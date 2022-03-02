@@ -1,0 +1,22 @@
+{
+  "backend": "TF2",
+  "cont_features": ["age", "hours_per_week"],
+  "data_name": "Income Dataset",
+  "desired_class": 0,
+  "features_to_vary": "all",
+  "instances": [
+    [
+      30,
+      "Self-Employed",
+      "Assoc",
+      "Married",
+      "Professional",
+      "White",
+      "Male",
+      65
+
+    ]
+  ],
+  "method": "random",
+  "num_cfs": 3
+}

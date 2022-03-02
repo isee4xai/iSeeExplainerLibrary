@@ -1,0 +1,54 @@
+{
+  "backend": "sklearn",
+  "cont_features": [
+    "construction_year",
+    "surface",
+    "floor",
+    "no_rooms"
+  ],
+  "data_name": "Apartment Dataset",
+  "desired_class": 0,
+  "instances": [
+    [
+      1966,
+      62,
+      8,
+      2,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      1947,
+      22,
+      10,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  ],
+  "method": "random",
+  "num_cfs": 3,
+  "features_to_vary": [
+    "construction_year",
+    "surface",
+    "floor",
+    "no_rooms"
+  ]
+}
+
