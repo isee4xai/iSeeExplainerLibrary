@@ -1,6 +1,6 @@
 # ExplainerLibraries
 
-### How to add a new explainer to the catalog
+### How to add a new explainer to the catalogue
 
 **1)**	In order to add a new explainer, you have to create a new Resource. First, go to the _resources_ folder and select the folder corresponding to the data type of the explainer you want to add (If your explainer works with a different data type, please add the corresponding folder to the resources folder). For illustration purposes, we will add a new explainer, LIME tabular.
 
