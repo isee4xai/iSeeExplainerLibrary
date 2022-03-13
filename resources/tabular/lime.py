@@ -33,12 +33,18 @@ class Lime(Resource):
         elif backend=="sklearn":
             mlp = joblib.load(model)
             predic_func =mlp.predict_proba
-        else:
+        elif backend=="PYT":
             mlp = torch.load(model)
             predic_func=mlp.predict
+        else:
+            mlp = joblib.load(model)
+            predic_func=mlp.predict
       
-        kwargsData = dict(training_labels=None, feature_names=None, categorical_features=None,  class_names=None)
+        kwargsData = dict(mode="classification",training_labels=None, feature_names=None, categorical_features=None,  class_names=None)
 
+        
+        if "model_task" in params_json:
+            kwargsData["mode"] = params_json["model_task"]
         if "training_labels" in params_json:
             kwargsData["training_labels"] = params_json["training_labels"]
         if "feature_names" in params_json:
@@ -88,7 +94,8 @@ class Lime(Resource):
                            "the 'data', containing the training data used for the model. These arguments are described below.",
 
         "model": "The trained prediction model given as a file. The extension must match the backend being used i.e.  a .pkl " 
-        "file for Scikit-learn (use Joblib library), .pt for PyTorch or .h5 for TensorFlow models.",
+             "file for Scikit-learn (use Joblib library), .pt for PyTorch or .h5 for TensorFlow models. For models with different backends, also upload "
+             "a .pkl, and make sure that the prediction function of the model is called 'predict'. This can be achieved by using a wrapper class.",
 
         "data": "Pandas DataFrame containing the training data given as a .pkl file (use Joblib library). The target class must be the last column of the DataFrame",
 
@@ -96,6 +103,7 @@ class Lime(Resource):
                 "instance": "Array representing a row with the feature values of an instance not including the target class.",
                 "backend": "A string containing the backend of the prediction model. The supported values are: 'sklearn' (Scikit-learn), 'TF1' "
                 "(TensorFlow 1.0), 'TF2' (TensorFlow 2.0), 'PYT' (PyTorch).",
+                "model_task": "(Optional) A string containing 'classification' or 'regression' accordingly. Defaults to 'classification'.",
                 "training_labels": "(Optional) Array of ints representing labels for training data.",
                 "feature_names": "(Optional) Array of strings corresponding to the columns in the training data. ", #MIGH DELETE IN FUTURE VERSIONS
                 "categorical_features": "(Optional) Array of ints representing the indexes of the categorical columns. Columns not included here will be considered continuous.",
