@@ -29,20 +29,23 @@ class Importance(Resource):
         if backend=="TF1" or backend=="TF2":
             model=h5py.File(model, 'w')
             mlp = tf.keras.models.load_model(model)
-          
-         
         elif backend=="sklearn":
             mlp = joblib.load(model)
-         
         else:
             mlp = torch.load(model)
+
+        
+        if "model_task" in params_json:
+            model_task = params_json["model_task"]
+        else:
+            model_task='classification'
           
         kwargsData = dict()
             
         if "variables" in params_json:
             kwargsData["variables"] = params_json["variables"]
-
-        explainer = dx.Explainer(mlp, dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False), dataframe.iloc[:,-1:],model_type="classification")
+       
+        explainer = dx.Explainer(mlp, dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False), dataframe.iloc[:,-1:],model_type=model_task)
         parts = explainer.model_parts(**{k: v for k, v in kwargsData.items()})
         
         response={"plot_url":"","explanation":json.loads(parts.result.to_json())}
@@ -63,7 +66,8 @@ class Importance(Resource):
         "params": { 
                 "backend": "A string containing the backend of the prediction model. The supported values are: 'sklearn' (Scikit-learn), 'TF1' "
                 "(TensorFlow 1.0), 'TF2' (TensorFlow 2.0), 'PYT' (PyTorch).",
-                "variables": "(Optional) Array of strings with the names of the features for which the importance will be calculated."
+                "variables": "(Optional) Array of strings with the names of the features for which the importance will be calculated. Defaults to all features.",
+                "model_task":"(Optional) A string containing 'classification' or 'regression' accordingly. Defaults to 'classification'."
                 
                 },
 
@@ -77,7 +81,8 @@ class Importance(Resource):
                     "5. People around me often ask me how I feel",
                     "6. I consider that my life is full of good things",
                     "7. My hobbies are still important to me"
-                  ]
+                  ],
+                "model_task":"classification"
                }
         }
     
