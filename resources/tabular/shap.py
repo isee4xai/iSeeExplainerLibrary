@@ -31,12 +31,14 @@ class Shap(Resource):
             model=h5py.File(model, 'w')
             mlp = tf.keras.models.load_model(model)
             predic_func=mlp.predict
-            mlp = tf.keras.models.load_model(model)
         elif backend=="sklearn":
             mlp = joblib.load(model)
             predic_func =mlp.predict_proba
-        else:
+        elif backend=="PYT":
             mlp = torch.load(model)
+            predic_func=mlp.predict
+        else:
+            mlp = joblib.load(model)
             predic_func=mlp.predict
       
         kwargsData = dict(feature_names=None, output_names=None)
@@ -66,8 +68,10 @@ class Shap(Resource):
         "_method_description": "This explaining method displays the contribution of each attribute for an individual prediction based on Shapley values. Requires 3 arguments: " 
                            "the 'params' string, the 'model' which is a file containing the trained model, and " 
                            "the 'data', containing the training data used for the model. These arguments are described below.",
+
         "model": "The trained prediction model given as a file. The extension must match the backend being used i.e.  a .pkl " 
-        "file for Scikit-learn (use Joblib library), .pt for PyTorch or .h5 for TensorFlow models.",
+             "file for Scikit-learn (use Joblib library), .pt for PyTorch or .h5 for TensorFlow models. For models with different backends, also upload "
+             "a .pkl, and make sure that the prediction function of the model is called 'predict'. This can be achieved by using a wrapper class.",
 
         "data": "Pandas DataFrame containing the training data given as a .pkl file (use Joblib library). The target class must be the last column of the DataFrame.",
         "params": { 
