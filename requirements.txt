@@ -19,4 +19,4 @@ html2image==2.0.1
 pillow==8.2.0
 matplotlib==3.3.4
 kaleido==0.2.1
-pymongo==4.1.1
+
