@@ -15,3 +15,8 @@ alibi==0.6.1
 dalex==1.4.1
 tensorflow==2.6.2
 torch==1.9.0
+html2image==2.0.1
+pillow==8.2.0
+matplotlib==3.3.4
+kaleido==0.2.1
+pymongo==4.1.1
