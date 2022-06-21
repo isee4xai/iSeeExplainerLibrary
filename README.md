@@ -50,7 +50,7 @@ The responses to the HTTP requests are given in JSON format. However, most of th
 2) Go to *Headers* and disable the *Accept* attribute.
 3) Add a new header with the same name, *Accept*, as key and specify the value according to the type of file you are trying to access. For .png files, specify *image/png*. For .html files, specify *text/html*. Finally, send the request.
     
-![ViewerPostman](https://user-images.githubusercontent.com/71895708/170830655-23bb69f2-321d-4851-acb9-d8012b51ae2c.PNG)
+![Screenshot (158)](https://user-images.githubusercontent.com/71895708/174875691-fe9509e0-8281-4890-953b-7d88c5e87a69.png)
 
 #### About the Parameters
 
@@ -120,7 +120,7 @@ def post(self):
 **7)** Lastly, add the class as a resource and specify its route in the _app.py_ file. In our example:
 
 ```python
-from resources.tabular.lime import Lime
+from resources.explainers.tabular.lime import Lime
 api.add_resource(Lime, '/Tabular/LIME')
 ```
 
