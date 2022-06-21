@@ -52,15 +52,27 @@ The responses to the HTTP requests are given in JSON format. However, most of th
     
 ![Screenshot (158)](https://user-images.githubusercontent.com/71895708/174875691-fe9509e0-8281-4890-953b-7d88c5e87a69.png)
 
-#### About the Parameters
+## About the Parameters
+
+The required parameters may be different depending on the explainer, so it is recommended to see the documentation provided by the get method of the explainer being used.
+
+- **id**: the *id* is a 10-character long string composed of letters and/or numbers. It is used to access the server space dedicated to the model to be explained. This space is a folder with the same name of the id located in the *Models* folder. This folder is created by the "Model AI Library" when a user uploads a model file (or an external URL), the training data (if required), and specific information about the model:
+	- _Model File_: The trained prediction model given as a compressed file. The extension must match the backend being used i.e. a .pkl file for Scikit-learn (use Joblib library), .pt for PyTorch, or .h5 for TensorFlow models. For models with different backends, it is possible to upload a .pkl, but it is necessary that the prediction function of the model is called 'predict'. 
+	- _Data File_: Pandas DataFrame containing the training data given as a .pkl file (use Joblib library). The target class must be the last column of the DataFrame. Only needed for tabular data models.
+	- _Model Info_: Json file containing the characteristics of the model. Some characteristics must be always specified, such as the backend of the model. Others are optional, such as the names of the features for tabular data, the categorical features, the labels of the output classes, etc. Please refer to the *model_info_attr.txt* file to see the currently defined attributes.
+
+Regardless of the provided files, **all the methods require an id to be provided**.
+
+-**url**: External URL of the prediction function. This parameter provides an alternative when the model owners do not want to upload the model file. The URL is ignored if a model file was uploaded to the server. This related server must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance). Refer to the _External URL Examples_ if you want to quickly create a service using flask to implement this method.
+
 
 ## Adding new explainers to the catalogue
 
-**1)**	In order to add a new explainer, you have to create a new Resource. First, go to the _resources_ folder and select the folder corresponding to the data type of the explainer you want to add (If your explainer works with a different data type, please add the corresponding folder to the resources folder). For illustration purposes, we will add a new explainer, LIME tabular.
+**1)**	To add a new explainer, it is necessary to create a new Resource. First, go to the _resources/explainers_ folder and select the folder corresponding to the data type of the explainer you want to add (If your explainer works with a different data type, please add the corresponding folder to the resources folder). For illustration purposes, we will walk through the steps of adding a "new" explainer (LIME tabular).
 
-**2)**	Inside the appropriate folder, ***create a new .py file*** with the name of your explainer. In our case, we create the lime.py file  inside _/resources/tabular/_ .
+**2)**	Inside the appropriate folder, ***create a new .py file*** with the name of your explainer. In our case, we create the lime.py file  inside _resources/explainers/tabular/_ .
 
-**3)**	Create a class for the explainer that represents a resource. This class needs to have ***two different methods: post and get***. In our example:
+**3)**	Create a class for the explainer. This class needs to have ***two different methods: post and get***. In our example:
 
 ```python
 from flask_restful import Resource
