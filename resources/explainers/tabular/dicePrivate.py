@@ -29,7 +29,7 @@ class DicePrivate(Resource):
         model_file, model_info_file, _ = get_model_files(_id)
 
         ## params from info
-        model_info=json.loads(json.load(model_info_file))
+        model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
         outcome_name="Target"
         if "target_name" in model_info:

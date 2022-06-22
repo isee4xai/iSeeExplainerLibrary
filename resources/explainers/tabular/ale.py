@@ -36,7 +36,7 @@ class Ale(Resource):
             raise "The training data file was not provided."
 
         ##getting params from info
-        model_info=json.loads(json.load(model_info_file))
+        model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
 
         kwargsData = dict(feature_names=None,target_names=None)
