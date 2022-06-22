@@ -59,11 +59,11 @@ The required parameters may be different depending on the explainer, so it is re
 - **id**: the *id* is a 10-character long string composed of letters and/or numbers. It is used to access the server space dedicated to the model to be explained. This space is a folder with the same name of the id located in the *Models* folder. This folder is created by the "Model AI Library" when a user uploads a model file (or an external URL), the training data (if required), and specific information about the model:
 	- _Model File_: The trained prediction model given as a compressed file. The extension must match the backend being used i.e. a .pkl file for Scikit-learn (use Joblib library), .pt for PyTorch, or .h5 for TensorFlow models. For models with different backends, it is possible to upload a .pkl, but it is necessary that the prediction function of the model is called 'predict'. 
 	- _Data File_: Pandas DataFrame containing the training data given as a .pkl file (use Joblib library). The target class must be the last column of the DataFrame. Only needed for tabular data models.
-	- _Model Info_: JSON file containing the characteristics of the model. Some characteristics must be always specified, such as the backend of the model. Others are optional, such as the names of the features for tabular data, the categorical features, the labels of the output classes, etc. Please refer to the *model_info_attr.txt* file to see the currently defined attributes.
+	- _Model Info_: JSON file containing the characteristics of the model. Some characteristics must be always specified, such as the backend of the model. Others are optional, such as the names of the features for tabular data, the categorical features, the labels of the output classes, etc. Please refer to the [model_info_attributes.txt](model_info_attributes.txt) file to see the currently defined attributes.
 
 	**Note:** Regardless of the provided files, **all the methods require an id to be provided**.
 
-- **url**: External URL of the prediction function passed as a string. This parameter provides an alternative when the model owners do not want to upload the model file and the explanation method is able to work with a prediction function instead of a model object. The URL is ignored if a model file was uploaded to the server. This related server must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance). Refer to the _External URL Examples_ if you want to quickly create a service using flask to implement this method.
+- **url**: External URL of the prediction function passed as a string. This parameter provides an alternative when the model owners do not want to upload the model file and the explanation method is able to work with a prediction function instead of a model object. The URL is ignored if a model file was uploaded to the server. This related server must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance). Refer to the _External URLs Examples folder_ if you want to quickly create a service using Flask to provide this method.
 
 - **params**: dictionary with the specific configuration parameters passed to the explanation method. These parameters depend on the method being used. It is **mandatory** to provide the *params* object when using local methods, as the instance to be explained is passed in this dictionary. Refer to the documentation of each method to know the configruation parameters that can be provided.
 
@@ -88,28 +88,113 @@ class Lime(Resource):
 	def get(self):
 		return {}
 ```
-**4)**	In the **post method**, define the mandatory arguments that must be passed for the explainer to get an explanation. In most explainers, this includes the files for the model and data (when needed), and an additional argument called params, which is a dictionary containing parameters such as a particular instance for local methods, configuration options, and additional information needed by the explainer. Note that in the example that after parsing the arguments, we use joblib to load the file parameters since the model and data are passed as pickled files.
+**4)**	In the **post method**, define the mandatory arguments that must be passed for the explainer to get an explanation. The method must receive at least and id to acess the folder related to the model. After parsing the arguments, use the function _get_model_files_, passing the id to fetch the model, data and info files. It is possible that some of these files do not exist, so make the appropriate checks before using them. The steps are generally to load the Dataframe with the training data if it exists, then getting the necessary attributes from the info file, getting the prediction function if possible, and finally getting the configuration parameters from the _params_ object.
 
 ```python	
 class Lime(Resource):
 
 def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("model", type=werkzeug.datastructures.FileStorage, location='files')
-        parser.add_argument("data", type=werkzeug.datastructures.FileStorage, location='files')
-        parser.add_argument('params')
-        args = parser.parse_args()
+        parser.add_argument("id",required=True)
+        parser.add_argument("url")
+        parser.add_argument('params',required=True)
         
-        data = args.get("data")
-        model = args.get("model")
-        dataframe = joblib.load(data)
+	## parsing arguments
+	args = parser.parse_args()
+        _id = args.get("id")
+        url = args.get("url")
         params_json = json.loads(args.get("params"))
-        instance=params_json["instance"]
-        backend = params_json["backend"]
+        
+        ## Getting model info, data, and file from local repository
+        model_file, model_info_file, data_file = get_model_files(_id)
+
+        ## loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) 
+        else:
+            raise "The training data file was not provided."
+
+        ## getting attributes from info
+        model_info=json.loads(json.load(model_info_file))
+        backend = model_info["backend"]  
+        kwargsData = dict(mode="classification", feature_names=None, categorical_features=None,categorical_names=None, class_names=None)
+        if "model_task" in model_info:
+            kwargsData["mode"] = model_info["model_task"]
+        if "feature_names" in model_info:
+            kwargsData["feature_names"] = model_info["feature_names"]
+        if "categorical_features" in model_info:
+            kwargsData["categorical_features"] = model_info["categorical_features"]
+        if "categorical_names" in model_info:
+            kwargsData["categorical_names"] = {int(k):v for k,v in model_info["categorical_names"].items()}
+        if "output_names" in model_info:
+            kwargsData["class_names"] = model_info["output_names"]
+
+        ## getting predict function
+        predic_func=None
+        if model_file!=None:
+            if backend=="TF1" or backend=="TF2":
+                model=h5py.File(model_file, 'w')
+                mlp = tf.keras.models.load_model(model)
+                predic_func=mlp
+            elif backend=="sklearn":
+                mlp = joblib.load(model_file)
+                predic_func=mlp.predict_proba
+            elif backend=="PYT":
+                mlp = torch.load(model_file)
+                predic_func=mlp.predict
+            else:
+                mlp = joblib.load(model_file)
+                predic_func=mlp.predict
+        elif url!=None:
+            def predict(X):
+                return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
+            predic_func=predict
+        else:
+            raise "Either a stored model or a valid URL for the prediction function must be provided."
+
+        ## getting parameters from params
+        instance = params_json["instance"]
+        kwargsData2 = dict(labels=(1,), top_labels=None, num_features=None)
+        if "output_classes" in params_json:
+            kwargsData2["labels"] = params_json["output_classes"]  #labels
+        if "top_classes" in params_json:
+            kwargsData2["top_labels"] = params_json["top_classes"]   #top labels
+        if "num_features" in params_json:
+            kwargsData2["num_features"] = params_json["num_features"]
 
 	...
 ```
-**5)** Add the actual code for the generation of the explanation to the post method. **Note:** the returned values must be a dictionary containing the explanation. This dictionary may also contain a URL to download a plot or image of the explanation when applicable.
+**5)** Add the actual code for the generation of the explanation to the post method. This depends entirely on the explanation method being used. Once the explanation has been created, convert it to a JSON format if necessary. If the explanation is returned as an html or png file, use the save_file_info function to get the upload folder path, the name that will be given to the file, and the url (getcall) that will be used to access the file. Save the file using this data and append the URL to the returned JSON. **Note:** the URL to access the file returned by save_file_info does not include the extension of the file, so it is necessary to append it at the end as it is shown in the example.
+
+```python	
+class Lime(Resource):
+
+def post(self):
+
+	...
+	        
+	explainer = lime.lime_tabular.LimeTabularExplainer(dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False).to_numpy(),
+                                                            **{k: v for k, v in kwargsData.items() if v is not None})
+        explanation = explainer.explain_instance(np.array(instance, dtype='f'), predic_func, **{k: v for k, v in kwargsData2.items() if v is not None}) 
+        
+        ## Formatting json explanation
+        ret = explanation.as_map()
+        ret = {str(k):[(int(i),float(j)) for (i,j) in v] for k,v in ret.items()}
+        if kwargsData["class_names"]!=None:
+            ret = {kwargsData["class_names"][int(k)]:v for k,v in ret.items()}
+        if kwargsData["feature_names"]!=None:
+            ret = {k:[(kwargsData["feature_names"][i],j) for (i,j) in v] for k,v in ret.items()}
+        ret=json.loads(json.dumps(ret))
+
+        ## saving to Uploads
+        upload_folder, filename, getcall = save_file_info(request.path)
+        hti = Html2Image()
+        hti.output_path= upload_folder
+        hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png")   
+        explanation.save_to_file(upload_folder+filename+".html")
+        
+        response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":ret}
+        return response
 
 **6)** For the get method, return a dictionary that serves as documentation for the explainer that is being implemented. In our implementations, we include a brief description of the explainer method and the parameters to the request, as well as the configuration parameters that should be passed in the _params_ dictionary. If necessary, we also include an example of the _params_ object. For example, for the Tabular/LIME implementation:
 
