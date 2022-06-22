@@ -115,7 +115,7 @@ def post(self):
             raise "The training data file was not provided."
 
         ## getting attributes from info
-        model_info=json.loads(json.load(model_info_file))
+        model_info=json.load(model_info_file)
         backend = model_info["backend"]  
         kwargsData = dict(mode="classification", feature_names=None, categorical_features=None,categorical_names=None, class_names=None)
         if "model_task" in model_info:
