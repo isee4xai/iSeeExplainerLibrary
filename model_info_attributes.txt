@@ -1,0 +1,21 @@
+Mandatory attributes:
+
+datatype => "Image", "Tabular", or "Text"
+backend => "sklearn", "TF1", "TF2", "PYT", or "other"
+model_task => "classification", "regression", or "other"
+
+
+For classification models:
+
+(Optional) output_names => Array of strings with the names of the target classes in order.
+
+
+For tabular data:
+
+categorical_names => Dictionary with indexes of categorical columns as keys and arrays of strings containing the categorical values as values.
+categorical_features => Array of ints representing the indexes of the categorical columns. Columns not included here will be considered continuous.
+cont_features => array of strings with the names of the continuous features
+ohe => Boolean value to indicate if the data is one-hot encoded
+(Optional) target_name  => target variable name
+(Optional) feature_names => Array of strings with the names of the features in order.
+Only if dataset was not uploaded: features => JSON Object with feature names as keys and arrays containing the ranges of continuous features, or strings with the categories for categorical features.
