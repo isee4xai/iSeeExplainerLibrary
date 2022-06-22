@@ -36,7 +36,7 @@ class CounterfactualsImage(Resource):
         model_file, model_info_file, _ = get_model_files(_id)
 
         ## params from info
-        model_info=json.loads(json.load(model_info_file))
+        model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
         if "output_names" in model_info:
             output_names=model_info["output_names"]

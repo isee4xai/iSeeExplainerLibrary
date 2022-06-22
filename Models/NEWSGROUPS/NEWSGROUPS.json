@@ -1,1 +1,4 @@
-"{\n  \"backend\": \"sklearn\", \"output_names\": [\"atheism\", \"graphics\", \"ms-windows.misc\", \"pc.hardware\", \"mac.hardware\", \"x\", \"misc.forsale\", \"autos\", \"motorcycles\", \"baseball\", \"hockey\", \"crypt\", \"electronics\", \"med\", \"space\", \"christian\", \"guns\", \"mideast\", \"politics.misc\", \"religion.misc\"]}"
+{
+  "backend": "sklearn",
+  "output_names": [ "atheism", "graphics", "ms-windows.misc", "pc.hardware", "mac.hardware", "x", "misc.forsale", "autos", "motorcycles", "baseball", "hockey", "crypt", "electronics", "med", "space", "christian", "guns", "mideast", "politics.misc", "religion.misc" ]
+}

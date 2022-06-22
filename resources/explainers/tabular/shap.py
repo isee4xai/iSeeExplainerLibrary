@@ -41,7 +41,7 @@ class Shap(Resource):
             index=params_json["output_index"];
 
         ##getting params from info
-        model_info=json.loads(json.load(model_info_file))
+        model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
 
         kwargsData = dict(feature_names=None, output_names=None)

@@ -1,1 +1,4 @@
-"{\n  \"backend\": \"TF2\", \"output_names\": [\"Zero\", \"One\",\"Two\",\"Three\",\"Four\",\"Five\",\"Six\",\"Seven\",\"Eight\", \"Nine\"]}"
+{
+  "backend": "TF2",
+  "output_names": [ "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine" ]
+}

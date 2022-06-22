@@ -30,7 +30,7 @@ class Importance(Resource):
         model_file, model_info_file, data_file = get_model_files(_id)
 
         ## params from info
-        model_info=json.loads(json.load(model_info_file))
+        model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
         model_task = model_info["model_task"]  ##error handling?
 

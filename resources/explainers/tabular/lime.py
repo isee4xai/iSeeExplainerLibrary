@@ -35,7 +35,7 @@ class Lime(Resource):
             raise "The training data file was not provided."
 
         ##getting params from info
-        model_info=json.loads(json.load(model_info_file))
+        model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
         kwargsData = dict(mode="classification", feature_names=None, categorical_features=None,categorical_names=None, class_names=None)
         if "model_task" in model_info:
