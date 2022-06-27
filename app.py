@@ -14,6 +14,7 @@ from resources.explainers.tabular.importance import Importance
 from resources.explainers.images.lime import LimeImage
 from resources.explainers.images.anchors import AnchorsImage
 from resources.explainers.images.counterfactuals import CounterfactualsImage
+from resources.explainers.images.gradcamTorch import GradCamTorch
 from resources.explainers.text.lime import LimeText
 
 
@@ -37,6 +38,7 @@ api.add_resource(Importance, '/Tabular/Importance')
 api.add_resource(LimeImage, '/Images/LIME')
 api.add_resource(AnchorsImage, '/Images/Anchors')
 api.add_resource(CounterfactualsImage, '/Images/Counterfactuals')
+api.add_resource(GradCamTorch, '/Images/GradCamTorch')
 api.add_resource(LimeText, '/Text/LIME')
 
 
