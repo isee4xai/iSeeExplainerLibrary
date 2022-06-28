@@ -20,5 +20,5 @@ jobs:
       with:
           push: true
           file: Dockerfile
-          tags: isee4xai/explainer:dev
+          tags: isee4xai/explainers:dev
           
