@@ -1,7 +1,6 @@
 from flask_restful import Resource,reqparse
 from flask import request
 from PIL import Image
-import cv2
 import numpy as np
 import torch
 import json
@@ -104,8 +103,8 @@ class GradCamTorch(Resource):
   
         #saving
         upload_folder, filename, getcall = save_file_info(request.path)
-        cam_image = cv2.cvtColor(cam_image, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(upload_folder+filename+'.png', cam_image)
+        cam_image = Image.fromarray(cam_image)
+        cam_image.save(upload_folder+filename+'.png')
 
         response={"plot_png":getcall+".png"}
         return response
