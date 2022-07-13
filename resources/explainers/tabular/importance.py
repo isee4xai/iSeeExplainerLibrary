@@ -5,14 +5,18 @@ import joblib
 import h5py
 import json
 import dalex as dx
-from saveinfo import save_file_info
 from flask import request
 from html2image import Html2Image
+from saveinfo import save_file_info
 from getmodelfiles import get_model_files
 
 
 class Importance(Resource):
-   
+
+    def __init__(self,model_folder,upload_folder):
+        self.model_folder = model_folder
+        self.upload_folder = upload_folder 
+        
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument("id", required=True)
@@ -27,7 +31,7 @@ class Importance(Resource):
             params_json = json.loads(params)
        
         #Getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id)
+        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
         ## params from info
         model_info=json.load(model_info_file)
@@ -57,7 +61,7 @@ class Importance(Resource):
         fig=parts.plot(show=False)
         
         #saving
-        upload_folder, filename, getcall = save_file_info(request.path)
+        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         fig.write_html(upload_folder+filename+'.html')
         hti = Html2Image()
         hti.output_path= upload_folder

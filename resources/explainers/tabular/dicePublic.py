@@ -12,6 +12,10 @@ from getmodelfiles import get_model_files
 from flask import request
 
 class DicePublic(Resource):
+
+    def __init__(self,model_folder,upload_folder):
+        self.model_folder = model_folder
+        self.upload_folder = upload_folder
    
     def post(self):
         parser = reqparse.RequestParser()
@@ -25,7 +29,7 @@ class DicePublic(Resource):
         params_json=json.loads(params)
         
         #Getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id)
+        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
         ## params from info
         model_info=json.load(model_info_file)
@@ -48,7 +52,7 @@ class DicePublic(Resource):
         try:
             instances=params_json["instances"]
         except:
-            raise "No instances were provided in the params."
+            raise Exception("No instances were provided in the params.")
 
         ## params from the request
         kwargsData = dict(continuous_features=cont_features, outcome_name=dataframe.columns[-1])
@@ -89,7 +93,7 @@ class DicePublic(Resource):
             e1 = exp.generate_counterfactuals(instances, **{k: v for k, v in kwargsData2.items() if v is not None})
         
         #saving
-        upload_folder, filename, getcall = save_file_info(request.path)
+        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         str_html=''
         i=1
         for cf in e1.cf_examples_list:
