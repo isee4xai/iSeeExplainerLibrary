@@ -13,6 +13,10 @@ from getmodelfiles import get_model_files
 from flask import request
 
 class DicePrivate(Resource):
+
+    def __init__(self,model_folder,upload_folder):
+        self.model_folder = model_folder
+        self.upload_folder = upload_folder
     
     def post(self):
         parser = reqparse.RequestParser()
@@ -26,7 +30,7 @@ class DicePrivate(Resource):
         params_json=json.loads(params)
         
         #Getting model info, data, and file from local repository
-        model_file, model_info_file, _ = get_model_files(_id)
+        model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
 
         ## params from info
         model_info=json.load(model_info_file)
@@ -37,21 +41,21 @@ class DicePrivate(Resource):
         try:
             features = model_info["features"]
         except:
-            raise "The dataset \"features\" field was not specified."
+            raise Exception("The dataset \"features\" field was not specified.")
       
         ## loading model
         if backend=="TF1" or backend=="TF2":
            model_h5=h5py.File(model_file, 'w')
            model = tf.keras.models.load_model(model_h5)
         else:
-            raise "Only TF1 and TF2 backends are allowed."
+            raise Exception("Only TF1 and TF2 backends are allowed.")
         
 
         ## Getting instances
         try:
             instance=params_json["instance"]
         except:
-            raise "No instance was provided in the params."
+            raise Exception("No instance was provided in the params.")
 
 
         kwargsData = dict(features=features, outcome_name=outcome_name, type_and_precision=None, mad=None)
@@ -85,7 +89,7 @@ class DicePrivate(Resource):
         e1 = exp.generate_counterfactuals(instance, **{k: v for k, v in kwargsData2.items() if v is not None})
 
         #saving
-        upload_folder, filename, getcall = save_file_info(request.path)
+        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         str_html=''
         i=1
         for cf in e1.cf_examples_list:
@@ -118,7 +122,7 @@ class DicePrivate(Resource):
         "id": "Identifier of the ML model that was stored locally.",
 
         "params": { 
-                "instance": "JSON object representing the instance of interest with attribute names as keys, and feature values as values.",
+                "instance": "JSON object representing the instance of interest with feature names as keys, and feature values as values.",
                 "desired_class": "Integer representing the index of the desired counterfactual class, or 'opposite' in the case of binary classification.",
                 "features_to_vary": "(optional) Either a string 'all' or a list of strings representing the feature names to vary. Defaults to all features.",
                 "num_cfs": "(optional) number of counterfactuals to be generated for each instance.",
