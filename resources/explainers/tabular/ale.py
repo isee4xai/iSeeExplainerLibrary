@@ -8,13 +8,17 @@ import json
 from alibi.explainers import ALE, plot_ale
 import math
 import matplotlib.pyplot as plt
-from saveinfo import save_file_info
 from flask import request
+from saveinfo import save_file_info
 from getmodelfiles import get_model_files
 import requests
 
 class Ale(Resource):
     
+    def __init__(self,model_folder,upload_folder):
+        self.model_folder = model_folder
+        self.upload_folder = upload_folder
+
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument("id",required=True)
@@ -27,13 +31,13 @@ class Ale(Resource):
         params_json = json.loads(args.get("params"))
         
         #Getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id)
+        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
         ## loading data
         if data_file!=None:
             dataframe = joblib.load(data_file) ##error handling?
         else:
-            raise "The training data file was not provided."
+            raise Exception("The training data file was not provided.")
 
         ##getting params from info
         model_info=json.load(model_info_file)
@@ -66,7 +70,7 @@ class Ale(Resource):
                 return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
             predic_func=predict
         else:
-            raise "Either a stored model or a valid URL for the prediction function must be provided."
+            raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
       
         #getting params from request
         kwargsData2 = dict(features=None)
@@ -86,7 +90,7 @@ class Ale(Resource):
         fig, ax = plt.subplots(dim, dim, sharey='all');
         plot_ale(proba_exp_lr,ax=ax,fig_kw={'figwidth': 12, 'figheight': 10})
         #saving
-        upload_folder, filename, getcall = save_file_info(request.path)
+        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         fig.savefig(upload_folder+filename+'.png')
 
         response = {"plot_png":getcall+'.png',"explanation":json.loads(proba_exp_lr.to_json())}

@@ -1,0 +1,15 @@
+{
+  "backend": "TF2",
+  "feature_names": [
+    "Pclass",
+    "Sex",
+    "Age",
+    "SibSp",
+    "Parch",
+    "Fare",
+    "Embarked_C",
+    "Embarked_Q",
+    "Embarked_S"
+  ],
+  "output_names": ["Deceased","Survived"]
+}

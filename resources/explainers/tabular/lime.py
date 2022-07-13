@@ -13,7 +13,11 @@ from getmodelfiles import get_model_files
 import requests
 
 class Lime(Resource):
-    
+
+    def __init__(self,model_folder,upload_folder):
+        self.model_folder = model_folder
+        self.upload_folder = upload_folder    
+
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument("id",required=True)
@@ -26,13 +30,13 @@ class Lime(Resource):
         params_json = json.loads(args.get("params"))
         
         #Getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id)
+        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
         ## loading data
         if data_file!=None:
             dataframe = joblib.load(data_file) ##error handling?
         else:
-            raise "The training data file was not provided."
+            raise Exception("The training data file was not provided.")
 
         ##getting params from info
         model_info=json.load(model_info_file)
@@ -70,7 +74,7 @@ class Lime(Resource):
                 return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
             predic_func=predict
         else:
-            raise "Either a stored model or a valid URL for the prediction function must be provided."
+            raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
 
   
         
@@ -100,7 +104,7 @@ class Lime(Resource):
         ret=json.loads(json.dumps(ret))
 
         ##saving
-        upload_folder, filename, getcall = save_file_info(request.path)
+        upload_folder, filename, getcall = save_file_info(request.path,self.model_folder)
         hti = Html2Image()
         hti.output_path= upload_folder
         hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png")   

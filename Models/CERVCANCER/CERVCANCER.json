@@ -1,0 +1,5 @@
+{
+  "backend": "sklearn",
+  "model_task": "classification",
+  "output_names": [ "Healthy", "Cancer"]
+}

@@ -1,0 +1,19 @@
+{
+  "backend": "XGBoost",
+  "model_task": "regression",
+  "feature_names": [
+    "CRIM",
+    "ZN",
+    "INDUS",
+    "CHAS",
+    "NOX",
+    "RM",
+    "AGE",
+    "DIS",
+    "RAD",
+    "TAX",
+    "PTRATIO",
+    "B",
+    "LSTAT"
+  ]
+}
