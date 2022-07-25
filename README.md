@@ -65,7 +65,9 @@ The required parameters may be different depending on the explainer, so it is re
 
 - **url**: External URL of the prediction function passed as a string. This parameter provides an alternative when the model owners do not want to upload the model file and the explanation method is able to work with a prediction function instead of a model object. The URL is ignored if a model file was uploaded to the server. This related server must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance). Refer to the _External URLs Examples folder_ if you want to quickly create a service using Flask to provide this method.
 
-- **params**: dictionary with the specific configuration parameters passed to the explanation method. These parameters depend on the method being used. It is **mandatory** to provide the *params* object when using local methods, as the instance to be explained is passed in this dictionary. Refer to the documentation of each method to know the configruation parameters that can be provided.
+- **instance**: This is a mandatory attribute for local methods, as it is the instance that will be explained. It is an array containing the feature values (must be in the same order that the model expects). For images, it is a matrix representing the pixels. It is also possible for image explainers to pass a file instead of the matrix using the parameter "image".
+
+- **params**: dictionary with the specific configuration parameters passed to the explanation method. These parameters are optional and depend on the method being used. Refer to the documentation of each method to know the configruation parameters that can be provided.
 
 
 
