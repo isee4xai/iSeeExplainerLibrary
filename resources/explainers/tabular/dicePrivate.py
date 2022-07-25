@@ -1,9 +1,5 @@
 from flask_restful import Resource,reqparse
 import tensorflow as tf
-import numpy as np
-import pandas as pd
-import joblib
-import werkzeug
 import h5py
 import json
 import dice_ml
@@ -21,13 +17,17 @@ class DicePrivate(Resource):
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument("id", required=True)
-        parser.add_argument("params",required=True)
+        parser.add_argument('instance',required=True)
+        parser.add_argument("params")
 
         #parsing args
         args = parser.parse_args()
         _id = args.get("id")
+        instance = json.loads(args.get("instance"))
         params=args.get("params")
-        params_json=json.loads(params)
+        params_json={}
+        if(params !=None):
+            params_json = json.loads(params)
         
         #Getting model info, data, and file from local repository
         model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
@@ -42,6 +42,9 @@ class DicePrivate(Resource):
             features = model_info["features"]
         except:
             raise Exception("The dataset \"features\" field was not specified.")
+
+        ##converting instance to dictionary
+        instance=dict(zip(features.keys(), instance))
       
         ## loading model
         if backend=="TF1" or backend=="TF2":
@@ -51,11 +54,6 @@ class DicePrivate(Resource):
             raise Exception("Only TF1 and TF2 backends are allowed.")
         
 
-        ## Getting instances
-        try:
-            instance=params_json["instance"]
-        except:
-            raise Exception("No instance was provided in the params.")
 
 
         kwargsData = dict(features=features, outcome_name=outcome_name, type_and_precision=None, mad=None)
@@ -64,7 +62,7 @@ class DicePrivate(Resource):
         if "mad" in params_json:
             kwargsData["mad"] = params_json["mad"]
 
-        kwargsData2 = dict()
+        kwargsData2 = dict(desired_class=1,total_CFs=3)
         if "num_cfs" in params_json:
            kwargsData2["total_CFs"] = params_json["num_cfs"]
         if "desired_class" in params_json:
@@ -115,15 +113,15 @@ class DicePrivate(Resource):
 
     def get(self):
         return {
-        "_method_description": "Generates counterfactuals without the training data. However, it requires the format and ranges of the data to be specified when uploading the model. Currently supported for TensorFlow models only.  Requires 2 arguments: " 
-                           "the 'id' string, and the 'params' object containing the configuration parameters of the explainer."
+        "_method_description": "Generates counterfactuals without the training data. However, it requires the format and ranges of the data to be specified when uploading the model. Currently supported for TensorFlow models only.  Accepts 3 arguments: " 
+                           "the 'id' string, the 'instance', and the 'params' dictionary (optional) containing the configuration parameters of the explainer."
                            " These arguments are described below.",
 
         "id": "Identifier of the ML model that was stored locally.",
-
+        "instance": "Array representing a row with the feature values of an instance including the target class.",
         "params": { 
-                "instance": "JSON object representing the instance of interest with feature names as keys, and feature values as values.",
-                "desired_class": "Integer representing the index of the desired counterfactual class, or 'opposite' in the case of binary classification.",
+
+                "desired_class": "(Optional) Integer representing the index of the desired counterfactual class. Defaults to class 1. You may also use the string 'opposite' for binary classification",
                 "features_to_vary": "(optional) Either a string 'all' or a list of strings representing the feature names to vary. Defaults to all features.",
                 "num_cfs": "(optional) number of counterfactuals to be generated for each instance.",
                 "method": "(optional) The method used for counterfactual generation. The supported methods for private data are: 'random' (random sampling) and 'genetic' (genetic algorithms). Defaults to 'random'.",
@@ -136,7 +134,6 @@ class DicePrivate(Resource):
                 "features_to_vary": "all",
                 "desired_class": 0,
                 "num_cfs": 3,
-                "instance": {"Height":180, "Weight": 78},
                 "method": "random",
                 "type_and_precision": {"Height": ["float",1], "Weight": "int"}
 

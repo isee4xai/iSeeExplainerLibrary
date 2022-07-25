@@ -21,14 +21,17 @@ class ShapKernelGlobal(Resource):
         
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("id",required=True)
-        parser.add_argument("url")
+        parser.add_argument('id',required=True)
+        parser.add_argument('url')
         parser.add_argument('params')
         args = parser.parse_args()
         
         _id = args.get("id")
         url = args.get("url")
-        params_json = json.loads(args.get("params"))
+        params=args.get("params")
+        params_json={}
+        if(params !=None):
+            params_json = json.loads(params)
         
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
@@ -40,7 +43,7 @@ class ShapKernelGlobal(Resource):
             raise Exception("The training data file was not provided.")
 
         #getting params from request
-        index=None
+        index=1
         if "output_index" in params_json:
             index=params_json["output_index"];
 
@@ -113,9 +116,8 @@ class ShapKernelGlobal(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
-
         "params": { 
-                "output_index": "(Optional) Integer representing the index of the class to be explained. Ignore for regression models. If not provided, an aggregated plot displaying all the classes will be generated." 
+                "output_index": "(Optional) Integer representing the index of the class to be explained. Ignore for regression models. Defaults to class 1." 
                 }
 
 
