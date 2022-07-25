@@ -20,14 +20,19 @@ class Lime(Resource):
 
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("id",required=True)
-        parser.add_argument("url")
-        parser.add_argument('params',required=True)
+        parser.add_argument('id',required=True)
+        parser.add_argument('instance',required=True)
+        parser.add_argument('url')
+        parser.add_argument('params')
         args = parser.parse_args()
         
         _id = args.get("id")
         url = args.get("url")
-        params_json = json.loads(args.get("params"))
+        instance = json.loads(args.get("instance"))
+        params=args.get("params")
+        params_json={}
+        if(params !=None):
+            params_json = json.loads(params)
         
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
@@ -79,7 +84,6 @@ class Lime(Resource):
   
         
         #getting params from request
-        instance = params_json["instance"]
         kwargsData2 = dict(labels=(1,), top_labels=None, num_features=None)
         if "output_classes" in params_json:
             kwargsData2["labels"] = params_json["output_classes"]  #labels
@@ -104,7 +108,7 @@ class Lime(Resource):
         ret=json.loads(json.dumps(ret))
 
         ##saving
-        upload_folder, filename, getcall = save_file_info(request.path,self.model_folder)
+        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         hti = Html2Image()
         hti.output_path= upload_folder
         hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png")   
@@ -116,14 +120,14 @@ class Lime(Resource):
     def get(self):
         return {
         "_method_description": "LIME perturbs the input data samples in order to train a simple model that approximates the prediction for the given instance and similar ones. "
-                           "The explanation contains the weight of each attribute to the prediction value. This method accepts 3 arguments: " 
-                           "the 'id', the 'url',  and the 'params' JSON with the configuration parameters of the method. "
+                           "The explanation contains the weight of each attribute to the prediction value. This method accepts 4 arguments: " 
+                           "the 'id', the 'instance', the 'url'(optional),  and the 'params' dictionary (optiohnal) with the configuration parameters of the method. "
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
+        "instance": "Array representing a row with the feature values of an instance not including the target class.",
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
-                "instance": "Array representing a row with the feature values of an instance not including the target class.",
                 "output_classes" : "(Optional) Array of ints representing the classes to be explained.",
                 "top_classes": "(Optional) Int representing the number of classes with the highest prediction probability to be explained. Overrides 'output_classes' if provided.",
                 "num_features": "(Optional) Int representing the maximum number of features to be included in the explanation."

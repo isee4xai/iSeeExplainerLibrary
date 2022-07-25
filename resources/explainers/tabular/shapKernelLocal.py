@@ -20,14 +20,20 @@ class ShapKernelLocal(Resource):
         
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("id",required=True)
-        parser.add_argument("url")
-        parser.add_argument('params',required=True)
+        parser.add_argument('id',required=True)
+        parser.add_argument('instance',required=True)
+        parser.add_argument('url')
+        parser.add_argument('params')
         args = parser.parse_args()
         
         _id = args.get("id")
+        instance = json.loads(args.get("instance"))
         url = args.get("url")
-        params_json = json.loads(args.get("params"))
+        params=args.get("params")
+        params_json={}
+        if(params !=None):
+            params_json = json.loads(params)
+        
         
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
@@ -39,7 +45,6 @@ class ShapKernelLocal(Resource):
             raise Exception("The training data file was not provided.")
 
         #getting params from request
-        instance = params_json["instance"]
         index=1
         plot_type=None
         if "output_index" in params_json:
@@ -128,24 +133,16 @@ class ShapKernelLocal(Resource):
 
     def get(self):
         return {
-        "_method_description": "This explaining method displays the contribution of each attribute for an individual prediction based on Shapley values. This method accepts 3 arguments: " 
-                           "the 'id', the 'url',  and the 'params' JSON with the configuration parameters of the method. "
+        "_method_description": "This explaining method displays the contribution of each attribute for an individual prediction based on Shapley values. This method accepts 4 arguments: " 
+                           "the 'id', the 'instance', the 'url' (optional),  and the 'params' dictionary (optional) with the configuration parameters of the method. "
                            "These arguments are described below.",
-
         "id": "Identifier of the ML model that was stored locally.",
+        "instance": "Array with the feature values of an instance without including the target class.",
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
-
         "params": { 
-                "instance": "Array with the feature values of an instance without including the target class.",
                 "output_index": "(Optional) Integer representing the index of the class to be explained. Ignore for regression models. The default index is 1." 
-                },
-
-        "params_example":{
-                "instance": [1966, 62, 8, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-                "output_index": 2,
-               }
-  
+                }
         }
     
 

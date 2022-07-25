@@ -20,13 +20,17 @@ class DicePublic(Resource):
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument("id", required=True)
-        parser.add_argument("params",required=True)
+        parser.add_argument('instance',required=True)
+        parser.add_argument("params")
 
         #parsing args
         args = parser.parse_args()
         _id = args.get("id")
+        instance = json.loads(args.get("instance"))
         params=args.get("params")
-        params_json=json.loads(params)
+        params_json={}
+        if(params !=None):
+            params_json = json.loads(params)
         
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
@@ -48,11 +52,6 @@ class DicePublic(Resource):
         ## loading data
         dataframe = joblib.load(data_file)
        
-        ## Getting instances
-        try:
-            instances=params_json["instances"]
-        except:
-            raise Exception("No instances were provided in the params.")
 
         ## params from the request
         kwargsData = dict(continuous_features=cont_features, outcome_name=dataframe.columns[-1])
@@ -61,7 +60,7 @@ class DicePublic(Resource):
         if "continuous_features_precision" in params_json:
            kwargsData["continuous_features_precision"] = params_json["continuous_features_precision"]
 
-        kwargsData2 = dict()
+        kwargsData2 = dict(desired_class=1,total_CFs=3)
         if "num_cfs" in params_json:
            kwargsData2["total_CFs"] = params_json["num_cfs"]
         if "desired_class" in params_json:
@@ -84,13 +83,13 @@ class DicePublic(Resource):
         columns = list(dataframe.columns)
         columns.remove(dataframe.columns[-1])
 
-        instances = pd.DataFrame(instances, columns=columns)
+        instance = pd.DataFrame([instance], columns=columns)
        
         # Generate counterfactuals
         if backend=="sklearn":
-            e1 = exp.generate_counterfactuals(query_instances=instances, **{k: v for k, v in kwargsData2.items() if v is not None})
+            e1 = exp.generate_counterfactuals(query_instances=instance, **{k: v for k, v in kwargsData2.items() if v is not None})
         else:
-            e1 = exp.generate_counterfactuals(instances, **{k: v for k, v in kwargsData2.items() if v is not None})
+            e1 = exp.generate_counterfactuals(instance, **{k: v for k, v in kwargsData2.items() if v is not None})
         
         #saving
         upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
@@ -119,25 +118,20 @@ class DicePublic(Resource):
 
     def get(self):
         return {
-        "_method_description": "Generates counterfactuals using the training data as a baseline. equires 2 arguments: " 
-                           "the 'id' string, and the 'params' object containing the configuration parameters of the explainer."
+        "_method_description": "Generates counterfactuals using the training data as a baseline. Accepts 3 arguments: " 
+                           "the 'id' string, the 'instance', and the 'params' dictionary (optional) containing the configuration parameters of the explainer."
                            " These arguments are described below.",
-
         "id": "Identifier of the ML model that was stored locally.",
-
+        "instance": "Array representing a row with the feature values of an instance including the target class.",
         "params": { 
-                "instances": "Array of arrays, where each array represents a row with the feature values of an instance including the target class.",
-                "desired_class": "Integer representing the index of the desired counterfactual class, or 'opposite' in the case of binary classification.",
+                "desired_class": "(optional) Integer representing the index of the desired counterfactual class. Defaults to class 1.  You may also use the string 'opposite' for binary classification",
                 "method": "(optional) The method used for counterfactual generation. The supported methods are: 'random' (random sampling), 'genetic' (genetic algorithms), 'kdtrees'.  Defaults to 'random'.",
                 "features_to_vary": "(optional) Either a string 'all' or a list of strings representing the feature names to vary. Defaults to all features.",
                 "num_cfs": "(optional) number of counterfactuals to be generated for each instance.",
                 "permitted_range": "(optional) JSON object with feature names as keys and permitted range in array as values.",
                 "continuous_features_precision": "(optional) JSON object with feature names as keys and precisions as values."
                 },
-
         "params_example":{
-
-                "instances": [ ["X1", "X2", "Xn"], ["Y1", "Y2", "Yn"]],
                 "desired_class": 0,
                 "features_to_vary": "all",
                 "method": "random",

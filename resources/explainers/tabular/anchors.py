@@ -18,13 +18,18 @@ class Anchors(Resource):
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument("id",required=True)
+        parser.add_argument('instance',required=True)
         parser.add_argument("url")
-        parser.add_argument('params',required=True)
+        parser.add_argument('params')
         args = parser.parse_args()
         
         _id = args.get("id")
         url = args.get("url")
-        params_json = json.loads(args.get("params"))
+        instance = json.loads(args.get("instance"))
+        params=args.get("params")
+        params_json={}
+        if(params !=None):
+            params_json = json.loads(params)
         
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
@@ -72,7 +77,6 @@ class Anchors(Resource):
             raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
 
         #getting params from request
-        instance = params_json["instance"]
         kwargsData2 = dict(threshold=0.95)
         if "threshold" in params_json:
             kwargsData2["threshold"] = params_json["threshold"]
@@ -94,16 +98,16 @@ class Anchors(Resource):
     def get(self):
         return {
         "_method_description": "This method provides local explanations in the form of simple boolean rules with a precision score and a "
-                            "coverage value which represents the scope in which that rules applies to similar instances. This method accepts 3 arguments: " 
-                           "the 'id', the 'url',  and the 'params' JSON with the configuration parameters of the method. "
+                            "coverage value which represents the scope in which that rules applies to similar instances. This method accepts 4 arguments: " 
+                           "the 'id', the 'instance', the 'url' (optional),  and the 'params' JSON (optional) with the configuration parameters of the method. "
                            "These arguments are described below.",
 
         "id": "Identifier of the ML model that was stored locally.",
+        "instance": "Array representing a row with the feature values of an instance without including the target class.",
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
 
         "params": { 
-                "instance": "Array representing a row with the feature values of an instance without including the target class.",
                 "threshold": "(Optional) The minimum level of precision required for the anchors. Default is 0.95"
                 }
 
