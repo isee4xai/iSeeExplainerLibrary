@@ -23,15 +23,20 @@ class AnchorsImage(Resource):
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument("id", required=True)
-        parser.add_argument("url")
+        parser.add_argument('instance')        
         parser.add_argument("image", type=werkzeug.datastructures.FileStorage, location='files')
+        parser.add_argument("url")
         parser.add_argument('params')
         args = parser.parse_args()
         
         _id = args.get("id")
-        url = args.get("url")
+        instance = args.get("instance")
         image = args.get("image")
-        params_json = json.loads(args.get("params"))
+        url = args.get("url")
+        params=args.get("params")
+        params_json={}
+        if(params !=None):
+            params_json = json.loads(params)
 
         output_names=None
         predic_func=None
@@ -66,13 +71,19 @@ class AnchorsImage(Resource):
         else:
             raise Exception("Either a locally stored model or an URL for the prediction function of the model must be provided.")
                 
-        if image==None:
+        if instance!=None:
             try:
-                image = np.array(params_json["image"])
+                image = np.array(json.loads(instance))
             except:
-                raise Exception("Either an image file or a matrix representative of the image must be provided.")
+                raise Exception("Could not read instance from JSON.")
+        elif image!=None:
+             try:
+                image = np.asarray(Image.open(image))
+             except:
+                 raise Exception("Could not load image from file.")
         else:
-            image = np.asarray(Image.open(image))
+            raise Exception("Either an image file or a matrix representative of the image must be provided.")
+
         if len(image.shape)<3:
             image = image.reshape(image.shape + (1,))
             plt.gray()
@@ -105,16 +116,16 @@ class AnchorsImage(Resource):
     def get(self):
         return {
         "_method_description": "Displays the pixels that are sufficient to the model to justify the predicted class. "
-                           "This method accepts 4 arguments: " 
-                           "the 'id', the 'url',  the 'params' JSON with the configuration parameters of the method, and optionally the 'image' that will be explained. "
+                           "This method accepts 5 arguments: " 
+                           "the 'id', the 'url' (optional),  the 'params' dictionary (optional) with the configuration parameters of the method, the 'instance' containing the image that will be explained as a matrix, or the 'image' file instead. "
                            "These arguments are described below.",
 
         "id": "Identifier of the ML model that was stored locally.",
         "url": "External URL of the prediction function. This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (images represented as arrays). It must return N outputs (predictions for each image).",
-        "image": "Image file to be explained. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255. Otherwise, pass the image in the params attribute.",
+        "instance": "Matrix representing the image to be explained.",
+        "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
-                "image": "Matrix representing the image. Ignored if an image file was uploaded.",
-                "threshold": "A float from 0 to 1 with the desired precision for the anchor.",
+                "threshold": "(Optional) A float from 0 to 1 with the desired precision for the anchor.",
                 "segmentation_fn": "(Optional) A string with an image segmentation algorithm from the following:'quickshift', 'slic', or 'felzenszwalb'."
                 }
 

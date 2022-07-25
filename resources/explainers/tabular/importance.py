@@ -80,18 +80,6 @@ class Importance(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "params": { 
                 "variables": "(Optional) Array of strings with the names of the features for which the importance will be calculated. Defaults to all features.",
-                },
-
-        "params_example":{
-                    "variables": [
-                                    "1. Most of the time I have difficulty concentrating on simple tasks",
-                                    "2. I don't feel like doing my daily duties",
-                                    "3. My friends or family have told me that I look different",
-                                    "4. When I think about the future it is difficult for me to imagine it clearly",
-                                    "5. People around me often ask me how I feel",
-                                    "6. I consider that my life is full of good things",
-                                    "7. My hobbies are still important to me"
-                                  ]
-               }
+                }
         }
     

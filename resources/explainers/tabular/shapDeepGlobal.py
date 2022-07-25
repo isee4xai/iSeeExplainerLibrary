@@ -33,7 +33,7 @@ class ShapDeepGlobal(Resource):
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
         #getting params from request
-        index=None
+        index=1
         if "output_index" in params_json:
             index=params_json["output_index"];
 
@@ -60,7 +60,7 @@ class ShapDeepGlobal(Resource):
         explainer = shap.DeepExplainer(model,dataframe.to_numpy())
         shap_values = explainer.shap_values(dataframe.to_numpy())
         
-        if(len(np.array(shap_values).shape)==3 and index!=None): #multiclass shape: (#_of_classes, #_of_instances,#_of_features)
+        if(len(np.array(shap_values).shape)==3): #multiclass shape: (#_of_classes, #_of_instances,#_of_features)
             shap_values=shap_values[index]
            
         #plotting
@@ -85,11 +85,9 @@ class ShapDeepGlobal(Resource):
         "_method_description": "This explaining method displays the average contribution of each attribute for the whole training dataset based on Shapley values (for TensorFlow/Keras models only). This method accepts 2 arguments: " 
                            "the 'id', and the 'params' JSON with the configuration parameters of the method. "
                            "These arguments are described below.",
-
         "id": "Identifier of the ML model that was stored locally.",
-
         "params": { 
-                "output_index": "(Optional) Integer representing the index of the class to be explained. Ignore for regression models. If not provided, an aggregated plot displaying all the classes will be generated.",
+                "output_index": "(Optional) Integer representing the index of the class to be explained. Ignore for regression models. Defaults to class 1.",
                 }
   
         }

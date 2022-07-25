@@ -28,7 +28,10 @@ class Ale(Resource):
         
         _id = args.get("id")
         url = args.get("url")
-        params_json = json.loads(args.get("params"))
+        params=args.get("params")
+        params_json={}
+        if(params !=None):
+            params_json = json.loads(params)
         
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
