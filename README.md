@@ -39,7 +39,7 @@ If the server was launched successfully, a similar message to the one in the ima
     
 ![Screenshot (119)](https://user-images.githubusercontent.com/71895708/174871434-d57e4d63-ef2a-4513-8deb-8672e1815cb6.png)
     
-3) To execute the methods and get actual explanations, we have to make a POST request. To do so, change the request type to POST and go to *Body > form-data*. Here is where we specify the required parameters, such as the *id*, *url*, and the *params* object. These parameters are explained in greater detail below in the section *About the parameters*. In this example, I am using the psychology model available at the Models folder. The only parameter passed in this case was the *id*.
+3) To execute the methods and get actual explanations, we have to make a POST request. To do so, change the request type to POST and go to *Body > form-data*. Here is where we specify the required parameters, such as the *id*, *url*, and the *params* object. These parameters are explained in greater detail below in the section *About the parameters*. In this example, I am using the psychology model available in the Models folder. The only parameter passed in this case was the *id*.
 ![Screenshot (157)](https://user-images.githubusercontent.com/71895708/174874200-d99fa678-42ae-4355-9448-53fda3901a87.png)
 
 #### Visualizing Explanations
@@ -48,7 +48,7 @@ The responses to the HTTP requests are given in JSON format. However, most of th
 
 1) To visualize these explanations, click on the URL in the response. It will open a new request tab with the specified URL.
 2) Go to *Headers* and disable the *Accept* attribute.
-3) Add a new header with the same name, *Accept*, as key and specify the value according to the type of file you are trying to access. For .png files, specify *image/png*. For .html files, specify *text/html*. Finally, send the request.
+3) Add a new header with the same name, *Accept*, as a key and specify the value according to the type of file you are trying to access. For .png files, specify *image/png*. For .html files, specify *text/html*. Finally, send the request.
     
 ![Screenshot (158)](https://user-images.githubusercontent.com/71895708/174875691-fe9509e0-8281-4890-953b-7d88c5e87a69.png)
 
@@ -56,26 +56,88 @@ The responses to the HTTP requests are given in JSON format. However, most of th
 
 The required parameters may be different depending on the explainer, so it is recommended to see the documentation provided by the get method of the explainer being used.
 
-- **id**: the *id* is a 10-character long string composed of letters and/or numbers. It is used to access the server space dedicated to the model to be explained. This space is a folder with the same name of the id located in the *Models* folder. This folder is created by the "Model AI Library" when a user uploads a model file (or an external URL), the training data (if required), and specific information about the model:
+- **id**: the *id* is a 10-character long string composed of letters and/or numbers. It is used to access the server space dedicated to the model to be explained. This space is a folder with the same name as the id located in the *Models* folder. This folder is created by the "Model AI Library" when a user uploads a model file (or an external URL), the training data (if required), and specific information about the model:
 	- _Model File_: The trained prediction model given as a compressed file. The extension must match the backend being used i.e. a .pkl file for Scikit-learn (use Joblib library), .pt for PyTorch, or .h5 for TensorFlow models. For models with different backends, it is possible to upload a .pkl, but it is necessary that the prediction function of the model is called 'predict'. 
 	- _Data File_: Pandas DataFrame containing the training data given as a .pkl file (use Joblib library). The target class must be the last column of the DataFrame. Only needed for tabular data models.
 	- _Model Info_: JSON file containing the characteristics of the model. Some characteristics must be always specified, such as the backend of the model. Others are optional, such as the names of the features for tabular data, the categorical features, the labels of the output classes, etc. Please refer to the [model_info_attributes.txt](model_info_attributes.txt) file to see the currently defined attributes.
 
-	**Note:** Regardless of the provided files, **all the methods require an id to be provided**.
+	**Note:** Regardless of the uploaded files, **all the methods require an id to be provided**.
 
-- **url**: External URL of the prediction function passed as a string. This parameter provides an alternative when the model owners do not want to upload the model file and the explanation method is able to work with a prediction function instead of a model object. **The URL is ignored if a model file was uploaded to the server**. This related server must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance). Refer to the _External URLs Examples folder_ if you want to quickly create a service using Flask to provide this method.
+- **url**: External URL of the prediction function passed as a string. This parameter provides an alternative when the model owners do not want to upload the model file and the explanation method is able to work with a prediction function instead of a model object. **The URL is ignored if a model file was uploaded to the server**. This related server must be able to handle a POST request receiving a multi-dimensional array of N data points as inputs (instances represented as arrays). It must return an array of N outputs (predictions for each instance). Refer to the _External URLs Examples folder_ if you want to quickly create a service using Flask to provide this method. Please see the example in the section below.
 
-- **instance**: This is a mandatory attribute for local methods, as it is the instance that will be explained. It is an array containing the feature values (must be in the same order that the model expects). For images, it is a matrix representing the pixels. It is also possible for image explainers to pass a file instead of the matrix using the parameter "image".
+- **instance**: This is a mandatory attribute for local methods, as it is the instance that will be explained. It is an array containing the feature values (which must be in the same order that the model expects). For images, it is a matrix representing the pixels. It is also possible for image explainers to pass a file instead of the matrix using the parameter "image".
 
-- **params**: dictionary with the specific configuration parameters passed to the explanation method. These parameters are optional and depend on the method being used. Refer to the documentation of each method to know the configruation parameters that can be provided.
+- **params**: dictionary with the specific configuration parameters passed to the explanation method. These parameters are optional and depend on the method being used. Refer to the documentation of each method to know the configuration parameters that can be provided.
 
+## Getting Explanations Using External URLs Models
 
+In some cases, uploading a model file to the server is not desired by the user or simply not possible. Some explanation methods provide an alternative, as they only need access to the prediction function of the model. The prediction function can be easily wrapped as an HTTP POST method so that the explainers can access the prediction function by making requests to a server administered by the user. However, the implementation of the POST method must attain the expected format:
 
-## Adding new explainers to the catalogue
+- **The POST method must receive a parameter named "inputs" and return an array with the predictions**. The format of the "inputs" parameter, as well as the output, must be as follows:
+
+  - For Tabular and Text models:
+  	- For Regression Models:
+		- inputs: array of shape *(n, f)* where *n* is the number of instances and *f* is the number of features.
+		- output: array of shape *(n,)* where *n* is the number of instances. Contains the predicted value for each instance.
+	- For Classification Models:
+		- inputs: array of shape *(n, f)* where *n* is the number of instances and *f* is the number of features. Contains the predicted probabilities of each class for each instance.
+
+  - For Image models: 
+  	- inputs: Array of shape *(n, h, w)* for black and white images, and shape *(n, h, w, 3)* for RGB images, where *n* is the number of images, *h* the pixel height, and *w* the pixel width.
+	- output: array of shape *(n, c)* where *n* is the number of instances and *c* is the number of classes. Contains the predicted probabilities of each class for each image.
+	
+Notice that if you are using a model from Tensorflow or Scikit-learn, the *predict* or *predict_proba* function of your model already matches this format. If you have models from different architectures, some additional wrapping code may be necessary to comply with this format.
+
+For illustration purposes, we will implement the POST method with Flask using the psychology model. Example implementations of external URL prediction functions are available in the *External_URLs* folder.
+
+**1)** If you are testing locally, launch the explainer libraries server as described before. 
+
+**2)** For the server logic, load the previously trained model first. Then define the POST method and add the inputs parameter to the parser. Load the contents of the inputs parameter and pass them to the prediction function of your model. We use the predict_proba function, as the psychology model is a scikit-learn classifier. Finally, specify the path for the method by adding it to the API. **Note**: if you are testing locally, make sure to assign a different port from the explainer libraries server.
+
+```python
+import sys
+from flask import Flask
+from flask_restful import Api,Resource,reqparse
+import numpy as np
+import json
+import joblib
+
+cli = sys.modules['flask.cli']
+cli.show_server_banner = lambda *x: None
+app = Flask(__name__)
+api = Api(app)
+
+#Load the model
+model = joblib.load("PSYCHOLOGY.pkl")
+
+class Predict(Resource):
+   
+    def post(self):
+        #Add the 'inputs' argument
+        parser = reqparse.RequestParser()
+        parser.add_argument("inputs", required=True)
+        args = parser.parse_args()
+        
+        #Get the inputs and pass them to the prediction function
+        inputs = np.array(json.loads(args.get("inputs")))
+        return model.predict_proba(inputs).tolist()
+
+# Add the resource to the API
+api.add_resource(Predict, '/Predict')
+
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=5001)
+```
+
+**3)** Run the server and test the POST method by passing the *url* parameter to the explanation method. Remember that the url is ignored if a model file was uploaded to the server, so make sure no model file is present in the corresponding folder.
+
+![Screenshot (166)](https://user-images.githubusercontent.com/71895708/182601845-7051449b-1cc0-4fa3-8ba9-083831b58f23.png)
+
+## Adding New Explainers to the Catalogue
 
 **1)**	To add a new explainer, it is necessary to create a new Resource. First, go to the _resources/explainers_ folder and select the folder corresponding to the data type of the explainer you want to add (If your explainer works with a different data type, please add the corresponding folder to the resources folder). For illustration purposes, we will walk through the steps of adding a "new" explainer (LIME tabular).
 
-**2)**	Inside the appropriate folder, ***create a new .py file*** with the name of your explainer. In our case, we create the lime.py file  inside _resources/explainers/tabular/_ .
+**2)**	Inside the appropriate folder, ***create a new .py file*** with the name of your explainer. In our case, we create the lime.py file inside _resources/explainers/tabular/_ .
 
 **3)**	Create a class for the explainer. This class needs to have ***two different methods: post and get***. In our example:
 
@@ -90,7 +152,7 @@ class Lime(Resource):
 	def get(self):
 		return {}
 ```
-**4)**	In the **post method**, define the mandatory arguments that must be passed for the explainer to get an explanation. The method must receive at least and id to acess the folder related to the model. After parsing the arguments, use the function _get_model_files_, passing the id to fetch the model, data and info files. It is possible that some of these files do not exist, so make the appropriate checks before using them. The steps are generally to load the Dataframe with the training data if it exists, then getting the necessary attributes from the info file, getting the prediction function if possible, and finally getting the configuration parameters from the _params_ object.
+**4)**	In the **post method**, define the mandatory arguments that must be passed for the explainer to get an explanation. The method must receive at least an id to access the folder related to the model. After parsing the arguments, use the function _get_model_files_, passing the id to fetch the model, data, and info files. It is possible that some of these files do not exist, so make the appropriate checks before using them. The steps are generally to load the Dataframe with the training data if it exists, then get the necessary attributes from the info file, get the prediction function if possible, and finally get the configuration parameters from the _params_ object.
 
 ```python	
 class Lime(Resource):
@@ -107,7 +169,7 @@ def post(self):
         url = args.get("url")
         params_json = json.loads(args.get("params"))
         
-        ## Getting model info, data, and file from local repository
+        ## Getting model info, data, and file from the local repository
         model_file, model_info_file, data_file = get_model_files(_id)
 
         ## loading data
@@ -209,7 +271,7 @@ def post(self):
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
-               "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
+               "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return an array of N outputs (predictions for each instance).",
         "params": { 
                 "instance": "Array representing a row with the feature values of an instance not including the target class.",
                 "output_classes" : "(Optional) Array of ints representing the classes to be explained.",
