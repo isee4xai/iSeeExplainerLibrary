@@ -4,6 +4,7 @@ from flask import Flask, send_from_directory,request
 from flask_restful import Api
 
 from viewer import ViewExplanation
+from explainerslist import Explainers
 from resources.explainers.tabular.dicePublic import DicePublic 
 from resources.explainers.tabular.dicePrivate import DicePrivate
 from resources.explainers.tabular.lime import Lime
@@ -74,6 +75,7 @@ cli.show_server_banner = lambda *x: None
 app = Flask(__name__)
 api = Api(app)
 
+api.add_resource(Explainers,'/Explainers')
 api.add_resource(ViewExplanation, '/ViewExplanation/<string:filename>')
 api.add_resource(DicePublic, '/Tabular/DicePublic',resource_class_kwargs=path_dict)
 api.add_resource(DicePrivate, '/Tabular/DicePrivate',resource_class_kwargs=path_dict)
