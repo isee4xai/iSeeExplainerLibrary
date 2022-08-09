@@ -94,7 +94,7 @@ class AnchorsImage(Resource):
 
         threshold=0.95
         if "threshold" in params_json:
-            threshold= params_json["threshold"]
+            threshold= float(params_json["threshold"])
 
         explainer = AnchorImage(predic_func, image.shape, segmentation_fn=segmentation_fn)
         explanation = explainer.explain(image,threshold)

@@ -103,7 +103,7 @@ class GradCamTorch(Resource):
 
         aug_smooth=True
         if "aug_smooth" in params_json:
-            aug_smooth= params_json["aug_smooth"]
+            aug_smooth= bool(params_json["aug_smooth"])
 
         cam  = GradCAM(model=mlp,
                    target_layers=target_layers, use_cuda=torch.cuda.is_available())
@@ -130,9 +130,9 @@ class GradCamTorch(Resource):
         "instance": "Matrix representing the image to be explained.",
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
-                "target_layer_index": "(Optional) index of the target layer to be accessed. Provide it when you want to focus on a specific component of the target_layer."
-                                      "If not provided, the whole layer indicated in 'target_layer' will be used.",
-                "target_class": "(Optional) Integer representing the index of the target class to generate the explanation. If not provided, defaults to the class with the highest predicted probability",
+                "target_layer_index": "(Optional) index of the target layer to be accessed. Provide it when you want to focus on a specific component of the target layer."
+                                      "If not provided, the whole layer specified as target when uploading the model will be used.",
+                "target_class": "(Optional) Integer representing the index of the target class to generate the explanation. If not provided, defaults to the class with the highest predicted probability.",
                 "aug_smooth": "(Optional) Boolean indicating whether to apply augmentation smoothing (defaults to True). This has the effect of better centering the CAM around the objects. However, it increases the run time by x6."
                 }
 

@@ -70,15 +70,13 @@ class LimeText(Resource):
      
         # Create explainer
         explainer = lime.lime_text.LimeTextExplainer(class_names=output_names)
-
         kwargsData2 = dict(labels=(1,), top_labels=None, num_features=None)
-
         if "output_classes" in params_json:
-            kwargsData2["labels"] = params_json["output_classes"]  #labels
+            kwargsData2["labels"] = json.loads(params_json["output_classes"]) if isinstance(params_json["output_classes"],str) else params_json["output_classes"]  #labels
         if "top_classes" in params_json:
-            kwargsData2["top_labels"] = params_json["top_classes"]   #top labels
+            kwargsData2["top_labels"] = int(params_json["top_classes"])   #top labels
         if "num_features" in params_json:
-            kwargsData2["num_features"] = params_json["num_features"]
+            kwargsData2["num_features"] = int(params_json["num_features"])
 
         explanation = explainer.explain_instance(instance, predic_func, **{k: v for k, v in kwargsData2.items() if v is not None}) 
         
