@@ -90,7 +90,7 @@ class LimeImage(Resource):
         
         kwargsData = dict(top_labels=3,segmentation_fn=None)
         if "top_classes" in params_json:
-            kwargsData["top_labels"] = params_json["top_classes"]   #top labels
+            kwargsData["top_labels"] = int(params_json["top_classes"])   #top labels
         if "segmentation_fn" in params_json:
             kwargsData["segmentation_fn"] = SegmentationAlgorithm(params_json["segmentation_fn"])
         

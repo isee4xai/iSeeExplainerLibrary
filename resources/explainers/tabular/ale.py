@@ -78,7 +78,7 @@ class Ale(Resource):
         #getting params from request
         kwargsData2 = dict(features=None)
         if "features_to_show" in params_json:
-            kwargsData2["features"] = params_json["features_to_show"]
+            kwargsData2["features"] = json.loads(params_json["features_to_show"]) if isinstance(params_json["features_to_show"],str) else params_json["features_to_show"]
 
 
         proba_ale_lr = ALE(predic_func, **{k: v for k, v in kwargsData.items()})
@@ -110,7 +110,7 @@ class Ale(Resource):
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
-                "features_to_show": "(Optional) Array of ints representing the indices of the features to be explained. Defaults to all features"
+                "features_to_show": "(Optional) Array of ints representing the indices of the features to be explained. Defaults to all features."
                 }
         }
     

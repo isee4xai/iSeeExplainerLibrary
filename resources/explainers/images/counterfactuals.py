@@ -93,7 +93,7 @@ class CounterfactualsImage(Resource):
 
         kwargsData = dict(target_proba=None,target_class='other')
         if "target_proba" in params_json:
-             kwargsData["target_proba"] = params_json["target_proba"]
+             kwargsData["target_proba"] = float(params_json["target_proba"])
         if "target_class" in params_json:
              kwargsData["target_class"] = params_json["target_class"]
 

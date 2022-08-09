@@ -48,7 +48,7 @@ class ShapKernelLocal(Resource):
         index=1
         plot_type=None
         if "output_index" in params_json:
-            index=params_json["output_index"]
+            index=int(params_json["output_index"])
         if "plot_type" in params_json:
             plot_type=params_json["plot_type"];
 
