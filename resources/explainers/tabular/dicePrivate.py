@@ -36,12 +36,18 @@ class DicePrivate(Resource):
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
         outcome_name="Target"
+        type_and_precision=None
+        mad=None
         if "target_name" in model_info:
             outcome_name = model_info["target_name"]
         try:
             features = model_info["features"]
         except:
             raise Exception("The dataset \"features\" field was not specified.")
+        if "type_and_precision" in model_info:
+            type_and_precision = model_info["type_and_precision"]
+        if "mad" in model_info:
+            mad = model_info["mad"]
 
         ##converting instance to dictionary
         instance=dict(zip(features.keys(), instance))
@@ -56,19 +62,14 @@ class DicePrivate(Resource):
 
 
 
-        kwargsData = dict(features=features, outcome_name=outcome_name, type_and_precision=None, mad=None)
-        if "type_and_precision" in params_json:
-            kwargsData["type_and_precision"] = params_json["type_and_precision"]
-        if "mad" in params_json:
-            kwargsData["mad"] = params_json["mad"]
-
+        kwargsData = dict(features=features, outcome_name=outcome_name, type_and_precision=type_and_precision, mad=mad)
         kwargsData2 = dict(desired_class=1,total_CFs=3)
         if "num_cfs" in params_json:
-           kwargsData2["total_CFs"] = params_json["num_cfs"]
+           kwargsData2["total_CFs"] = int(params_json["num_cfs"])
         if "desired_class" in params_json:
-           kwargsData2["desired_class"] = params_json["desired_class"]
+           kwargsData2["desired_class"] = params_json["desired_class"] if params_json["desired_class"]=="opposite" else int(params_json["desired_class"])
         if "features_to_vary" in params_json:
-           kwargsData2["features_to_vary"] = params_json["features_to_vary"]
+           kwargsData2["features_to_vary"] = params_json["features_to_vary"] if params_json["features_to_vary"]=="all" else json.loads(params_json["features_to_vary"])
 
         # Create data
         d = dice_ml.Data(**{k: v for k, v in kwargsData.items() if v is not None})
@@ -125,8 +126,7 @@ class DicePrivate(Resource):
                 "features_to_vary": "(optional) Either a string 'all' or a list of strings representing the feature names to vary. Defaults to all features.",
                 "num_cfs": "(optional) number of counterfactuals to be generated for each instance.",
                 "method": "(optional) The method used for counterfactual generation. The supported methods for private data are: 'random' (random sampling) and 'genetic' (genetic algorithms). Defaults to 'random'.",
-                "type_and_precision": "(optional) JSON object with continuous feature names as keys. If the feature is of type int, the value should be the string 'int'. If the feature is of type float, an array of two values is expected, containing the string 'float', and the precision.",
-                "mad": "(optional) JSON with feature names as keys and corresponding Median Absolute Deviation.",
+               
                 },
 
         "params_example":{
@@ -134,8 +134,7 @@ class DicePrivate(Resource):
                 "features_to_vary": "all",
                 "desired_class": 0,
                 "num_cfs": 3,
-                "method": "random",
-                "type_and_precision": {"Height": ["float",1], "Weight": "int"}
+                "method": "random"
 
                }
         }

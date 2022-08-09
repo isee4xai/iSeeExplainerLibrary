@@ -56,17 +56,17 @@ class DicePublic(Resource):
         ## params from the request
         kwargsData = dict(continuous_features=cont_features, outcome_name=dataframe.columns[-1])
         if "permitted_range" in params_json:
-           kwargsData["permitted_range"] = params_json["permitted_range"]
+           kwargsData["permitted_range"] = json.loads(params_json["permitted_range"]) if isinstance(params_json["permitted_range"],str) else params_json["permitted_range"]
         if "continuous_features_precision" in params_json:
-           kwargsData["continuous_features_precision"] = params_json["continuous_features_precision"]
+           kwargsData["continuous_features_precision"] = json.loads(params_json["continuous_features_precision"]) if isinstance(params_json["continuous_features_precision"],str) else params_json["continuous_features_precision"]
 
         kwargsData2 = dict(desired_class=1,total_CFs=3)
         if "num_cfs" in params_json:
-           kwargsData2["total_CFs"] = params_json["num_cfs"]
+           kwargsData2["total_CFs"] = int(params_json["num_cfs"])
         if "desired_class" in params_json:
-           kwargsData2["desired_class"] = params_json["desired_class"]
+           kwargsData2["desired_class"] = params_json["desired_class"] if params_json["desired_class"]=="opposite" else int(params_json["desired_class"])
         if "features_to_vary" in params_json:
-           kwargsData2["features_to_vary"] = params_json["features_to_vary"]
+           kwargsData2["features_to_vary"] = params_json["features_to_vary"] if params_json["features_to_vary"]=="all" else json.loads(params_json["features_to_vary"])
 
         # Create data
         d = dice_ml.Data(dataframe=dataframe, **{k: v for k, v in kwargsData.items() if v is not None})

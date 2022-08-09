@@ -33,7 +33,7 @@ class ShapTreeGlobal(Resource):
         #getting params from request
         index=1
         if "output_index" in params_json:
-            index=params_json["output_index"];
+            index=int(params_json["output_index"]);
 
 
         #getting params from info

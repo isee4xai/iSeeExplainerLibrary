@@ -53,7 +53,7 @@ class Importance(Resource):
         ## params from the request
         kwargsData = dict()
         if "variables" in params_json:
-            kwargsData["variables"] = params_json["variables"]
+            kwargsData["variables"] = json.loads(params_json["variables"]) if isinstance(params_json["variables"],str) else params_json["variables"]
        
         explainer = dx.Explainer(model, dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False), dataframe.iloc[:,-1:],model_type=model_task)
         parts = explainer.model_parts(**{k: v for k, v in kwargsData.items()})

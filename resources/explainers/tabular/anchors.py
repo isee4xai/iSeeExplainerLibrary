@@ -79,7 +79,7 @@ class Anchors(Resource):
         #getting params from request
         kwargsData2 = dict(threshold=0.95)
         if "threshold" in params_json:
-            kwargsData2["threshold"] = params_json["threshold"]
+            kwargsData2["threshold"] = float(params_json["threshold"])
 
         # Create data
         explainer = AnchorTabular(predic_func, **{k: v for k, v in kwargsData.items()})
