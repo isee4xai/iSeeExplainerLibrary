@@ -2,7 +2,7 @@ import sys
 import os
 from flask import Flask, send_from_directory,request
 from flask_restful import Api
-
+from flask_cors import CORS, cross_origin
 from viewer import ViewExplanation
 from explainerslist import Explainers
 from resources.explainers.tabular.dicePublic import DicePublic 
@@ -73,8 +73,9 @@ path_dict={"model_folder":MODEL_FOLDER,"upload_folder":UPLOAD_FOLDER}
 cli = sys.modules['flask.cli']
 cli.show_server_banner = lambda *x: None
 app = Flask(__name__)
+app.config['CORS_HEADERS'] = 'Content-Type'
+cors = CORS(app)
 api = Api(app)
-
 api.add_resource(Explainers,'/Explainers')
 api.add_resource(ViewExplanation, '/ViewExplanation/<string:filename>')
 api.add_resource(DicePublic, '/Tabular/DicePublic',resource_class_kwargs=path_dict)
