@@ -4,7 +4,24 @@
 
 This quick guide illustrates how to launch the Flask server and make requests to any of the explanation methods in the API using Postman. 
 
-#### Launching the Server
+#### Launching with Docker
+
+1) Clone the repository.
+
+2) From the root folder, build the Docker image.
+
+```
+docker build --tag explainerlibraries .
+```
+
+3) Run the container.
+
+```
+docker run -p 5000:5000 --name explainerlibrariescont explainerlibraries
+```
+
+
+#### Launching with Python
 
 1) Clone the repository.
 
