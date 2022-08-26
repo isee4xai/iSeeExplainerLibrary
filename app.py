@@ -17,6 +17,7 @@ from resources.explainers.tabular.shapDeepGlobal import ShapDeepGlobal
 from resources.explainers.tabular.anchors import Anchors
 from resources.explainers.tabular.ale import Ale
 from resources.explainers.tabular.importance import Importance
+from resources.explainers.tabular.discern import DisCERN
 from resources.explainers.images.lime import LimeImage
 from resources.explainers.images.anchors import AnchorsImage
 from resources.explainers.images.counterfactuals import CounterfactualsImage
@@ -90,6 +91,7 @@ api.add_resource(ShapDeepGlobal, '/Tabular/DeepSHAPGlobal',resource_class_kwargs
 api.add_resource(Anchors, '/Tabular/Anchors',resource_class_kwargs=path_dict)
 api.add_resource(Ale, '/Tabular/ALE',resource_class_kwargs=path_dict)
 api.add_resource(Importance, '/Tabular/Importance',resource_class_kwargs=path_dict)
+api.add_resource(DisCERN, '/Tabular/DisCERN',resource_class_kwargs=path_dict)
 api.add_resource(LimeImage, '/Images/LIME',resource_class_kwargs=path_dict)
 api.add_resource(AnchorsImage, '/Images/Anchors',resource_class_kwargs=path_dict)
 api.add_resource(CounterfactualsImage, '/Images/Counterfactuals',resource_class_kwargs=path_dict)
