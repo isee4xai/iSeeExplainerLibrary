@@ -298,7 +298,7 @@ def post(self):
 
         }
 ```
-**7)** Lastly, add the class as a resource and specify its route in the _app.py_ file. In our example:
+**7)** Lastly, add the class as a resource and specify its route in the _app.py_ and in the _explainerslist.py_ files. In our example:
 
 ```python
 from resources.explainers.tabular.lime import Lime
