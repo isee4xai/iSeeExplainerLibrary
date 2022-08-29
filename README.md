@@ -105,7 +105,6 @@ In some cases, uploading a model file to the server is not desired by the user o
 	
 Notice that if you are using a model from Tensorflow or Scikit-learn, the *predict* or *predict_proba* function of your model already matches this format. If you have models from different architectures, some additional wrapping code may be necessary to comply with this format.
 
-## Adding New Explainers to the Catalogue
 For illustration purposes, we will implement the POST method with Flask using the psychology model. Example implementations of external URL prediction functions are available in the *External_URLs* folder.
 
 **1)** If you are testing locally, launch the explainer libraries server as described before. 
