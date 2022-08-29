@@ -169,35 +169,39 @@ class Lime(Resource):
 	def get(self):
 		return {}
 ```
-**4)**	In the **post method**, define the mandatory arguments that must be passed for the explainer to get an explanation. The method must receive at least an id to access the folder related to the model. After parsing the arguments, use the function _get_model_files_, passing the id to fetch the model, data, and info files. It is possible that some of these files do not exist, so make the appropriate checks before using them. The steps are generally to load the Dataframe with the training data if it exists, then get the necessary attributes from the info file, get the prediction function if possible, and finally get the configuration parameters from the _params_ object.
+**4)**	In the **post method**, define the mandatory arguments that must be passed for the explainer to get an explanation. The method must receive at least an id to access the folder related to the model. After parsing the arguments, use the function _get_model_files_, passing the id to fetch the model, data, and info files. It is possible that some of these files do not exist, so make the appropriate checks before using them. Generally, the steps involve loading the Dataframe with the training data if it exists, then getting the necessary attributes from the info file, then getting the prediction function if possible, and finally getting the configuration parameters from the _params_ object.
 
 ```python	
 class Lime(Resource):
 
 def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("id",required=True)
-        parser.add_argument("url")
-        parser.add_argument('params',required=True)
+        parser.add_argument('id',required=True)
+        parser.add_argument('instance',required=True)
+        parser.add_argument('url')
+        parser.add_argument('params')
+        args = parser.parse_args()
         
-	## parsing arguments
-	args = parser.parse_args()
         _id = args.get("id")
         url = args.get("url")
-        params_json = json.loads(args.get("params"))
+        instance = json.loads(args.get("instance"))
+        params=args.get("params")
+        params_json={}
+        if(params !=None):
+            params_json = json.loads(params)
         
-        ## Getting model info, data, and file from the local repository
-        model_file, model_info_file, data_file = get_model_files(_id)
+        #Getting model info, data, and file from local repository
+        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
         ## loading data
         if data_file!=None:
-            dataframe = joblib.load(data_file) 
+            dataframe = joblib.load(data_file) ##error handling?
         else:
-            raise "The training data file was not provided."
+            raise Exception("The training data file was not provided.")
 
-        ## getting attributes from info
+        ##getting params from info
         model_info=json.load(model_info_file)
-        backend = model_info["backend"]  
+        backend = model_info["backend"]  ##error handling?
         kwargsData = dict(mode="classification", feature_names=None, categorical_features=None,categorical_names=None, class_names=None)
         if "model_task" in model_info:
             kwargsData["mode"] = model_info["model_task"]
@@ -231,17 +235,18 @@ def post(self):
                 return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
             predic_func=predict
         else:
-            raise "Either a stored model or a valid URL for the prediction function must be provided."
+            raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
 
-        ## getting parameters from params
-        instance = params_json["instance"]
+  
+        
+        #getting params from request
         kwargsData2 = dict(labels=(1,), top_labels=None, num_features=None)
-        if "output_classes" in params_json:
-            kwargsData2["labels"] = params_json["output_classes"]  #labels
+        if "output_classes" in params_json: #labels
+            kwargsData2["labels"] = json.loads(params_json["output_classes"]) if isinstance(params_json["output_classes"],str) else params_json["output_classes"]  
         if "top_classes" in params_json:
-            kwargsData2["top_labels"] = params_json["top_classes"]   #top labels
+            kwargsData2["top_labels"] = int(params_json["top_classes"])   #top labels
         if "num_features" in params_json:
-            kwargsData2["num_features"] = params_json["num_features"]
+            kwargsData2["num_features"] = int(params_json["num_features"])
 
 	...
 ```
@@ -281,22 +286,21 @@ def post(self):
 
 ```python
     def get(self):
-        return {
+                return {
         "_method_description": "LIME perturbs the input data samples in order to train a simple model that approximates the prediction for the given instance and similar ones. "
-                           "The explanation contains the weight of each attribute to the prediction value. This method accepts 3 arguments: " 
-                           "the 'id', the 'url',  and the 'params' JSON with the configuration parameters of the method. "
+                           "The explanation contains the weight of each attribute to the prediction value. This method accepts 4 arguments: " 
+                           "the 'id', the 'instance', the 'url'(optional),  and the 'params' dictionary (optiohnal) with the configuration parameters of the method. "
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
+        "instance": "Array representing a row with the feature values of an instance not including the target class.",
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
-               "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return an array of N outputs (predictions for each instance).",
+               "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
-                "instance": "Array representing a row with the feature values of an instance not including the target class.",
                 "output_classes" : "(Optional) Array of ints representing the classes to be explained.",
                 "top_classes": "(Optional) Int representing the number of classes with the highest prediction probability to be explained. Overrides 'output_classes' if provided.",
                 "num_features": "(Optional) Int representing the maximum number of features to be included in the explanation."
                 }
 
-        }
 ```
 **7)** Lastly, add the class as a resource and specify its route in the _app.py_ and in the _explainerslist.py_ files. In our example:
 
