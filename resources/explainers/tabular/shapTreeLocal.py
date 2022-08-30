@@ -3,6 +3,7 @@ import numpy as np
 import joblib
 import json
 import shap
+import xgboost
 from flask import request
 import matplotlib.pyplot as plt
 from saveinfo import save_file_info
