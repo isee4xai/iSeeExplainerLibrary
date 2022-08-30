@@ -3,6 +3,7 @@ import numpy as np
 import joblib
 import json
 import shap
+import xgboost
 from flask_restful import Resource,reqparse
 from flask import request
 from saveinfo import save_file_info
