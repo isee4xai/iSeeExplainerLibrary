@@ -20,5 +20,7 @@ class Explainers(Resource):
                     '/Images/Anchors',
                     '/Images/Counterfactuals',
                     '/Images/GradCamTorch',
-                    '/Text/LIME'
+                    '/Text/LIME',
+                    '/Tabular/DisCERN',
+                    '/Text/NLPClassifier'
                 ]

@@ -14,7 +14,7 @@ shap==0.41.0
 alibi==0.6.1
 dalex==1.4.1
 tensorflow==2.6.2
-torch==1.9.0
+torch==1.12.1
 html2image==2.0.1
 pillow==8.2.0
 matplotlib==3.3.4
@@ -22,5 +22,6 @@ kaleido==0.2.1
 grad-cam==1.3.9
 protobuf==3.20.*
 flask-cors==3.0.10
+git+https://github.com/isee4xai/NLPClassifierExplainer
 xgboost==1.6.1
 discern-xai==0.0.23
