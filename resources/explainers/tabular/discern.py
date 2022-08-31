@@ -6,39 +6,47 @@ from getmodelfiles import get_model_files
 from saveinfo import save_file_info
 import joblib
 from html2image import Html2Image
-import h5py
-import tensorflow as tf
-import torch
 from flask import request
-
-import discern.discern_tabular
+from discern import discern_tabular
 
 class DisCERN(Resource):
+
+    def __init__(self,model_folder,upload_folder):
+        self.model_folder = model_folder
+        self.upload_folder = upload_folder
 
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument("id", required=True)
-        parser.add_argument("params",required=True)
+        parser.add_argument("instance", required=True)
+        parser.add_argument("params")
 
         #parsing args
         args = parser.parse_args()
         _id = args.get("id")
         params=args.get("params")
-        params_json=json.loads(params)
+        instance = json.loads(args.get("instance"))
+        params=args.get("params")
+        params_json={}
+        if(params!=None):
+            params_json = json.loads(params)
         
         #Getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id)
+        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
         outcome_name="Target"
+        categorical_features=[]
         if "target_name" in model_info:
             outcome_name = model_info["target_name"]
         try:
-            features = model_info["features"]
+            feature_names = model_info["feature_names"]
         except:
             raise "The dataset \"features\" field was not specified."
+        if "categorical_features" in model_info:
+            categorical_features = model_info["categorical_features"]
       
         ## loading model
         # if backend=="TF1" or backend=="TF2":
@@ -64,24 +72,30 @@ class DisCERN(Resource):
         ## loading data
         dataframe = joblib.load(data_file)
 
-        try:
-            instance = params_json["instance"]
-        except:
-            raise "No instance was provided in the params."
+        #getting params from request
+        desired_class='opposite'
+        feature_attribution_method='LIME'
+        attributed_instance='Q'
+        if "desired_class" in params_json:
+            desired_class = params_json["desired_class"] if params_json["desired_class"]=="opposite" else int(params_json["desired_class"])
+        if "feature_attribution_method" in params_json: 
+            feature_attribution_method = params_json["feature_attribution_method"]  
+        if "attributed_instance" in params_json:
+            attributed_instance = params_json["attributed_instance"]
 
         ## init discern
-        discern = discern.discern_tabular.DisCERNTabular(mlp, params_json["feature_attribution_method"], params_json["attributed_instance"])    
+        discern_obj = discern_tabular.DisCERNTabular(mlp, feature_attribution_method, attributed_instance)    
         dataframe_features = dataframe.loc[:, dataframe.columns != outcome_name].values
         dataframe_labels = dataframe[outcome_name].values
-        target_values = dataframe[outcome_name].unique()
-        discern.init_data(dataframe_features, dataframe_labels, features, target_values)
+        target_values = dataframe[outcome_name].unique().tolist()
+        discern_obj.init_data(dataframe_features, dataframe_labels, feature_names, target_values,**{'cat_feature_indices':categorical_features})
 
-        cf, s, p = discern.find_cf(instance, mlp.predict([instance])[0])
+        cf, s, p = discern_obj.find_cf(instance, mlp.predict([instance])[0],desired_class)
 
-        result_df = pd.DataFrame(np.array([instance, cf]), columns=features)
+        result_df = pd.DataFrame(np.array([instance, cf]), columns=feature_names)
 
         #saving
-        upload_folder, filename, getcall = save_file_info(request.path)
+        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         str_html= result_df.to_html()+'<br>'
         
         file = open(upload_folder+filename+".html", "w")
@@ -97,22 +111,22 @@ class DisCERN(Resource):
 
     def get(self):
         return {
-        "_method_description": "Generates a counterfactual. Requires 2 arguments: " 
-                           "the 'id' string, and the 'params' object containing the configuration parameters of the explainer."
+        "_method_description": "Generates a counterfactual. Requires 3 arguments: " 
+                           "the 'id' string, the 'instance' to be explained, and the 'params' object containing the configuration parameters of the explainer."
                            " These arguments are described below.",
 
         "id": "Identifier of the ML model that was stored locally.",
-
+        "instance": "Array of feature values of the instance to be explained.",
         "params": { 
-                "instance": "Array of feature values of the instance",
-                "desired_class": "Integer representing the index of the desired counterfactual class, or 'opposite' in the case of binary classification.",
-                "feature_attribution_method": "Feature attribution method used for obtaining feature weights; currently supports LIME, SHAP and Integrated Gradients",
-                "attributed_instance": "Indicate on which instance to use feature attribution: Q for query or N for NUN"},
+                
+                "desired_class": "Integer representing the index of the desired counterfactual class, or 'opposite' in the case of binary classification. Defaults to 'opposite'.",
+                "feature_attribution_method": "Feature attribution method used for obtaining feature weights; currently supports LIME, SHAP and Integrated Gradients. Defaults to LIME.",
+                "attributed_instance": "Indicate on which instance to use feature attribution: Q for query or N for NUN. Defaults to Q."},
 
         "params_example":{
-                "instance": {180, 78, 0.2},
+                "instance": [180, 78, 0.2],
                 "desired_class": 'opposite',
-                "feature_attribution_method": "LIME",
+                "feature_attribution_method": 'LIME',
                 "attributed_instance": 'Q'},    
         }
 
