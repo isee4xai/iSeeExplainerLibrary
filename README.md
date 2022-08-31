@@ -156,20 +156,26 @@ if __name__ == '__main__':
 
 **2)**	Inside the appropriate folder, ***create a new .py file*** with the name of your explainer. In our case, we create the lime.py file inside _resources/explainers/tabular/_ .
 
-**3)**	Create a class for the explainer. This class needs to have ***two different methods: post and get***. In our example:
+**3)**	Create a class for the explainer. This class needs to have ***two different methods: post and get***. You may also need to add an **\_\_init\_\_** method to access the paths of the models and uploads folders. In our example:
 
 ```python
 from flask_restful import Resource
 
 class Lime(Resource):
 
+    	def __init__(self,model_folder,upload_folder):
+		self.model_folder = model_folder
+		self.upload_folder = upload_folder  
+	
 	def post(self):
 		return {}
 		
 	def get(self):
 		return {}
 ```
-**4)**	In the **post method**, define the mandatory arguments that must be passed for the explainer to get an explanation. The method must receive at least an id to access the folder related to the model. After parsing the arguments, use the function _get_model_files_, passing the id to fetch the model, data, and info files. It is possible that some of these files do not exist, so make the appropriate checks before using them. Generally, the steps involve loading the Dataframe with the training data if it exists, then getting the necessary attributes from the info file, then getting the prediction function if possible, and finally getting the configuration parameters from the _params_ object.
+
+
+**5)**	In the **post method**, define the mandatory arguments that must be passed for the explainer to get an explanation. The method must receive at least an id to access the folder related to the model. After parsing the arguments, use the function _get_model_files_, passing the id to fetch the model, data, and info files. It is possible that some of these files do not exist, so make the appropriate checks before using them. Generally, the steps involve loading the Dataframe with the training data if it exists, then getting the necessary attributes from the info file, then getting the prediction function if possible, and finally getting the configuration parameters from the _params_ object.
 
 ```python	
 class Lime(Resource):
@@ -250,7 +256,7 @@ def post(self):
 
 	...
 ```
-**5)** Add the actual code for the generation of the explanation to the post method. This depends entirely on the explanation method being used. Once the explanation has been created, convert it to a JSON format if necessary. If the explanation is returned as an html or png file, use the save_file_info function to get the upload folder path, the name that will be given to the file, and the url (getcall) that will be used to access the file. Save the file using this data and append the URL to the returned JSON. **Note:** the URL to access the file returned by save_file_info does not include the extension of the file, so it is necessary to append it at the end as it is shown in the example.
+**6)** Add the actual code for the generation of the explanation to the post method. This depends entirely on the explanation method being used. Once the explanation has been created, convert it to a JSON format if necessary. If the explanation is returned as an html or png file, use the save_file_info function to get the upload folder path, the name that will be given to the file, and the url (getcall) that will be used to access the file. Save the file using this data and append the URL to the returned JSON. **Note:** the URL to access the file returned by save_file_info does not include the extension of the file, so it is necessary to append it at the end as it is shown in the example.
 
 ```python	
 class Lime(Resource):
@@ -282,7 +288,7 @@ def post(self):
         response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":ret}
         return response
 ```
-**6)** For the get method, return a dictionary that serves as documentation for the explainer that is being implemented. In our implementations, we include a brief description of the explainer method and the parameters to the request, as well as the configuration parameters that should be passed in the _params_ dictionary. If necessary, we also include an example of the _params_ object. For example, for the Tabular/LIME implementation:
+**7)** For the get method, return a dictionary that serves as documentation for the explainer that is being implemented. In our implementations, we include a brief description of the explainer method and the parameters to the request, as well as the configuration parameters that should be passed in the _params_ dictionary. If necessary, we also include an example of the _params_ object. For example, for the Tabular/LIME implementation:
 
 ```python
     def get(self):
@@ -302,7 +308,7 @@ def post(self):
                 }
 
 ```
-**7)** Lastly, add the class as a resource and specify its route in the _app.py_ and in the _explainerslist.py_ files. In our example:
+**8)** Lastly, add the class as a resource and specify its route in the _app.py_ and in the _explainerslist.py_ files. In our example:
 
 ```python
 from resources.explainers.tabular.lime import Lime
