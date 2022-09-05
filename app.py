@@ -1,6 +1,8 @@
 import sys
 import os
-from flask import Flask, send_from_directory,request
+import markdown
+import markdown.extensions.fenced_code
+from flask import Flask, send_from_directory
 from flask_restful import Api
 from flask_cors import CORS, cross_origin
 from viewer import ViewExplanation
@@ -112,5 +114,13 @@ def output_file_html(data, code, headers):
     data["filename"],mimetype="text/html",as_attachment=True)
     return response
 
+@app.route("/")
+def index():
+    readme_file = open('README.md', 'r')
+    md_template_string = markdown.markdown(readme_file.read(), extensions=["fenced_code"])
+
+    return md_template_string
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
+
