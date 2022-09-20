@@ -111,12 +111,14 @@ def output_file_png(data, code, headers):
 
 @api.representation('text/html')
 def output_file_html(data, code, headers):
-    if isinstance(data,list):
-        response = make_response(json.dumps(data), code)
-        response.headers.extend(headers or {})
-    else:
+    print(data)
+    if isinstance(data,dict) and "filename" in data:
         response = send_from_directory(UPLOAD_FOLDER,
         data["filename"],mimetype="text/html",as_attachment=True)
+    else:
+        response = make_response(json.dumps(data), code)
+        response.headers.extend(headers or {})
+        
     return response
 
 @app.route("/")
@@ -127,5 +129,3 @@ def index():
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
-
-
