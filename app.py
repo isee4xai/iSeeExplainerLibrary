@@ -111,14 +111,12 @@ def output_file_png(data, code, headers):
 
 @api.representation('text/html')
 def output_file_html(data, code, headers):
-    print(data)
     if isinstance(data,dict) and "filename" in data:
         response = send_from_directory(UPLOAD_FOLDER,
         data["filename"],mimetype="text/html",as_attachment=True)
     else:
         response = make_response(json.dumps(data), code)
         response.headers.extend(headers or {})
-        
     return response
 
 @app.route("/")
