@@ -1,8 +1,9 @@
 import sys
 import os
+import json
 import markdown
 import markdown.extensions.fenced_code
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, make_response
 from flask_restful import Api
 from flask_cors import CORS, cross_origin
 from viewer import ViewExplanation
@@ -110,17 +111,21 @@ def output_file_png(data, code, headers):
 
 @api.representation('text/html')
 def output_file_html(data, code, headers):
-    response = send_from_directory(UPLOAD_FOLDER,
-    data["filename"],mimetype="text/html",as_attachment=True)
+    if isinstance(data,list):
+        response = make_response(json.dumps(data), code)
+        response.headers.extend(headers or {})
+    else:
+        response = send_from_directory(UPLOAD_FOLDER,
+        data["filename"],mimetype="text/html",as_attachment=True)
     return response
 
 @app.route("/")
 def index():
     readme_file = open('README.md', 'r')
     md_template_string = markdown.markdown(readme_file.read(), extensions=["fenced_code"])
-
     return md_template_string
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
+
 
