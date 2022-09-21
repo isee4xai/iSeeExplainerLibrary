@@ -78,7 +78,14 @@ The required parameters may be different depending on the explainer, so it is re
 	- _Data File_: Pandas DataFrame containing the training data given as a .pkl file (use Joblib library). The name of this file must be the id concatenates with the string "_data", i.e: PSYCHOLOGY_data.pkl. The target class must be the last column of the DataFrame. Currently, it is only needed for tabular data models.
 	- _Model Info_: JSON file containing the characteristics of the model, also referred to as model attributes. Some attributes ar mandatory, such as the backend of the model (in most cases). Others are optional, such as the names of the features for tabular data, the categorical features, the labels of the output classes, etc. Even though some of these attributes may be optional, they may considerably improve the quality of the explanation, mostly from a visualization point of view. Note that model attribues are *static*, they don't vary from execution to execution. Please refer to the [model_info_attributes.txt](model_info_attributes.txt) file to see the currently defined attributes among all the explainers available.
 
-	**Note:** Regardless of the uploaded files, **all the methods require an id to be provided. If you want to test a method with your own model, upload a folder containing the previously described files to the Models folder, assigning an id of your choice**. 
+	**Note:** Regardless of the uploaded files, **all the methods require an id to be provided. If you want to test a method with your own model, upload a folder containing the previously described files to the Models folder, assigning an id of your choice**. See the example below for a model with id "PSYCHOLOGY".
+	
+	
+	
+	<p align="center">
+  <img src="https://user-images.githubusercontent.com/71895708/191551057-2a043e68-51b0-4304-bace-4db6b9ba12d4.png"/>
+</p>
+
 
 - **url**: External URL of the prediction function passed as a string. This parameter provides an alternative when the model owners do not want to upload the model file and the explanation method is able to work with a prediction function instead of a model object. **The URL is ignored if a model file was uploaded to the server**. This related server must be able to handle a POST request receiving a multi-dimensional array of N data points as inputs (instances represented as arrays). It must return an array of N outputs (predictions for each instance). Refer to the _External URLs Examples folder_ if you want to quickly create a service using Flask to provide this method. Please see the example in the section below.
 
