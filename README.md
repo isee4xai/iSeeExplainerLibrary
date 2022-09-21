@@ -314,3 +314,15 @@ def post(self):
 from resources.explainers.tabular.lime import Lime
 api.add_resource(Lime, '/Tabular/LIME')
 ```
+
+## How to Collaborate to ExplainerLibraries
+
+**1)** Fork the repo and clone it to our local machine. 
+
+**2)** Create our own branch.
+
+**3)** Add the explainer file and make the necessary modifications.
+
+**4)** Launch the application locally and test the new explainer.
+
+**5)** Push the changes and create a pull request for review.
