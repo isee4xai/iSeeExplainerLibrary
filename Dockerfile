@@ -15,4 +15,4 @@ RUN apt update && apt-get install -y libgl1  libglib2.0-0
 COPY --from=builder /tmp/build/ /usr/local/lib/python3.8/site-packages/
 COPY . .
 
-CMD [ "python", "app.py"]
+CMD python app.py ${UPLOAD_FOLDER}
