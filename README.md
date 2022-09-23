@@ -333,3 +333,10 @@ api.add_resource(Lime, '/Tabular/LIME')
 **4)** Launch the application locally and test the new explainer.
 
 **5)** Push the changes and create a pull request for review.
+
+
+## How to raise an issue ?
+
+Please submit a GitHub issue with as much details as possible
+
+Thank you!
