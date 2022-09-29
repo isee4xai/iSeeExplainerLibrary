@@ -157,6 +157,20 @@ if __name__ == '__main__':
 
 ![Screenshot (166)](https://user-images.githubusercontent.com/71895708/182601845-7051449b-1cc0-4fa3-8ba9-083831b58f23.png)
 
+
+## How to Collaborate to ExplainerLibraries
+
+**1)** Fork the repo and clone it to our local machine. 
+
+**2)** Create our own branch.
+
+**3)** Add the explainer file and make the necessary modifications.
+
+**4)** Launch the application locally and test the new explainer.
+
+**5)** Push the changes and create a pull request for review.
+
+
 ## Adding New Explainers to the Catalogue
 
 **1)**	To add a new explainer, it is necessary to create a new Resource. First, go to the _resources/explainers_ folder and select the folder corresponding to the data type of the explainer you want to add (If your explainer works with a different data type, please add the corresponding folder to the resources folder). For illustration purposes, we will walk through the steps of adding a "new" explainer (LIME tabular).
@@ -322,21 +336,8 @@ from resources.explainers.tabular.lime import Lime
 api.add_resource(Lime, '/Tabular/LIME')
 ```
 
-## How to Collaborate to ExplainerLibraries
-
-**1)** Fork the repo and clone it to our local machine. 
-
-**2)** Create our own branch.
-
-**3)** Add the explainer file and make the necessary modifications.
-
-**4)** Launch the application locally and test the new explainer.
-
-**5)** Push the changes and create a pull request for review.
 
 
-## How to raise an issue ?
+## Found an Issue?
 
-Please submit a GitHub issue with as much details as possible
-
-Thank you!
+Please open a GitHub issue with as much detail as possible and we will try to fix it as soon as we can. Thank you!
