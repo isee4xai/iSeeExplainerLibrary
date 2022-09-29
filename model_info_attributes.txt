@@ -1,9 +1,9 @@
 Mandatory attributes:
 
-datatype => "Image", "Tabular", or "Text"
+alias => string with the name given to the model
 backend => "sklearn", "TF1", "TF2", "PYT", or "other"
 model_task => "classification", "regression", or "other"
-
+datatype => "Image", "Tabular", or "Text"
 
 For classification models:
 
