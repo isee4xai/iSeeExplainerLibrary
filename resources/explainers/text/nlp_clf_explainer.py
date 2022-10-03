@@ -28,12 +28,10 @@ class NLPClassifierExpl(Resource):
 
 
         #Getting model info, data, and file from local repository
-        model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
+        model_file, _, _ = get_model_files(_id,self.model_folder)
 
         NLP_model = NLPClassifier()
         NLP_model.load_model (model_file)
-        
-    
         explanation = NLP_model.explain(instance)
         
         return explanation
