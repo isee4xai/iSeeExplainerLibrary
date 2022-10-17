@@ -2,7 +2,7 @@
 
 ## Using the API with Postman
 
-This quick guide illustrates how to make requests to a local server or the deployed ExplanationLibraries server and executing the explanation methods in the API using Postman. 
+This quick guide illustrates how to make requests to the ExplanationLibraries server or to a local server, and executing the explanation methods in the API using Postman. 
 
 <!-- #### Launching with Docker
 
@@ -21,7 +21,15 @@ docker run -p 5000:5000 --name explainerlibrariescont explainerlibraries
 ```
 -->
 
+#### Using the ExplainerLibraries server via Run in Postman
+
+You can use our deployed server to test some example request in our public Postman collection. Simply click the button below and try some of the different requests as explained in the following sections.
+
+[![Run in Postman](https://run.pstmn.io/button.svg)](https://app.getpostman.com/run-collection/18308093-d7be39b5-d207-424e-a272-653f7379348b?action=collection%2Ffork&collection-url=entityId%3D18308093-d7be39b5-d207-424e-a272-653f7379348b%26entityType%3Dcollection%26workspaceId%3D47b431d6-44a4-4fba-a47e-760dfd1447ad)
+
 #### Launching with Python in your Local System
+
+If you are planning to add your own explainer methods to the library, you may want to test them by launching the server on your local machine. To launch the server locally, refer to the following steps:
 
 1) Clone the repository.
 
@@ -44,12 +52,6 @@ pip install -r requirements.txt
 ```console
 python app.py
 ```
-    
-#### Using the ExplainerLibraries server via Run in Postman
-
-You can also use our deployed server to test some example request in our public Postman collection. Simply click the button below and try some of the different requests as explained in the following sections.
-
-[![Run in Postman](https://run.pstmn.io/button.svg)](https://app.getpostman.com/run-collection/18308093-d7be39b5-d207-424e-a272-653f7379348b?action=collection%2Ffork&collection-url=entityId%3D18308093-d7be39b5-d207-424e-a272-653f7379348b%26entityType%3Dcollection%26workspaceId%3D47b431d6-44a4-4fba-a47e-760dfd1447ad)
 
 #### Making Requests
 
