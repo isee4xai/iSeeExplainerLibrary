@@ -117,7 +117,7 @@ class ShapKernelGlobal(Resource):
                            "These arguments are described below.",
 
         "id": "Identifier of the ML model that was stored locally.",
-        "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
+        "url": "External URL of the prediction function. Ignored if a model file was previously uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
                 "output_index": "(Optional) Integer representing the index of the class to be explained. Ignore for regression models. Defaults to class 1." 
