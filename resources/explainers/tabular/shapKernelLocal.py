@@ -74,7 +74,10 @@ class ShapKernelLocal(Resource):
                 predic_func=mlp
             elif backend=="sklearn":
                 mlp = joblib.load(model_file)
-                predic_func=mlp.predict_proba
+                try:
+                    predic_func=mlp.predict_proba
+                except:
+                    predic_func=mlp.predict
             elif backend=="PYT":
                 mlp = torch.load(model_file)
                 predic_func=mlp.predict
