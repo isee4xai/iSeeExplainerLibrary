@@ -1,3 +1,4 @@
+==================================================================
 Mandatory attributes:
 
 alias => string with the name given to the model
@@ -5,11 +6,12 @@ backend => "sklearn", "TF1", "TF2", "PYT", or "other"
 model_task => "classification", "regression", or "other"
 datatype => "Image", "Tabular", or "Text"
 
+==================================================================
 For classification models:
 
 (Optional) output_names => Array of strings with the names of the target classes in order.
 
-
+==================================================================
 For tabular data:
 
 categorical_names => Dictionary with indexes of categorical columns as keys and arrays of strings containing the categorical values as values.
@@ -20,11 +22,18 @@ ohe => Boolean value to indicate if the data is one-hot encoded
 (Optional) feature_names => Array of strings with the names of the features in order.
 Only if dataset was not uploaded: features => JSON Object with feature names as keys and arrays containing the ranges of continuous features, or strings with the categories for categorical features.
 
+==================================================================
+For timeseries models:
+
+target_columns => array containing the indexes of the target columns of the dataset. 
+
+==================================================================
 For Image Normalization in Pytorch: (used for grad-cam)
 
 mean: Array of floats used to normalize each channel of the RGB Image.
 std: Array of floats used to normalize each channel of the RGB Image.
 
+==================================================================
 For pytorch-models: (used-for grad-cam)
 
 target_layer: name of target layer to be provided as a string. This is the layer that you want to compute the visualization for.
