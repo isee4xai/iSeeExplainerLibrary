@@ -11,7 +11,7 @@ flask==2.0.1
 flask-restful==0.3.9
 lime==0.2.0.1
 shap==0.41.0
-alibi==1.9.0
+alibi==0.8.0
 dalex==1.4.1
 tensorflow==2.10.0
 torch==1.12.1
