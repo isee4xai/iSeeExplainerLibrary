@@ -198,18 +198,20 @@ class CBRFox(Resource):
 
     def get(self):
         return {
-        "_method_description": "LIME perturbs the input data samples in order to train a simple model that approximates the prediction for the given instance and similar ones. "
-                           "The explanation contains the weight of each attribute to the prediction value. This method accepts 4 arguments: " 
-                           "the 'id', the 'instance', the 'url'(optional),  and the 'params' dictionary (optiohnal) with the configuration parameters of the method. "
+        "_method_description": "This method applies the Case-Based Reasoning paradigm to provide explanations-by-example, where time series are split into different time-window cases that serve"
+                           "as explanation cases for the outcome of the prediction model. It has been designed for domain-expert users -without ML skills- that need to understand and how (future)"
+                           "predictions could be dependent of past time series windows. It proposes a novel similarity function which deals with both the morphological similarity and the absolute"
+                           "proximity between the time series, together with several reuse strategies to generate the explanation cases. It uses an automatic evaluation approach based on computing"
+                           "the error (MAE) between the model prediction for and the actual values in the solution of the explanatory case. Finally, this evaluation method is applied to demonstrate"
+                           "the performance of the proposal on the given dataset. This method accepts 3 arguments: " 
+                           "the 'id', the 'instance',  and the 'params' dictionary (optional) with the configuration parameters of the method. "
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
-        "instance": "Array representing a row with the feature values of an instance not including the target class.",
-        "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
-               "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
+        "instance": "2-D Array representing a single segment with data for multiple rows containing the feature values of particular time-points.",
         "params": { 
-                "output_classes" : "(Optional) Array of ints representing the classes to be explained.",
-                "top_classes": "(Optional) Int representing the number of classes with the highest prediction probability to be explained. Overrides 'output_classes' if provided.",
-                "num_features": "(Optional) Int representing the maximum number of features to be included in the explanation."
+                "smoothness_factor" : "(Optional) Float ranging from 0 to 1 for the smoothness factor that will be applied for metric computation. Defaults to 0.3.",
+                "punished_sum_factor": "(Optional) Float ranging from 0 to 1 for the punished sum factor that will be applied for metric computation. Defaults to 0.5.",
+                "reference_method": "(Optional) The method to be used for the selection of the general cases. It may be 'average','min','max' and 'median'. Defaults to 'average'."
                 }
 
         }
