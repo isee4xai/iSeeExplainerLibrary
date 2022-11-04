@@ -27,6 +27,7 @@ from resources.explainers.images.counterfactuals import CounterfactualsImage
 from resources.explainers.images.gradcamTorch import GradCamTorch
 from resources.explainers.text.lime import LimeText
 from resources.explainers.text.nlp_clf_explainer import NLPClassifierExpl
+from resources.explainers.timeseries.cbrFox import CBRFox
 
 
 MODEL_FOLDER="Models"
@@ -102,6 +103,7 @@ api.add_resource(CounterfactualsImage, '/Images/Counterfactuals',resource_class_
 api.add_resource(GradCamTorch, '/Images/GradCamTorch',resource_class_kwargs=path_dict)
 api.add_resource(LimeText, '/Text/LIME',resource_class_kwargs=path_dict)
 api.add_resource(NLPClassifierExpl, "/Text/NLPClassifier", resource_class_kwargs=path_dict)
+api.add_resource(CBRFox, "/Timeseries/CBRFox", resource_class_kwargs=path_dict)
 
 @api.representation('image/png')
 def output_file_png(data, code, headers):
