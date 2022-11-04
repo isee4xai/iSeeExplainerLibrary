@@ -22,5 +22,6 @@ class Explainers(Resource):
                     '/Images/GradCamTorch',
                     '/Text/LIME',
                     '/Tabular/DisCERN',
-                    '/Text/NLPClassifier'
+                    '/Text/NLPClassifier',
+                    '/Timeseries/CBRFox'
                 ]
