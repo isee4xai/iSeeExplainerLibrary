@@ -184,6 +184,6 @@ class NLPClassifierExpl(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "A string with the text to be explained.",
         "params":{
-                    "format": "string defining the output format of the explanation. Can be set to either 'json' (default value) so a JSON-formatted text is generated, or 'html' for an HTML output."   
+                    "format": "(Optional) string defining the output format of the explanation. Can be set to either 'json' (default value) so a JSON-formatted text is generated, or 'html' for an HTML output."   
               }
         }
