@@ -49,10 +49,11 @@ class Ale(Resource):
         kwargsData = dict(feature_names=None,target_names=None)
         if "feature_names" in model_info:
             kwargsData["feature_names"]=model_info["feature_names"]
-        if "output_names" in model_info:
-            kwargsData["target_names"] = model_info["output_names"]
         if "target_name" in model_info:
             kwargsData["target_names"] = [model_info["target_name"]]
+        if "output_names" in model_info:
+            kwargsData["target_names"] = model_info["output_names"]
+
 
         ## getting predict function
         predic_func=None
