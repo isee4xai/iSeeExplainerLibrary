@@ -1,5 +1,4 @@
 from flask_restful import Resource
-from werkzeug.utils import secure_filename
 
 class Explainers(Resource):
     def get(self):
@@ -23,5 +22,6 @@ class Explainers(Resource):
                     '/Text/LIME',
                     '/Tabular/DisCERN',
                     '/Text/NLPClassifier',
-                    '/Timeseries/CBRFox'
+                    '/Timeseries/CBRFox',
+                    '/Tabular/IREX'
                 ]

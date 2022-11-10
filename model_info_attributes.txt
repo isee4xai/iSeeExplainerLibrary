@@ -21,6 +21,7 @@ ohe => Boolean value to indicate if the data is one-hot encoded
 (Optional) target_name  => target variable name
 (Optional) feature_names => Array of strings with the names of the features in order.
 Only if dataset was not uploaded: features => JSON Object with feature names as keys and arrays containing the ranges of continuous features, or strings with the categories for categorical features.
+Only for IREX: expected_answers => Array containing the expected answers to the questions of a questionnaire that are supposed to contribute to the target class by experts. 
 
 ==================================================================
 For timeseries models:
