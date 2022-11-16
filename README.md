@@ -103,7 +103,7 @@ The required parameters may be different depending on the explainer, so it is re
 
 ## Getting Explanations Using External URLs Models
 
-In some cases, uploading a model file to the server is not desired by the user or simply not possible. Some explanation methods provide an alternative, as they only need access to the prediction function of the model. The prediction function can be easily wrapped as an HTTP POST method so that the explainers can access the prediction function by making requests to a server administered by the user. However, the implementation of the POST method must attain the expected format:
+In some cases, uploading a model file to the server is not desired by the user or simply not possible. Some explanation methods provide an alternative, as they only need access to the prediction function of the model. The prediction function can be easily wrapped as an HTTP POST method so that the explainers can access the prediction function by making requests to a server administered by the user. However, the implementation of the POST method must follow the expected format:
 
 - **The POST method must receive a parameter named "inputs" and return an array with the predictions**. The format of the "inputs" parameter, as well as the output, must be as follows:
 
@@ -112,7 +112,8 @@ In some cases, uploading a model file to the server is not desired by the user o
 		- inputs: array of shape *(n, f)* where *n* is the number of instances and *f* is the number of features.
 		- output: array of shape *(n,)* where *n* is the number of instances. Contains the predicted value for each instance.
 	- For Classification Models:
-		- inputs: array of shape *(n, f)* where *n* is the number of instances and *f* is the number of features. Contains the predicted probabilities of each class for each instance.
+		- inputs: array of shape *(n, f)* where *n* is the number of instances and *f* is the number of features.
+		- output: array of shape *(n, c)* where *n* is the number of instances and *c* is the number of classes. Contains the predicted probabilities of each class for each instance.
 
   - For Image models: 
   	- inputs: Array of shape *(n, h, w)* for black and white images, and shape *(n, h, w, 3)* for RGB images, where *n* is the number of images, *h* the pixel height, and *w* the pixel width.
