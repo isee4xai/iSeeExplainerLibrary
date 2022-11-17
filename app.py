@@ -5,7 +5,7 @@ import markdown
 import markdown.extensions.fenced_code
 from flask import Flask, send_from_directory, make_response
 from flask_restful import Api
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
 from viewer import ViewExplanation
 from explainerslist import Explainers
 from resources.explainers.tabular.dicePublic import DicePublic 
@@ -17,11 +17,12 @@ from resources.explainers.tabular.shapTreeLocal import ShapTreeLocal
 from resources.explainers.tabular.shapTreeGlobal import ShapTreeGlobal
 from resources.explainers.tabular.shapDeepLocal import ShapDeepLocal
 from resources.explainers.tabular.shapDeepGlobal import ShapDeepGlobal
-from resources.explainers.tabular.irex import IREX
 from resources.explainers.tabular.anchors import Anchors
 from resources.explainers.tabular.ale import Ale
 from resources.explainers.tabular.importance import Importance
 from resources.explainers.tabular.discern import DisCERN
+from resources.explainers.tabular.irex import IREX
+from resources.explainers.tabular.nice import Nice
 from resources.explainers.images.lime import LimeImage
 from resources.explainers.images.anchors import AnchorsImage
 from resources.explainers.images.counterfactuals import CounterfactualsImage
@@ -99,6 +100,7 @@ api.add_resource(Ale, '/Tabular/ALE',resource_class_kwargs=path_dict)
 api.add_resource(Importance, '/Tabular/Importance',resource_class_kwargs=path_dict)
 api.add_resource(DisCERN, '/Tabular/DisCERN',resource_class_kwargs=path_dict)
 api.add_resource(IREX, '/Tabular/IREX',resource_class_kwargs=path_dict)
+api.add_resource(Nice, '/Tabular/NICE',resource_class_kwargs=path_dict)
 api.add_resource(LimeImage, '/Images/LIME',resource_class_kwargs=path_dict)
 api.add_resource(AnchorsImage, '/Images/Anchors',resource_class_kwargs=path_dict)
 api.add_resource(CounterfactualsImage, '/Images/Counterfactuals',resource_class_kwargs=path_dict)
