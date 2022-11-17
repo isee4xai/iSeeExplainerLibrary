@@ -119,7 +119,7 @@ class DicePrivate(Resource):
                            " These arguments are described below.",
 
         "id": "Identifier of the ML model that was stored locally.",
-        "instance": "Array representing a row with the feature values of an instance including the target class.",
+        "instance": "Array representing a row with the feature values of an instance without including the target class.",
         "params": { 
 
                 "desired_class": "(Optional) Integer representing the index of the desired counterfactual class. Defaults to class 1. You may also use the string 'opposite' for binary classification",
