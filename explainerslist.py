@@ -1,27 +1,26 @@
-from flask_restful import Resource
+﻿from flask_restful import Resource
 
 class Explainers(Resource):
     def get(self):
-        return [
-                    '/Tabular/DicePublic',
-                    '/Tabular/DicePrivate',
-                    '/Tabular/LIME',
-                    '/Tabular/KernelSHAPLocal',
-                    '/Tabular/KernelSHAPGlobal',
-                    '/Tabular/TreeSHAPLocal',
-                    '/Tabular/TreeSHAPGlobal',
-                    '/Tabular/DeepSHAPLocal',
-                    '/Tabular/DeepSHAPGlobal',
-                    '/Tabular/Anchors',
-                    '/Tabular/ALE',
-                    '/Tabular/Importance',
-                    '/Images/LIME',
-                    '/Images/Anchors',
-                    '/Images/Counterfactuals',
-                    '/Images/GradCamTorch',
-                    '/Text/LIME',
-                    '/Tabular/DisCERN',
-                    '/Text/NLPClassifier',
-                    '/Timeseries/CBRFox',
-                    '/Tabular/IREX'
-                ]
+        return [ '/Images/Anchors',
+                 '/Images/Counterfactuals',
+                 '/Images/GradCamTorch',
+                 '/Images/LIME',
+                 '/Tabular/ALE',
+                 '/Tabular/Anchors',
+                 '/Tabular/DeepSHAPGlobal',
+                 '/Tabular/DeepSHAPLocal',
+                 '/Tabular/DicePrivate',
+                 '/Tabular/DicePublic',
+                 '/Tabular/DisCERN',
+                 '/Tabular/IREX',
+                 '/Tabular/Importance',
+                 '/Tabular/KernelSHAPGlobal',
+                 '/Tabular/KernelSHAPLocal',
+                 '/Tabular/LIME',
+                 '/Tabular/NICE',
+                 '/Tabular/TreeSHAPGlobal',
+                 '/Tabular/TreeSHAPLocal',
+                 '/Text/LIME',
+                 '/Text/NLPClassifier',
+                 '/Timeseries/CBRFox']

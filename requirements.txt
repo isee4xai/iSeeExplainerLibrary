@@ -29,3 +29,4 @@ statsmodels==0.13.5
 numba==0.56.3
 seaborn==0.12.1
 lightgbm==3.3.3
+NICEx==0.2.3
