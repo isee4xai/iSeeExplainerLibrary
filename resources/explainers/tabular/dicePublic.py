@@ -122,7 +122,7 @@ class DicePublic(Resource):
                            "the 'id' string, the 'instance', and the 'params' dictionary (optional) containing the configuration parameters of the explainer."
                            " These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
-        "instance": "Array representing a row with the feature values of an instance including the target class.",
+        "instance": "Array representing a row with the feature values of an instance without including the target class.",
         "params": { 
                 "desired_class": "(optional) Integer representing the index of the desired counterfactual class. Defaults to class 1.  You may also use the string 'opposite' for binary classification",
                 "method": "(optional) The method used for counterfactual generation. The supported methods are: 'random' (random sampling), 'genetic' (genetic algorithms), 'kdtrees'.  Defaults to 'random'.",
