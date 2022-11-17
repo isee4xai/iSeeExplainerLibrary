@@ -4,6 +4,7 @@ import joblib
 import json
 import shap
 import xgboost
+import lightgbm
 from flask import request
 import matplotlib.pyplot as plt
 from saveinfo import save_file_info
