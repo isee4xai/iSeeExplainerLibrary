@@ -4,6 +4,7 @@ import joblib
 import json
 import shap
 import xgboost
+import lightgbm
 from flask_restful import Resource,reqparse
 from flask import request
 from saveinfo import save_file_info
