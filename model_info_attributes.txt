@@ -29,6 +29,11 @@ For timeseries models:
 target_columns => array containing the indexes of the target columns of the dataset. 
 
 ==================================================================
+For image models:
+
+rgb => boolean indicating if the model works with RGB images
+
+==================================================================
 For Grad-Cam: 
 
 mean: Array of floats used to normalize each channel of the RGB Image.
