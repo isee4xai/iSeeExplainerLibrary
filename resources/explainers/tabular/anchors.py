@@ -51,7 +51,7 @@ class Anchors(Resource):
             cat_names = model_info["categorical_names"]
             kwargsData["categorical_names"] = {int(k):v for k,v in cat_names.items()}
         if "ohe" in model_info:
-            kwargsData["ohe"] = model_info["ohe"]
+            kwargsData["ohe"] = bool(model_info["ohe"])
 
         ## getting predict function
         predic_func=None
