@@ -147,7 +147,7 @@ class IREX(Resource):
     def get(self):
         return {
         "_method_description": "IREX is a reusable method for the Iterative Refinement and EXplanation of classification models. It has been designed for domain-expert users -without machine learning skills- that need to understand" 
-        " and improve classification models. This particular implementation of IREX uses ALE to identify anomalous features that may be contradictory to what the expert knowledge indicates. Anomalous features are highlighted on red in an ALE heatmap. This method accepts 3 arguments: " 
+        " and improve classification models. This particular implementation of IREX uses ALE to identify anomalous features that may be contradictory to what the expert knowledge indicates. Anomalous features are highlighted in red in an ALE heatmap. This method accepts 3 arguments: " 
                            "the 'id', the 'url',  and the 'params' JSON with the configuration parameters of the method. "
                            "These arguments are described below.",
 
@@ -157,6 +157,14 @@ class IREX(Resource):
         "params": { 
                 "threshold": "(Optional) A float between 0 and 1 for the threshold that will be used to determine anomalous variables. If a feature seems to be contradictory but its absolute ALE value is below this threshold, it will not be considered anomalous. Defaults to 0.01.",
                 "classes_to_show": "(Optional) Array of ints representing the indices of the classes to be explained. Defaults to all classes."
-                }
+                },
+        "output_description":{
+                "heatmap": "A heatmap displaying the relevance of the features according to ALE, where anomalous features (behavior differring from expected values) are highlighted in red."
+               },
+        "meta":{
+                "supportsAPI":False,
+                "needsData": True,
+                "requiresAttributes":[{"expected_answers":"Array containing the expected answers to the questions of a questionnaire that are supposed to contribute to the target class by experts." }]
+            }
         }
     

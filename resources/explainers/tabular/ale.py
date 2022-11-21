@@ -46,9 +46,13 @@ class Ale(Resource):
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
 
-        kwargsData = dict(feature_names=None,target_names=None)
-        if "feature_names" in model_info:
-            kwargsData["feature_names"]=model_info["feature_names"]
+        try:
+            feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
+        except: 
+            raise Exception("Could not extract feature names from training data file.")
+
+        kwargsData = dict(feature_names=feature_names,target_names=None)
+       
         if "target_name" in model_info:
             kwargsData["target_names"] = [model_info["target_name"]]
         if "output_names" in model_info:
@@ -108,7 +112,7 @@ class Ale(Resource):
 
     def get(self):
         return {
-        "_method_description": "Computes the accumulated local effects (ALE) of a model for the specified features. The outcome represents the global feature effect on the prediction probability. This method accepts 3 arguments: " 
+        "_method_description": "Computes the accumulated local effects (ALE) of a model for the specified features. This method accepts 3 arguments: " 
                            "the 'id', the 'url',  and the 'params' JSON with the configuration parameters of the method. "
                            "These arguments are described below.",
 
@@ -117,6 +121,15 @@ class Ale(Resource):
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
                 "features_to_show": "(Optional) Array of ints representing the indices of the features to be explained. Defaults to all features."
-                }
+                },
+        "output_description":{
+                "ale_plot": "A plot for each of the specified features where the y-axis represents the global feature effect on the outcome value according to the computed ALE values."
+               },
+
+        "meta":{
+                "supportsAPI":True,
+                "needsData": True,
+                "requiresAttributes":[]
+            }
         }
     

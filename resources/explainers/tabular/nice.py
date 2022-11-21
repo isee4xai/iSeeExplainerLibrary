@@ -49,17 +49,14 @@ class Nice(Resource):
         backend = model_info["backend"]  ##error handling?
 
         output_names=None
-        if "feature_names" in model_info:
-            feature_names=model_info["feature_names"]
-        else:
-            try:
-                feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
-            except:
-                feature_names=["Feature "+str(i) for i in range(len(instance))]
+        try:
+            feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
+        except: 
+            raise Exception("Could not extract feature names from training data file.")
         if "categorical_features" in model_info:    #necessary                        
             categorical_features=model_info["categorical_features"]
         else:
-            raise Exception("Array of categorical features must be specified.")
+            raise Exception("Array of indices of categorical features must be specified.")
         if "output_names" in model_info:
             output_names = model_info["output_names"]
         if "target_name" in model_info:
@@ -150,5 +147,13 @@ class Nice(Resource):
         "params": { 
                 "desired_class": "(optional) Integer representing the index of the desired counterfactual class. Defaults to string 'other', which will look for any different class.",
                 "optimization_criteria": "(optional) The counterfactual criteria to optimize. It can be 'sparsity','proximity', or 'plausibility'. Defaults to 'sparsity.'"
-                }
+                },
+        "output_description":{
+                "html_table": "An html page containing a table with the original instance compared against the generated counterfactual."
+               },
+        "meta":{
+                "supportsAPI":True,
+                "needsData": True,
+                "requiresAttributes":[{"features":"Dictionary with feature names as keys and arrays containing the ranges of continuous features, or strings with the categories for categorical features."}]
+            }
         }

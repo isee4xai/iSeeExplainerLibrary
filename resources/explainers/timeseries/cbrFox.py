@@ -212,6 +212,11 @@ class CBRFox(Resource):
                 "smoothness_factor" : "(Optional) Float ranging from 0 to 1 for the smoothness factor that will be applied for metric computation. Defaults to 0.3.",
                 "punished_sum_factor": "(Optional) Float ranging from 0 to 1 for the punished sum factor that will be applied for metric computation. Defaults to 0.5.",
                 "reference_method": "(Optional) The method to be used for the selection of the general cases. It may be 'average','min','max' and 'median'. Defaults to 'average'."
-                }
+                },
+        "meta":{
+                "supportsAPI":False,
+                "needsData": True,
+                "requiresAttributes":[{"target_columns":"Array containing the indexes of the target columns of the dataset."}]
+            }
 
         }

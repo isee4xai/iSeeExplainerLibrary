@@ -115,7 +115,7 @@ class AnchorsImage(Resource):
 
     def get(self):
         return {
-        "_method_description": "Displays the pixels that are sufficient to the model to justify the predicted class. "
+        "_method_description": "Uses anchors to find the groups of pixels that are sufficient for the model to justify the predicted class."
                            "This method accepts 5 arguments: " 
                            "the 'id', the 'url' (optional),  the 'params' dictionary (optional) with the configuration parameters of the method, the 'instance' containing the image that will be explained as a matrix, or the 'image' file instead. "
                            "These arguments are described below.",
@@ -127,6 +127,17 @@ class AnchorsImage(Resource):
         "params": { 
                 "threshold": "(Optional) A float from 0 to 1 with the desired precision for the anchor.",
                 "segmentation_fn": "(Optional) A string with an image segmentation algorithm from the following:'quickshift', 'slic', or 'felzenszwalb'."
-                }
+                },
+        "output_description":{
+                "anchor_image":"Displays the pixels that are sufficient for the model to justify the predicted class."
+            },
+
+        "meta":{
+                "supportsAPI":True,
+                "supportsB&WImage":True,
+                "needsData": False,
+                "requiresAttributes":[]
+
+            }
 
         }

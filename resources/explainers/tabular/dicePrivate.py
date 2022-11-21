@@ -114,7 +114,7 @@ class DicePrivate(Resource):
 
     def get(self):
         return {
-        "_method_description": "Generates counterfactuals without the training data. However, it requires the format and ranges of the data to be specified when uploading the model. Currently supported for TensorFlow models only.  Accepts 3 arguments: " 
+        "_method_description": "Diverse Counterfactual Explanations (DiCE)  private method generates counterfactuals without training data. However, it requires the format and ranges of the data to be specified when uploading the model. This method is currently supported for TensorFlow models only.  Accepts 3 arguments: " 
                            "the 'id' string, the 'instance', and the 'params' dictionary (optional) containing the configuration parameters of the explainer."
                            " These arguments are described below.",
 
@@ -128,13 +128,12 @@ class DicePrivate(Resource):
                 "method": "(optional) The method used for counterfactual generation. The supported methods for private data are: 'random' (random sampling) and 'genetic' (genetic algorithms). Defaults to 'random'.",
                
                 },
-
-        "params_example":{
-            
-                "features_to_vary": "all",
-                "desired_class": 0,
-                "num_cfs": 3,
-                "method": "random"
-
-               }
+        "output_description":{
+                "html_table": "An html page containing a table with the original instance compared against a table with the generated couterfactuals."
+               },
+        "meta":{
+                "supportsAPI":False,
+                "needsData": False,
+                "requiresAttributes":[{"features":"Dictionary with feature names as keys and arrays containing the ranges of continuous features, or strings with the categories for categorical features."}]
+            }
         }

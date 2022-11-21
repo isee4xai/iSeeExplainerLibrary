@@ -40,9 +40,11 @@ class ShapTreeGlobal(Resource):
 
         #getting params from info
         model_info=json.load(model_info_file)
-        kwargsData = dict(feature_names=None, output_names=None)
-        if "feature_names" in model_info:
-            kwargsData["feature_names"] = model_info["feature_names"]
+        try:
+            feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
+        except: 
+            raise Exception("Could not extract feature names from training data file.")
+        kwargsData = dict(feature_names=feature_names, output_names=None)
         if "output_names" in model_info:
             kwargsData["output_names"] = model_info["output_names"]
 
@@ -82,14 +84,22 @@ class ShapTreeGlobal(Resource):
 
     def get(self):
         return {
-        "_method_description": "This explaining method displays the contribution of each attribute for an individual prediction based on Shapley values (for tree ensemble methods only). Supported for XGBoost, LightGBM, CatBoost, scikit-learn and pyspark tree models. This method accepts 2 arguments: " 
+        "_method_description": "This method based on Shapley values computes the average contribution of each feature for the whole training dataset. TreeSHAP is intended for ensemble methods only and is currently supported for XGBoost, LightGBM, CatBoost, scikit-learn and pyspark tree models. This method accepts 2 arguments: " 
                            "the 'id', and the 'params' JSON with the configuration parameters of the method. "
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
         "params": { 
                 "output_index": "(Optional) Integer representing the index of the class to be explained. Ignore for regression models. The default index is 1.",
-                }
-  
+                },
+        "output_description":{
+                "beeswarm_plot": "The beeswarm plot is designed to display an information-dense summary of how the top features in a dataset impact the model's output. Each instance the given explanation is represented by a single dot" 
+                                 "on each feature fow. The x position of the dot is determined by the SHAP value of that feature, and dots 'pile up' along each feature row to show density. Color is used to display the original value of a feature. "
+               },
+        "meta":{
+                "supportsAPI":True,
+                "needsData": True,
+                "requiresAttributes":[]
+            }
         }
     
 
