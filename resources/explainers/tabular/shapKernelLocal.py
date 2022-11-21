@@ -56,11 +56,11 @@ class ShapKernelLocal(Resource):
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
 
-        kwargsData = dict(feature_names=None, output_names=None)
-        if "feature_names" in model_info:
-            kwargsData["feature_names"] = model_info["feature_names"]
-        else:
-            kwargsData["feature_names"]=["Feature "+str(i) for i in range(len(instance))]
+        try:
+            feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
+        except: 
+            raise Exception("Could not extract feature names from training data file.")
+        kwargsData = dict(feature_names=feature_names, output_names=None)
         if "output_names" in model_info:
             kwargsData["output_names"] = model_info["output_names"]
 
@@ -136,7 +136,7 @@ class ShapKernelLocal(Resource):
 
     def get(self):
         return {
-        "_method_description": "This explaining method displays the contribution of each attribute for an individual prediction based on Shapley values. This method accepts 4 arguments: " 
+        "_method_description": "This method displays the contribution of each attribute for an individual prediction based on Shapley values. This method accepts 4 arguments: " 
                            "the 'id', the 'instance', the 'url' (optional),  and the 'params' dictionary (optional) with the configuration parameters of the method. "
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
@@ -144,8 +144,29 @@ class ShapKernelLocal(Resource):
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
-                "output_index": "(Optional) Integer representing the index of the class to be explained. Ignore for regression models. The default index is 1." 
-                }
+                "output_index": "(Optional) Integer representing the index of the class to be explained. Ignore for regression models. The default index is 1." ,
+                "plot_type": "(Optional) String with the name of the plot to be generated. The supported plots are 'waterfall','decision', 'force' and 'bar'. Defaults to 'waterfall'."
+                },
+
+        "output_description":{
+                "waterfall_plot": "Waterfall plots are designed to display explanations for individual predictions, so they expect a single row of an Explanation object as input. "
+                                    "The bottom of a waterfall plot starts as the expected value of the model output, and then each row shows how the positive (red) or negative (blue) contribution of "
+                                    "each feature moves the value from the expected model output over the background dataset to the model output for this prediction.",
+                "force_plot":"Displays the contribution of each attribute as a plot that confronts the features that contribute positively (left) and the ones that contribute negatively (right) to the predicted outcome. "
+                             "The predicted outcome is displayed as a divisory line between the positive and negative contributions.",
+
+                "decision_plot": "A decision plot shows how a complex model arrive at its predictions. "
+                                "The decision plot displays the average of the model's base values and shifts the SHAP values accordingly to accurately reproduce the model's scores."
+                                "The straight vertical line marks the model's base value. The colored line is the prediction. Feature values are printed next to the prediction line for reference."
+                                "Starting at the bottom of the plot, the prediction line shows how the SHAP values (i.e., the feature effects) accumulate from the base value to arrive at the model's final score at the top of the plot. ",
+
+                "bar_plot": "The bar plot is a local feature importance plot, where the bars are the SHAP values for each feature. Note that the feature values are shown in the left next to the feature names."
+         },
+        "meta":{
+                "supportsAPI":True,
+                "needsData": True,
+                "requiresAttributes":[]
+            }
         }
     
 

@@ -134,6 +134,23 @@ class GradCamTorch(Resource):
                                       "If not provided, the whole layer specified as target when uploading the model will be used.",
                 "target_class": "(Optional) Integer representing the index of the target class to generate the explanation. If not provided, defaults to the class with the highest predicted probability.",
                 "aug_smooth": "(Optional) Boolean indicating whether to apply augmentation smoothing (defaults to True). This has the effect of better centering the CAM around the objects. However, it increases the run time by x6."
-                }
+                },
+        "output_description":{
+                "saliency_map":"Displays an image that highlights the region that contributes the most to the target class."
+            },
+
+        "meta":{
+                "supportsAPI":False,
+                "needsData": False,
+                "supportsB&WImage":False,
+                "requiresAttributes":[{"target_layer":"name of target layer to be provided as a string. This is the layer that you want to compute the visualization for. Usually this will be the last convolutional layer in the model. It is also possible to specify internal components of this layer by         passing the target_layer_index parameter in params when making a call to the explainer resource. To get the target layer, this method executes 'model.<target_layer>        [<target_layer_index>]' "
+                                                        "\nSome common examples of these parameters for well-known models:"
+                                                        "\nResnet18 and 50: model.layer4 -> 'target_layer':'layer4'"
+                                                        "\nVGG, densenet161: model.features[-1] -> 'target_layer':'features', 'target_layer_index':-1"
+                                                        "\nmnasnet1_0: model.layers[-1] -> 'target_layer':'layers', 'target_layer_index':-1"},
+
+                                      ]
+
+            }
 
         }
