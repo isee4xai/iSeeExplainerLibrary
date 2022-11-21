@@ -80,6 +80,14 @@ class Importance(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "params": { 
                 "variables": "(Optional) Array of strings with the names of the features for which the importance will be calculated. Defaults to all features.",
-                }
+                },
+        "output_description":{
+                "bar_plot": "A bar plot representing the increase in the prediction error (importance) for the features with the highest values."
+               },
+        "meta":{
+                "supportsAPI":False,
+                "needsData": True,
+                "requiresAttributes":[]
+            }
         }
     

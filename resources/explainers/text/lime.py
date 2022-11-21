@@ -111,5 +111,14 @@ class LimeText(Resource):
                 "output_classes" : "(Optional) Array of ints representing the classes to be explained.",
                 "top_classes": "(Optional) Int representing the number of classes with the highest prediction probablity to be explained.",
                 "num_features": "(Optional) Int representing the maximum number of features to be included in the explanation."
-                }
+                },
+        "output_description":{
+                "lime_plot": "An image contaning a plot with the most influyent words for the given instance. For regression models, the plot displays both positive and negative contributions of each word to the predicted outcome."
+                "The same applies to classification models, but there can be a plot for each possible class. The text instance with highlighted words is also included."
+               },
+        "meta":{
+                "supportsAPI":True,
+                "needsData": False,
+                "requiresAttributes":[]
+            }
         }

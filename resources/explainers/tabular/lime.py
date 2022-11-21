@@ -134,6 +134,15 @@ class Lime(Resource):
                 "output_classes" : "(Optional) Array of ints representing the classes to be explained.",
                 "top_classes": "(Optional) Int representing the number of classes with the highest prediction probability to be explained. Overrides 'output_classes' if provided.",
                 "num_features": "(Optional) Int representing the maximum number of features to be included in the explanation."
-                }
+                },
+        "output_description":{
+                "lime_plot": "An image contaning a plot with the most influyent features for the given instance. For regression models, the plot displays both positive and negative contributions of each feature value to the predicted outcome."
+                "The same applies to classification models, but there can be a plot for each possible class. A table containing the feature values of the instance is also included in the image."
+               },
 
+        "meta":{
+                "supportsAPI":True,
+                "needsData": True,
+                "requiresAttributes":[]
+            }
         }

@@ -34,6 +34,9 @@ class DisCERN(Resource):
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
+        ## loading data
+        dataframe = joblib.load(data_file)
+
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
@@ -42,9 +45,9 @@ class DisCERN(Resource):
         if "target_name" in model_info:
             outcome_name = model_info["target_name"]
         try:
-            feature_names = model_info["feature_names"]
-        except:
-            raise "The dataset \"features\" field was not specified."
+            feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
+        except: 
+            raise Exception("Could not extract feature names from training data file.")
         if "categorical_features" in model_info:
             categorical_features = model_info["categorical_features"]
       
@@ -69,8 +72,7 @@ class DisCERN(Resource):
         except:
             raise "Currently only supports sklearn models"
 
-        ## loading data
-        dataframe = joblib.load(data_file)
+        
 
         #getting params from request
         desired_class='opposite'
@@ -85,8 +87,8 @@ class DisCERN(Resource):
 
         ## init discern
         discern_obj = discern_tabular.DisCERNTabular(mlp, feature_attribution_method, attributed_instance)    
-        dataframe_features = dataframe.loc[:, dataframe.columns != outcome_name].values
-        dataframe_labels = dataframe[outcome_name].values
+        dataframe_features = dataframe.drop(dataframe.columns[-1],axis=1).values
+        dataframe_labels = dataframe.iloc[:,-1].values
         target_values = dataframe[outcome_name].unique().tolist()
         discern_obj.init_data(dataframe_features, dataframe_labels, feature_names, target_values,**{'cat_feature_indices':categorical_features})
 
@@ -111,7 +113,7 @@ class DisCERN(Resource):
 
     def get(self):
         return {
-        "_method_description": "Generates a counterfactual. Requires 3 arguments: " 
+        "_method_description": "Discovering Counterfactual Explanations using Relevance Features from Neighbourhoods (DisCERN) generates counterfactuals for scikit-learn-based models. Requires 3 arguments: " 
                            "the 'id' string, the 'instance' to be explained, and the 'params' object containing the configuration parameters of the explainer."
                            " These arguments are described below.",
 
@@ -123,11 +125,14 @@ class DisCERN(Resource):
                 "feature_attribution_method": "Feature attribution method used for obtaining feature weights; currently supports LIME, SHAP and Integrated Gradients. Defaults to LIME.",
                 "attributed_instance": "Indicate on which instance to use feature attribution: Q for query or N for NUN. Defaults to Q."},
 
-        "params_example":{
-                "instance": [180, 78, 0.2],
-                "desired_class": 'opposite',
-                "feature_attribution_method": 'LIME',
-                "attributed_instance": 'Q'},    
+        "output_description":{
+                "html_table": "An html page containing a table with the generated couterfactuals."
+               },
+        "meta":{
+                "supportsAPI":False,
+                "needsData": True,
+                "requiresAttributes":[]
+            }
         }
 
 

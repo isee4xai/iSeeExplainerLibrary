@@ -121,7 +121,7 @@ class LimeImage(Resource):
 
     def get(self):
         return {
-        "_method_description": "Displays the group of pixels that contribute positively or negatively to the prediction of the image class."
+        "_method_description": "Uses LIME to identify the group of pixels that contribute the most to the predicted class."
                            "This method accepts 5 arguments: " 
                            "the 'id', the 'url' (optional),  the 'params' dictionary (optional) with the configuration parameters of the method, the 'instance' containing the image that will be explained as a matrix, or the 'image' file instead. "
                            "These arguments are described below.",
@@ -133,6 +133,16 @@ class LimeImage(Resource):
                 "top_classes": "(Optional) Int representing the number of classes with the highest prediction probablity to be explained.",
                 "segmentation_fn": "(Optional) A string with a segmentation algorithm to be used from the following:'quickshift', 'slic', or 'felzenszwalb'"
 
-                }
+                },
+        "output_description":{
+                "lime_image":"Displays the group of pixels that contribute positively (in green) and negatively (in red) to the prediction of the image class. More than one class may be displayed."
+            },
 
+        "meta":{
+                "supportsAPI":True,
+                "supportsB&WImage":False,
+                "needsData": False,
+                "requiresAttributes":[]
+
+            }
         }

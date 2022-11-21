@@ -120,7 +120,7 @@ class CounterfactualsImage(Resource):
 
     def get(self):
         return {
-        "_method_description": "Displays an image that is as similar as possible to the original but with a different prediction. "
+        "_method_description": "Finds an image that is similar to the original, but that the model predicts to be from a different class. The class of the conterfactual can be explicitly specified."
                             "This method accepts 5 arguments: " 
                            "the 'id', the 'url' (optional),  the 'params' dictionary (optional) with the configuration parameters of the method, the 'instance' containing the image that will be explained as a matrix, or the 'image' file instead. "
                            "These arguments are described below.",
@@ -132,6 +132,16 @@ class CounterfactualsImage(Resource):
         "params": { 
                 "target_class": "(optional) A string containing 'other' or 'same', or an integer denoting the desired class for the counterfactual instance. Defaults to 'other'.",
                 "target_proba": "(optional) Float from 0 to 1 representing the target probability for the counterfactual generated. Defaults to 1."
-                }
+                },
+        "output_description":{
+                "counterfactual_image":"Displays an image that is as similar as possible to the original but that the model predicts to be from a different class."
+            },
+
+        "meta":{
+                "supportsAPI":True,
+                "supportsB&WImage":True,
+                "needsData": False,
+                "requiresAttributes":[]
+            }
 
         }

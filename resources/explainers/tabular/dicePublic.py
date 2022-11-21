@@ -35,10 +35,20 @@ class DicePublic(Resource):
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
+        ## loading data
+        dataframe = joblib.load(data_file)
+
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
-        cont_features = model_info["cont_features"] ##error handling?
+        if "categorical_features" in model_info:
+            categorical_features=model_info["categorical_features"]
+        else:
+            raise Exception("Array of indices of categorical features must be specified.")
+
+        cont_features=list(dataframe.columns)[:-1]
+        for cat_feature in categorical_features:
+            cont_features.remove(dataframe.columns[cat_feature])
 
         ## loading model
         if backend=="TF1" or backend=="TF2":
@@ -49,9 +59,6 @@ class DicePublic(Resource):
         else:
            model = joblib.load(model_file)
         
-        ## loading data
-        dataframe = joblib.load(data_file)
-       
 
         ## params from the request
         kwargsData = dict(continuous_features=cont_features, outcome_name=dataframe.columns[-1])
@@ -118,7 +125,7 @@ class DicePublic(Resource):
 
     def get(self):
         return {
-        "_method_description": "Generates counterfactuals using the training data as a baseline. Accepts 3 arguments: " 
+        "_method_description": "Diverse Counterfactual Explanations (DiCE) public method generates counterfactuals using the ML model's training data as a baseline. Accepts 3 arguments: " 
                            "the 'id' string, the 'instance', and the 'params' dictionary (optional) containing the configuration parameters of the explainer."
                            " These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
@@ -131,12 +138,12 @@ class DicePublic(Resource):
                 "permitted_range": "(optional) JSON object with feature names as keys and permitted range in array as values.",
                 "continuous_features_precision": "(optional) JSON object with feature names as keys and precisions as values."
                 },
-        "params_example":{
-                "desired_class": 0,
-                "features_to_vary": "all",
-                "method": "random",
-                "num_cfs": 3,
-                "permitted_range": {"Height": [ 0, 250]},
-                "continuous_features_precision": {"Height": 1, "Weight":3},
-               }
+        "output_description":{
+                "html_table": "An html page containing a table with the original instance compared against a table with the generated couterfactuals."
+               },
+        "meta":{
+                "supportsAPI":False,
+                "needsData": True,
+                "requiresAttributes":[]
+            }
         }

@@ -185,5 +185,10 @@ class NLPClassifierExpl(Resource):
         "instance": "A string with the text to be explained.",
         "params":{
                     "format": "string defining the output format of the explanation. Can be set to either 'json' (default value) so a JSON-formatted text is generated, or 'html' for an HTML output."   
-              }
+              },
+        "meta":{
+                "supportsAPI":False,
+                "needsData": False,
+                "requiresAttributes":[]
+            }
         }

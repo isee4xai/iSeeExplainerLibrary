@@ -44,9 +44,13 @@ class Anchors(Resource):
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
 
-        kwargsData = dict(feature_names=None,categorical_names=None, ohe=False)
-        if "feature_names" in model_info:
-            kwargsData["feature_names"]=model_info["feature_names"]
+        try:
+            feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
+        except: 
+            raise Exception("Could not extract feature names from training data file.")
+
+        kwargsData = dict(feature_names=feature_names,categorical_names=None, ohe=False)
+
         if "categorical_names" in model_info:
             cat_names = model_info["categorical_names"]
             kwargsData["categorical_names"] = {int(k):v for k,v in cat_names.items()}
@@ -97,7 +101,7 @@ class Anchors(Resource):
 
     def get(self):
         return {
-        "_method_description": "This method provides local explanations in the form of simple boolean rules with a precision score and a "
+        "_method_description": "Anchors provide local explanations in the form of simple boolean rules with a precision score and a "
                             "coverage value which represents the scope in which that rules applies to similar instances. This method accepts 4 arguments: " 
                            "the 'id', the 'instance', the 'url' (optional),  and the 'params' JSON (optional) with the configuration parameters of the method. "
                            "These arguments are described below.",
@@ -109,9 +113,15 @@ class Anchors(Resource):
 
         "params": { 
                 "threshold": "(Optional) The minimum level of precision required for the anchors. Default is 0.95"
-                }
+                },
+        "output_description":{
+                "anchor_json": "A JSON object with the boolean rule (anchor) that was found, and values for its precision and coverage (scope in which that rules applies to similar instances)."
+               },
 
-       
-          
+        "meta":{
+                "supportsAPI":True,
+                "needsData": True,
+                "requiresAttributes":[]
+            }
         }
     
