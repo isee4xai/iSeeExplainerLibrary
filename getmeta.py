@@ -6,7 +6,7 @@ import json
 class Meta(Resource):
 
     def get(self, datatype, explainer):
-        response=requests.get(request.url_root+datatype+"/"+explainer+"/meta")
+        response=requests.get(request.url_root+datatype+"/"+explainer)
         if response.ok:
            jsondocs=json.loads(response.text)
         else:
