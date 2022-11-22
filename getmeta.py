@@ -8,6 +8,7 @@ class Meta(Resource):
     def get(self, datatype, explainer):
         
         url=request.url_root+datatype+"/"+explainer
+        print(url)
         response=requests.get(url)
         if response.ok:
            jsondocs=json.loads(response.text)
