@@ -45,18 +45,26 @@ class Lime(Resource):
 
         ##getting params from info
         model_info=json.load(model_info_file)
-        backend = model_info["backend"]  ##error handling?
-        kwargsData = dict(mode="classification", feature_names=None, categorical_features=None,categorical_names=None, class_names=None)
-        if "model_task" in model_info:
-            kwargsData["mode"] = model_info["model_task"]
-        if "feature_names" in model_info:
-            kwargsData["feature_names"] = model_info["feature_names"]
-        if "categorical_features" in model_info:
-            kwargsData["categorical_features"] = model_info["categorical_features"]
-        if "categorical_names" in model_info:
-            kwargsData["categorical_names"] = {int(k):v for k,v in model_info["categorical_names"].items()}
-        if "output_names" in model_info:
-            kwargsData["class_names"] = model_info["output_names"]
+        backend = model_info["backend"]  
+        mode=model_info["model_task"]
+        try:
+            class_names=model_info["attributes"]["target_values"][0]
+        except:
+            class_names=None
+        target_name=model_info["attributes"]["target_names"][0]
+        feature_names=list(model_info["attributes"]["features"].keys())
+        feature_names.remove(target_name)
+
+        categorical_features=[]
+        categorical_names={}
+        for feature in feature_names:
+            if isinstance(model_info["attributes"]["features"][feature],list):
+                i=dataframe.columns.get_loc(feature)
+                categorical_features.append(i)
+                categorical_names.update({i:[ str(x) for x in model_info["attributes"]["features"][feature]]})
+
+        kwargsData = dict(mode=mode, feature_names=feature_names, categorical_features=categorical_features,categorical_names=categorical_names, class_names=class_names)
+
 
         ## getting predict function
         predic_func=None
@@ -97,7 +105,7 @@ class Lime(Resource):
 
 
 
-        explainer = lime.lime_tabular.LimeTabularExplainer(dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False).to_numpy(),
+        explainer = lime.lime_tabular.LimeTabularExplainer(dataframe.drop([target_name], axis=1, inplace=False).to_numpy(),
                                                             **{k: v for k, v in kwargsData.items() if v is not None})
         explanation = explainer.explain_instance(np.array(instance, dtype='f'), predic_func, **{k: v for k, v in kwargsData2.items() if v is not None}) 
         

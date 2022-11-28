@@ -44,18 +44,17 @@ class Anchors(Resource):
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
 
-        try:
-            feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
-        except: 
-            raise Exception("Could not extract feature names from training data file.")
+        target_name=model_info["attributes"]["target_names"][0]
+        feature_names=list(model_info["attributes"]["features"].keys())
+        feature_names.remove(target_name)
 
-        kwargsData = dict(feature_names=feature_names,categorical_names=None, ohe=False)
+        categorical_names={}
+        for feature in feature_names:
+            if isinstance(model_info["attributes"]["features"][feature],list):
+                categorical_names.update({dataframe.columns.get_loc(feature):[ str(x) for x in model_info["attributes"]["features"][feature]]})
 
-        if "categorical_names" in model_info:
-            cat_names = model_info["categorical_names"]
-            kwargsData["categorical_names"] = {int(k):v for k,v in cat_names.items()}
-        if "ohe" in model_info:
-            kwargsData["ohe"] = bool(model_info["ohe"])
+        kwargsData = dict(feature_names=feature_names,categorical_names=categorical_names)
+
 
         ## getting predict function
         predic_func=None

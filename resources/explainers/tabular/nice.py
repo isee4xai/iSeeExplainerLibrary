@@ -47,25 +47,17 @@ class Nice(Resource):
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
+        output_names=model_info["attributes"]["target_values"][0]
+        target_name=model_info["attributes"]["target_names"][0]
+        feature_names=list(model_info["attributes"]["features"].keys())
+        feature_names.remove(target_name)
 
-        output_names=None
-        try:
-            feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
-        except: 
-            raise Exception("Could not extract feature names from training data file.")
-        if "categorical_features" in model_info:    #necessary                        
-            categorical_features=model_info["categorical_features"]
-        else:
-            raise Exception("Array of indices of categorical features must be specified.")
-        if "output_names" in model_info:
-            output_names = model_info["output_names"]
-        if "target_name" in model_info:
-            target_name = model_info["target_name"]
-        else:
-            try:
-                target_name=dataframe.columns[-1]
-            except:
-                target_name="Target"
+        categorical_features=[]
+        for feature in feature_names:
+            if isinstance(model_info["attributes"]["features"][feature],list):
+                categorical_features.append(dataframe.columns.get_loc(feature))
+
+
 
         ## getting predict function
         predic_func=None
@@ -119,8 +111,7 @@ class Nice(Resource):
                   index = ["Original Instance","Counterfactual"], 
                   columns = feature_names + [target_name])
 
-        if output_names is not None:
-            df[target_name]=df[target_name].map(lambda x: output_names[int(x)])
+        df[target_name]=df[target_name].map(lambda x: output_names[int(x)])
 
         #saving
         upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
@@ -154,6 +145,6 @@ class Nice(Resource):
         "meta":{
                 "supportsAPI":True,
                 "needsData": True,
-                "requiresAttributes":[{"features":"Dictionary with feature names as keys and arrays containing the ranges of continuous features, or strings with the categories for categorical features."}]
+                "requiresAttributes":[]
             }
         }

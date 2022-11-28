@@ -47,8 +47,7 @@ class AnchorsImage(Resource):
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
-        if "output_names" in model_info:
-            output_names=model_info["output_names"]
+        output_names=model_info["attributes"]["target_values"][0]
 
         if model_file!=None:
             if backend=="TF1" or backend=="TF2":
@@ -84,9 +83,12 @@ class AnchorsImage(Resource):
         else:
             raise Exception("Either an image file or a matrix representative of the image must be provided.")
 
-        if len(image.shape)<3:
-            image = image.reshape(image.shape + (1,))
+        if image.shape!=tuple(model_info["attributes"]["features"]["image"]["shape"]):
+            image = image.reshape(tuple(model_info["attributes"]["features"]["image"]["shape"]))
+
+        if image.shape[-1]==1:
             plt.gray()
+
 
         segmentation_fn='slic'
         if "segmentation_fn" in params_json:
@@ -110,7 +112,7 @@ class AnchorsImage(Resource):
         upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         fig.savefig(upload_folder+filename+".png")
 
-        response={"plot_png":getcall+".png","explanation":json.loads(explanation.to_json())}
+        response={"plot_png":getcall+".png"}#,"explanation":json.loads(explanation.to_json())}
         return response
 
     def get(self):

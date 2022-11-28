@@ -34,17 +34,6 @@ class ShapDeepLocal(Resource):
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        ## loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?  
-            try:
-                feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
-            except: 
-                 raise Exception("Could not extract feature names from training data file.")
-            dataframe=dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False)
-        else:
-            raise Exception("The training data file was not provided.")
-
         #getting params from request
         index=1
         plot_type=None
@@ -55,17 +44,23 @@ class ShapDeepLocal(Resource):
 
         ##getting params from info
         model_info=json.load(model_info_file)
-        kwargsData = dict(feature_names=feature_names, output_names=None)
-        '''
-        if "output_names" in model_info:
-           kwargsData["output_names"] = model_info["output_names"]
-        '''
+        backend=model_info["backend"]
+        target_name=model_info["attributes"]["target_names"][0]
+        feature_names=list(model_info["attributes"]["features"].keys())
+        feature_names.remove(target_name)
+
+        ## loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) ##error handling?  
+            dataframe.drop([target_name], axis=1, inplace=True)
+        else:
+            raise Exception("The training data file was not provided.")
 
         #load model (.h5 file)
+        if backend not in ["TF","TF1","TF2"]:
+            raise Exception("Deepshap only supports Tensorflow models.")
         model=h5py.File(model_file, 'w')
         model = tf.keras.models.load_model(model)
-
-        
 
         # Create explanation
         explainer = shap.DeepExplainer(model,dataframe.to_numpy())
@@ -78,15 +73,15 @@ class ShapDeepLocal(Resource):
         #plotting
         plt.switch_backend('agg')
         if plot_type=="bar":
-            shap.plots._bar.bar_legacy(shap_values[0],features=np.array(instance),feature_names=kwargsData["feature_names"],show=False)
+            shap.plots._bar.bar_legacy(shap_values[0],features=np.array(instance),feature_names=feature_names,show=False)
         elif plot_type=="decision":
-            shap.decision_plot(explainer.expected_value,shap_values=shap_values[0],features=np.array(instance),feature_names=kwargsData["feature_names"])
+            shap.decision_plot(explainer.expected_value,shap_values=shap_values[0],features=np.array(instance),feature_names=feature_names)
         else:
             if plot_type==None:
                 print("No plot type was specified. Defaulting to waterfall plot.")
             elif plot_type!="waterfall":
                 print("No plot with the specified name was found. Defaulting to waterfall plot.")
-            shap.plots._waterfall.waterfall_legacy(explainer.expected_value,shap_values=shap_values[0],features=np.array(instance),feature_names=kwargsData["feature_names"],show=False)
+            shap.plots._waterfall.waterfall_legacy(explainer.expected_value,shap_values=shap_values[0],features=np.array(instance),feature_names=feature_names,show=False)
        
         ##saving
         upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)

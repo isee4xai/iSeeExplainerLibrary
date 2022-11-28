@@ -32,17 +32,7 @@ class ShapTreeLocal(Resource):
             params_json = json.loads(params)
        
         #Getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
-
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-            try:
-                feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
-            except: 
-                feature_names=["Feature "+str(i) for i in range(len(instance))] 
-        else:
-            feature_names=["Feature "+str(i) for i in range(len(instance))]
+        model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
 
         #getting params from request
         index=1
@@ -54,10 +44,15 @@ class ShapTreeLocal(Resource):
 
         ##getting params from info
         model_info=json.load(model_info_file)
-
-        kwargsData = dict(feature_names=feature_names, output_names=None)
-        if "output_names" in model_info:
-            kwargsData["output_names"] = model_info["output_names"]
+        backend = model_info["backend"]  ##error handling?
+        try:
+            output_names=model_info["attributes"]["target_values"][0]
+        except:
+            output_names=None
+        target_name=model_info["attributes"]["target_names"][0]
+        feature_names=list(model_info["attributes"]["features"].keys())
+        feature_names.remove(target_name)
+        kwargsData = dict(feature_names=feature_names, output_names=output_names)
 
         #load model (.pkl file)
         model=joblib.load(model_file)
@@ -77,7 +72,7 @@ class ShapTreeLocal(Resource):
         elif plot_type=="decision":
             shap.decision_plot(explainer.expected_value,shap_values=shap_values[0],features=np.array(instance),feature_names=kwargsData["feature_names"])
         elif plot_type=="force":
-                shap.plots._force.force(explainer.expected_value,shap_values=shap_values[0],features=np.array(instance),feature_names=kwargsData["feature_names"],out_names=kwargsData["output_names"],matplotlib=True,show=False)
+                shap.plots._force.force(explainer.expected_value,shap_values=shap_values[0],features=np.array(instance),feature_names=kwargsData["feature_names"],out_names=target_name,matplotlib=True,show=False)
         else:
             if plot_type==None:
                 print("No plot type was specified. Defaulting to waterfall plot.")

@@ -40,16 +40,13 @@ class DisCERN(Resource):
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
-        outcome_name="Target"
+        outcome_name=model_info["attributes"]["target_names"][0]
+        feature_names=list(model_info["attributes"]["features"].keys())
+        feature_names.remove(outcome_name)
         categorical_features=[]
-        if "target_name" in model_info:
-            outcome_name = model_info["target_name"]
-        try:
-            feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
-        except: 
-            raise Exception("Could not extract feature names from training data file.")
-        if "categorical_features" in model_info:
-            categorical_features = model_info["categorical_features"]
+        for feature in feature_names:
+            if isinstance(model_info["attributes"]["features"][feature],list):
+                categorical_features.append(dataframe.columns.get_loc(feature))
       
         ## loading model
         # if backend=="TF1" or backend=="TF2":

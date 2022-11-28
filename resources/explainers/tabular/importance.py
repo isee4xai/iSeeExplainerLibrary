@@ -35,8 +35,9 @@ class Importance(Resource):
 
         ## params from info
         model_info=json.load(model_info_file)
-        backend = model_info["backend"]  ##error handling?
-        model_task = model_info["model_task"]  ##error handling?
+        backend = model_info["backend"]  
+        model_task = model_info["model_task"]  
+        target_name=model_info["attributes"]["target_names"][0]
 
         ## loading model
         if backend=="TF1" or backend=="TF2":
@@ -55,7 +56,7 @@ class Importance(Resource):
         if "variables" in params_json:
             kwargsData["variables"] = json.loads(params_json["variables"]) if isinstance(params_json["variables"],str) else params_json["variables"]
        
-        explainer = dx.Explainer(model, dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False), dataframe.iloc[:,-1:],model_type=model_task)
+        explainer = dx.Explainer(model, dataframe.drop([target_name], axis=1, inplace=False), dataframe.loc[:, [target_name]],model_type=model_task)
         parts = explainer.model_parts(**{k: v for k, v in kwargsData.items()})
 
         fig=parts.plot(show=False)
