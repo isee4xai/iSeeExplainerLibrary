@@ -44,20 +44,17 @@ class Ale(Resource):
 
         ##getting params from info
         model_info=json.load(model_info_file)
-        backend = model_info["backend"]  ##error handling?
+        backend = model_info["backend"] 
 
+        target_name=model_info["attributes"]["target_names"][0]
         try:
-            feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
-        except: 
-            raise Exception("Could not extract feature names from training data file.")
+            output_names=model_info["attributes"]["target_values"][0]
+        except:
+            output_names=None
+        feature_names=list(model_info["attributes"]["features"].keys())
+        feature_names.remove(target_name)
 
-        kwargsData = dict(feature_names=feature_names,target_names=None)
-       
-        if "target_name" in model_info:
-            kwargsData["target_names"] = [model_info["target_name"]]
-        if "output_names" in model_info:
-            kwargsData["target_names"] = model_info["output_names"]
-
+        kwargsData = dict(feature_names=feature_names,target_names=output_names)
 
         ## getting predict function
         predic_func=None
@@ -92,7 +89,7 @@ class Ale(Resource):
 
 
         proba_ale_lr = ALE(predic_func, **{k: v for k, v in kwargsData.items()})
-        proba_exp_lr = proba_ale_lr.explain(dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False).to_numpy(),**{k: v for k, v in kwargsData2.items()})
+        proba_exp_lr = proba_ale_lr.explain(dataframe.drop([target_name], axis=1, inplace=False).to_numpy(),**{k: v for k, v in kwargsData2.items()})
         
         
         if(kwargsData2["features"]!=None):

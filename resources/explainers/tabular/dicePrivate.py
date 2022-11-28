@@ -35,19 +35,15 @@ class DicePrivate(Resource):
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
-        outcome_name="Target"
-        type_and_precision=None
-        mad=None
-        if "target_name" in model_info:
-            outcome_name = model_info["target_name"]
-        try:
-            features = model_info["features"]
-        except:
-            raise Exception("The dataset \"features\" field was not specified.")
-        if "type_and_precision" in model_info:
-            type_and_precision = model_info["type_and_precision"]
-        if "mad" in model_info:
-            mad = model_info["mad"]
+        outcome_name=model_info["attributes"]["target_names"][0]
+
+        features=model_info["attributes"]["features"]
+        features.pop(outcome_name)
+        for k,v in features.items():
+            if isinstance(v,dict):
+                features.update({k:[v["min"],v["max"]]})
+            else:
+                features.update({k:[str(x) for x in v]})
 
         ##converting instance to dictionary
         instance=dict(zip(features.keys(), instance))
@@ -58,11 +54,8 @@ class DicePrivate(Resource):
            model = tf.keras.models.load_model(model_h5)
         else:
             raise Exception("Only TF1 and TF2 backends are allowed.")
-        
 
-
-
-        kwargsData = dict(features=features, outcome_name=outcome_name, type_and_precision=type_and_precision, mad=mad)
+        kwargsData = dict(features=features, outcome_name=outcome_name)
         kwargsData2 = dict(desired_class=1,total_CFs=3)
         if "num_cfs" in params_json:
            kwargsData2["total_CFs"] = int(params_json["num_cfs"])

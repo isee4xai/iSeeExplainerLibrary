@@ -34,8 +34,7 @@ class LimeText(Resource):
         if(params !=None):
             params_json = json.loads(params)
 
-        output_names=None
-        predic_func=None
+        
         
         #Getting model info, data, and file from local repository
         model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
@@ -43,9 +42,12 @@ class LimeText(Resource):
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
-        if "output_names" in model_info:
-            output_names=model_info["output_names"]
+        try:
+            output_names=model_info["attributes"]["target_values"][0]
+        except:
+            output_names=None
 
+        predic_func=None
         if model_file!=None:
             if backend=="TF1" or backend=="TF2":
                 model=h5py.File(model_file, 'w')

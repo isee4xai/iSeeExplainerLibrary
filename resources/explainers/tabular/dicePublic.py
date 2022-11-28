@@ -41,14 +41,16 @@ class DicePublic(Resource):
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
-        if "categorical_features" in model_info:
-            categorical_features=model_info["categorical_features"]
-        else:
-            raise Exception("Array of indices of categorical features must be specified.")
+        target_names=model_info["attributes"]["target_names"]
+        feature_names=list(model_info["attributes"]["features"].keys())
+        for target in target_names:
+            feature_names.remove(target)
+        cont_features=[]
+        for feature in feature_names:
+            if isinstance(model_info["attributes"]["features"][feature],dict):
+                cont_features.append(feature)
 
-        cont_features=list(dataframe.columns)[:-1]
-        for cat_feature in categorical_features:
-            cont_features.remove(dataframe.columns[cat_feature])
+
 
         ## loading model
         if backend=="TF1" or backend=="TF2":
@@ -60,7 +62,7 @@ class DicePublic(Resource):
            model = joblib.load(model_file)
         
 
-        ## params from the request
+        ## params from request
         kwargsData = dict(continuous_features=cont_features, outcome_name=dataframe.columns[-1])
         if "permitted_range" in params_json:
            kwargsData["permitted_range"] = json.loads(params_json["permitted_range"]) if isinstance(params_json["permitted_range"],str) else params_json["permitted_range"]

@@ -36,11 +36,6 @@ class ShapKernelGlobal(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-        else:
-            raise Exception("The training data file was not provided.")
 
         #getting params from request
         index=1
@@ -49,17 +44,22 @@ class ShapKernelGlobal(Resource):
 
         #getting params from info
         model_info=json.load(model_info_file)
-        backend = model_info["backend"]  ##error handling?
-
+        backend = model_info["backend"]
         try:
-            feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
-        except: 
-            raise Exception("Could not extract feature names from training data file.")
-        kwargsData = dict(feature_names=feature_names, output_names=None)
-        if "output_names" in model_info:
-            kwargsData["output_names"] = model_info["output_names"]
+            output_names=model_info["attributes"]["target_values"][0]
+        except:
+            output_names=None
+        target_name=model_info["attributes"]["target_names"][0]
+        feature_names=list(model_info["attributes"]["features"].keys())
+        feature_names.remove(target_name)
+        kwargsData = dict(feature_names=feature_names, output_names=output_names)
 
-
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file)
+            dataframe.drop([target_name], axis=1, inplace=True)
+        else:
+            raise Exception("The training data file was not provided.")
         #getting predict function
         predic_func=None
         if model_file!=None:
@@ -86,9 +86,7 @@ class ShapKernelGlobal(Resource):
         else:
             raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
 
-
         #creating explanation
-        dataframe=dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False)
         explainer = shap.KernelExplainer(predic_func, dataframe,**{k: v for k, v in kwargsData.items()})
         shap_values = explainer.shap_values(dataframe)
      
@@ -97,7 +95,7 @@ class ShapKernelGlobal(Resource):
 
         #plotting   
         plt.switch_backend('agg')
-        shap.summary_plot(shap_values,features=dataframe, feature_names=kwargsData["feature_names"],class_names=kwargsData["output_names"],show=False)
+        shap.summary_plot(shap_values,features=dataframe, feature_names=feature_names,class_names=output_names,show=False)
 
         #saving
         upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
