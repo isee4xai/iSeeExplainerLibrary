@@ -39,18 +39,15 @@ class LimeImage(Resource):
         params_json={}
         if(params !=None):
             params_json = json.loads(params)
-
-        output_names=None
-        predic_func=None
-        
+       
         #Getting model info, data, and file from local repository
         model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
 
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
-        if "output_names" in model_info:
-            output_names=model_info["output_names"]
+        output_names=model_info["attributes"]["target_values"][0]
+        predic_func=None
 
         if model_file!=None:
             if backend=="TF1" or backend=="TF2":
@@ -87,7 +84,13 @@ class LimeImage(Resource):
         else:
             raise Exception("Either an image file or a matrix representative of the image must be provided.")
 
-        
+        if image.shape!=tuple(model_info["attributes"]["features"]["image"]["shape"]):
+            image = image.reshape(tuple(model_info["attributes"]["features"]["image"]["shape"]))
+
+        if image.shape[-1]==1:
+            #image.reshape(tuple(model_info["attributes"]["features"]["image"]["shape"][:-1]))
+            return "LIME only supports RGB images."
+
         kwargsData = dict(top_labels=3,segmentation_fn=None)
         if "top_classes" in params_json:
             kwargsData["top_labels"] = int(params_json["top_classes"])   #top labels
@@ -116,7 +119,7 @@ class LimeImage(Resource):
         upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         fig.savefig(upload_folder+filename+".png")
 
-        response={"plot_png":getcall+".png","explanation":dict_exp}
+        response={"plot_png":getcall+".png"}#,"explanation":dict_exp}
         return response
 
     def get(self):

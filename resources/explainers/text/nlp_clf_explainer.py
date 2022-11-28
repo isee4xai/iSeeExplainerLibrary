@@ -169,7 +169,7 @@ class NLPClassifierExpl(Resource):
         model_file, _, _ = get_model_files(_id,self.model_folder)
 
         NLP_model = NLPClassifier()
-        NLP_model.load_model (model_file)
+        NLP_model.load_model(model_file)
         explanation = NLP_model.explain(instance)
 
         if params_json.get ('format', None) == 'html':

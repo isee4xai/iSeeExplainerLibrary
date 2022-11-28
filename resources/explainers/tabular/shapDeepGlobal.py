@@ -32,31 +32,31 @@ class ShapDeepGlobal(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-            try:
-                feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
-            except: 
-                raise Exception("Could not extract feature names from training data file.")
-            dataframe=dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False)
-        else:
-            raise Exception("The training data file was not provided.")
-
-         #getting params from request
-        index=1
-        if "output_index" in params_json:
-            index=int(params_json["output_index"]);
-
         #getting params from info
         model_info=json.load(model_info_file)
-        kwargsData = dict(feature_names=feature_names, output_names=None)
-        if "output_names" in model_info:
-            kwargsData["output_names"] = model_info["output_names"]
+        try:
+            output_names=model_info["attributes"]["target_values"][0]
+        except:
+            output_names=None
+        target_name=model_info["attributes"]["target_names"][0]
+        feature_names=list(model_info["attributes"]["features"].keys())
+        feature_names.remove(target_name)
+
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) 
+            dataframe.drop([target_name], axis=1, inplace=True)
+        else:
+            raise Exception("The training data file was not provided.")
 
         #loading model (.h5 file)
         model=h5py.File(model_file, 'w')
         model = tf.keras.models.load_model(model)
+
+        #getting params from request
+        index=1
+        if "output_index" in params_json:
+            index=int(params_json["output_index"]);
 
         #creating explanation
         explainer = shap.DeepExplainer(model,dataframe.to_numpy())
@@ -67,7 +67,7 @@ class ShapDeepGlobal(Resource):
            
         #plotting
         plt.switch_backend('agg')
-        shap.summary_plot(shap_values,features=dataframe,feature_names=kwargsData["feature_names"],class_names=kwargsData["output_names"])
+        shap.summary_plot(shap_values,features=dataframe,feature_names=feature_names,class_names=output_names)
 
         #saving
         upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)

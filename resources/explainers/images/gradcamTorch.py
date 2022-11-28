@@ -37,6 +37,14 @@ class GradCamTorch(Resource):
         #Getting model info, data, and file from local repository
         model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
 
+
+        ## params from info
+       
+        model_info=json.load(model_info_file)
+        backend = model_info["backend"]  
+        if backend!="PYT":
+            return "Only PyTorch models are compatible with this explanation method."
+
         #loading model
         if model_file!=None:
             mlp = torch.load(model_file)
@@ -44,32 +52,41 @@ class GradCamTorch(Resource):
         else:
             raise Exception("This method requires a PyTorch model to be uploaded.")
 
-        ## params from info
-        target_layers=None
+    
+
         mean=[0.5,0.5,0.5]
         std=[0.5,0.5,0.5]
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"]  
-        if backend!="PYT":
-            raise Exception("Only PyTorch models are compatible with this explanation method.")
-        if "mean" in model_info:
-            mean=model_info["mean"]
-        if "std" in model_info:
-            std=model_info["std"]
-        if "target_layer" in model_info:
-            if hasattr(mlp,model_info["target_layer"]):
-                target_layers = [getattr(mlp,model_info["target_layer"])]
+        if "mean" in params_json:
+            mean=params_json["mean"]
+        if "std" in params_json:
+            std=params_json["std"]
+        if "target_layer" in params_json:
+            if hasattr(mlp,params_json["target_layer"]):
+                target_layers = [getattr(mlp,params_json["target_layer"])]
             else:
-                raise Exception("The specified target layer" + str(model_info["target_layer"]) + "does not exist.")
+                return "The specified target layer" + str(params_json["target_layer"]) + "does not exist."
         else:
-            raise Exception("This method requires the name of target layer to be provided as a string. This is the layer that you want to compute the visualization for."\
+            return "This method requires the name of target layer to be provided as a string. This is the layer that you want to compute the visualization for."\
                 " Usually this will be the last convolutional layer in the model. It is also possible to specify internal components of this layer by passing the"\
                 " target_layer_index parameter in params. To get the target layer, this method executes 'model.<target_layer>[<target_layer_index>]'"\
                 " Some common examples of these parameters for well-known models:"\
                 " Resnet18 and 50: model.layer4 -> 'target_layer':'layer4'"\
                 " VGG, densenet161: model.features[-1] -> 'target_layer':'features', 'target_layer_index':-1"\
-                " mnasnet1_0: model.layers[-1] -> 'target_layer':'layers', 'target_layer_index':-1")
+                " mnasnet1_0: model.layers[-1] -> 'target_layer':'layers', 'target_layer_index':-1"
 
+        if "target_layer_index" in params_json:
+            try:
+                target_layers=[target_layers[0][int(params_json["target_layer_index"])]]
+            except:
+                return "The specified index could not be accessed in the target_layer." 
+
+        target=None
+        if "target_class" in params_json:
+            target = [ClassifierOutputTarget(int(params_json["target_class"]))]
+
+        aug_smooth=True
+        if "aug_smooth" in params_json:
+            aug_smooth= bool(params_json["aug_smooth"])
 
         rgb_img=None        
         if instance!=None:
@@ -84,26 +101,16 @@ class GradCamTorch(Resource):
                  raise Exception("Could not load image from file.")
         else:
             raise Exception("Either an image file or a matrix representative of the image must be provided.")
+        
         if len(rgb_img.shape)<3:
-            raise Exception("The provided image must be RGB-encoded.")
+            raise Exception("Grad-Cam only supports RGB images.")
+
         rgb_img = np.float32(rgb_img) / 255
         input_tensor = preprocess_image(rgb_img,
                                 mean=mean,
                                 std=std)
 
-        if "target_layer_index" in params_json:
-            try:
-                target_layers=[target_layers[0][int(params_json["target_layer_index"])]]
-            except:
-                raise Exception("The specified index could not be accessed in the target_layer.")
-
-        target=None
-        if "target_class" in params_json:
-            target = [ClassifierOutputTarget(int(params_json["target_class"]))]
-
-        aug_smooth=True
-        if "aug_smooth" in params_json:
-            aug_smooth= bool(params_json["aug_smooth"])
+        
 
         cam  = GradCAM(model=mlp,
                    target_layers=target_layers, use_cuda=torch.cuda.is_available())
@@ -130,9 +137,18 @@ class GradCamTorch(Resource):
         "instance": "Matrix representing the image to be explained.",
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
+                "target_layer":"(MANDATORY) name of target layer to be provided as a string. This is the layer that you want to compute the visualization for."\
+                                " Usually this will be the last convolutional layer in the model. It is also possible to specify internal components of this layer by passing the"\
+                                " target_layer_index parameter in params. To get the target layer, this method executes 'model.<target_layer>[<target_layer_index>]'"\
+                                " Some common examples of these parameters for well-known models:"\
+                                " Resnet18 and 50: model.layer4 -> 'target_layer':'layer4'"\
+                                " VGG, densenet161: model.features[-1] -> 'target_layer':'features', 'target_layer_index':-1"\
+                                " mnasnet1_0: model.layers[-1] -> 'target_layer':'layers', 'target_layer_index':-1",
                 "target_layer_index": "(Optional) index of the target layer to be accessed. Provide it when you want to focus on a specific component of the target layer."
                                       "If not provided, the whole layer specified as target when uploading the model will be used.",
                 "target_class": "(Optional) Integer representing the index of the target class to generate the explanation. If not provided, defaults to the class with the highest predicted probability.",
+                "mean":"Array of floats with the mean values of each chanel used to normalize the RGB Image.",
+                "std": "Array of floats with the standard deviation values of each chanel used to normalize the RGB Image.",
                 "aug_smooth": "(Optional) Boolean indicating whether to apply augmentation smoothing (defaults to True). This has the effect of better centering the CAM around the objects. However, it increases the run time by x6."
                 },
         "output_description":{

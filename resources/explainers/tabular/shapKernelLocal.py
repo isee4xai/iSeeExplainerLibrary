@@ -38,12 +38,7 @@ class ShapKernelLocal(Resource):
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        ## loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-        else:
-            raise Exception("The training data file was not provided.")
-
+       
         #getting params from request
         index=1
         plot_type=None
@@ -55,15 +50,21 @@ class ShapKernelLocal(Resource):
         ##getting params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
-
         try:
-            feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
-        except: 
-            raise Exception("Could not extract feature names from training data file.")
-        kwargsData = dict(feature_names=feature_names, output_names=None)
-        if "output_names" in model_info:
-            kwargsData["output_names"] = model_info["output_names"]
+            output_names=model_info["attributes"]["target_values"][0]
+        except:
+            output_names=None
+        target_name=model_info["attributes"]["target_names"][0]
+        feature_names=list(model_info["attributes"]["features"].keys())
+        feature_names.remove(target_name)
+        kwargsData = dict(feature_names=feature_names, output_names=output_names)
 
+        ## loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) ##error handling?
+            dataframe.drop([target_name], axis=1, inplace=True)
+        else:
+            raise Exception("The training data file was not provided.")
 
         ## getting predict function
         predic_func=None
@@ -91,9 +92,8 @@ class ShapKernelLocal(Resource):
         else:
             raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
 
-
         # Create data
-        explainer = shap.KernelExplainer(predic_func, dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False),**{k: v for k, v in kwargsData.items()})
+        explainer = shap.KernelExplainer(predic_func, dataframe,**{k: v for k, v in kwargsData.items()})
 
         shap_values = explainer.shap_values(np.array(instance))
         
@@ -108,7 +108,7 @@ class ShapKernelLocal(Resource):
         elif plot_type=="decision":
             shap.decision_plot(explainer.expected_value,shap_values=shap_values,features=np.array(instance),feature_names=kwargsData["feature_names"])
         elif plot_type=="force":
-                shap.plots._force.force(explainer.expected_value,shap_values=shap_values,features=np.array(instance),feature_names=kwargsData["feature_names"],out_names=kwargsData["output_names"],matplotlib=True,show=False)
+                shap.plots._force.force(explainer.expected_value,shap_values=shap_values,features=np.array(instance),feature_names=kwargsData["feature_names"],out_names=target_name,matplotlib=True,show=False)
         else:
             if plot_type==None:
                 print("No plot type was specified. Defaulting to waterfall plot.")

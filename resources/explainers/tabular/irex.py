@@ -37,31 +37,27 @@ class IREX(Resource):
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        ## loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-        else:
-            raise Exception("The training data file was not provided.")
+        
 
         ##getting params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
         model_task=model_info["model_task"] ##error handling?
-
-        if model_task!="classification":
-            raise Exception("IREX can only be used with classification models.")
-
+        target_name=model_info["attributes"]["target_names"][0]
         try:
-            expected=model_info["expected_answers"]
+            output_names=model_info["attributes"]["target_values"][0]
         except:
-            raise Exception("An array with the expected answers is necessary for the IREX explainer.")
+            output_names=None
+        feature_names=list(model_info["attributes"]["features"].keys())
+        feature_names.remove(target_name)
+        kwargsData = dict(feature_names=feature_names,target_names=output_names)
 
-        kwargsData = dict(feature_names=None,target_names=None)
-        if "feature_names" in model_info:
-            kwargsData["feature_names"]=model_info["feature_names"]
-        if "output_names" in model_info:
-            kwargsData["target_names"]=model_info["output_names"]
-
+        ## loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) ##error handling?
+            dataframe.drop([target_name], axis=1, inplace=True)
+        else:
+            raise Exception("The training data file was not provided.")
         ## getting predict function
         predic_func=None
         if model_file!=None:
@@ -91,6 +87,10 @@ class IREX(Resource):
         #getting params from request
         threshold=0.01
         classes_to_show=None
+        if "expected_answers" in params_json:  
+            expected=json.loads(params_json["expected_answers"]) if isinstance(params_json["expected_answers"],str) else params_json["expected_answers"]
+        else:
+            raise Exception("This method requires the expected answers.")
         if "threshold" in params_json:
             threshold = float(params_json["threshold"])
         if "classes_to_show" in params_json:
@@ -98,7 +98,7 @@ class IREX(Resource):
 
 
         proba_ale_lr = ALE(predic_func, **{k: v for k, v in kwargsData.items()})
-        proba_exp_lr = proba_ale_lr.explain(dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False).to_numpy())
+        proba_exp_lr = proba_ale_lr.explain(dataframe.to_numpy())
 
         anomalies=[]
         for i in range(len(proba_exp_lr.ale_values)):
@@ -155,6 +155,7 @@ class IREX(Resource):
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
+                "expected_answers":"Array containing the expected answers to the questions of a questionnaire that are supposed to contribute to the target class by experts.",
                 "threshold": "(Optional) A float between 0 and 1 for the threshold that will be used to determine anomalous variables. If a feature seems to be contradictory but its absolute ALE value is below this threshold, it will not be considered anomalous. Defaults to 0.01.",
                 "classes_to_show": "(Optional) Array of ints representing the indices of the classes to be explained. Defaults to all classes."
                 },
@@ -164,7 +165,7 @@ class IREX(Resource):
         "meta":{
                 "supportsAPI":False,
                 "needsData": True,
-                "requiresAttributes":[{"expected_answers":"Array containing the expected answers to the questions of a questionnaire that are supposed to contribute to the target class by experts." }]
+                "requiresAttributes":[]
             }
         }
     

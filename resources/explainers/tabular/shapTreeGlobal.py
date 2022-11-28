@@ -3,8 +3,6 @@ import numpy as np
 import joblib
 import json
 import shap
-import xgboost
-import lightgbm
 from flask_restful import Resource,reqparse
 from flask import request
 from saveinfo import save_file_info
@@ -37,24 +35,25 @@ class ShapTreeGlobal(Resource):
         if "output_index" in params_json:
             index=int(params_json["output_index"]);
 
-
         #getting params from info
         model_info=json.load(model_info_file)
+        backend = model_info["backend"]
         try:
-            feature_names=list(dataframe.drop(dataframe.columns[-1],axis=1).columns)
-        except: 
-            raise Exception("Could not extract feature names from training data file.")
-        kwargsData = dict(feature_names=feature_names, output_names=None)
-        if "output_names" in model_info:
-            kwargsData["output_names"] = model_info["output_names"]
-
+            output_names=model_info["attributes"]["target_values"][0]
+        except:
+            output_names=None
+        target_name=model_info["attributes"]["target_names"][0]
+        feature_names=list(model_info["attributes"]["features"].keys())
+        feature_names.remove(target_name)
+        kwargsData = dict(feature_names=feature_names, output_names=output_names)
+    
         #loading model (.pkl file)
         model=joblib.load(model_file)
 
         #loading data
         if data_file!=None:
             dataframe = joblib.load(data_file) ##error handling?
-            dataframe=dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False)
+            dataframe.drop([target_name], axis=1, inplace=True)
         else:
             raise Exception("The training data file was not provided.")
 
