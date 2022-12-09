@@ -122,7 +122,7 @@ class Lime(Resource):
         upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         hti = Html2Image()
         hti.output_path= upload_folder
-        hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png", size=(800, 400))   
+        hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png", size=(800, 800))   
         explanation.save_to_file(upload_folder+filename+".html")
         
         response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":ret}
