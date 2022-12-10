@@ -24,7 +24,7 @@ protobuf==3.19.6
 flask-cors==3.0.10
 git+https://github.com/isee4xai/NLPClassifierExplainer
 xgboost==1.6.1
-discern-xai==0.0.23
+discern-xai==0.0.24
 statsmodels==0.13.5
 numba==0.56.3
 seaborn==0.12.1
