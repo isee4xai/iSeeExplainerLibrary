@@ -1,5 +1,50 @@
 {
+  "alias": "CancerPred",
   "backend": "sklearn",
   "model_task": "classification",
-  "output_names": [ "Healthy", "Cancer"]
+  "dataset_type": "Tabular",
+  "attributes": {
+    "target_names": [ "Biopsy" ],
+    "target_values": [ [ "Healthy", "Cancer" ] ],
+    "features": {
+      "Age": {
+        "min": 13,
+        "max": 84
+      },
+      "Number.of.sexual.partners": {
+        "min": 1,
+        "max": 15
+      },
+      "First.sexual.intercourse": {
+        "min": 10,
+        "max": 32
+      },
+      "Num.of.pregnancies": {
+        "min": 0,
+        "max": 11
+      },
+      "Smokes..years.": {
+        "min": 0,
+        "max": 34
+      },
+      "Hormonal.Contraceptives..years.": {
+        "min": 0,
+        "max": 30
+      },
+      "IUD..years.": {
+        "min": 0,
+        "max": 17
+      },
+      "STDs..number.": {
+        "min": 0,
+        "max": 4
+      },
+      "STDs..Number.of.diagnosis": {
+        "min": 0,
+        "max": 3
+      },
+      "Biopsy": [ 0, 1 ]
+    }
+  }
+
 }

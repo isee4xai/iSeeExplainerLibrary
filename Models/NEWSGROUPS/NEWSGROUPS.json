@@ -1,4 +1,14 @@
 {
+  "alias": "newsgroups",
   "backend": "sklearn",
-  "output_names": [ "atheism", "graphics", "ms-windows.misc", "pc.hardware", "mac.hardware", "x", "misc.forsale", "autos", "motorcycles", "baseball", "hockey", "crypt", "electronics", "med", "space", "christian", "guns", "mideast", "politics.misc", "religion.misc" ]
+  "model_task": "classification",
+  "dataset_type": "Text",
+  "attributes": {
+    "target_values": [ [ "atheism", "graphics", "ms-windows.misc", "pc.hardware", "mac.hardware", "x", "misc.forsale", "autos", "motorcycles", "baseball", "hockey", "crypt", "electronics", "med", "space", "christian", "guns", "mideast", "politics.misc", "religion.misc" ] ],
+    "target_names": [ "newsgroup" ],
+    "features": {
+      "text": {},
+      "newsgroup": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]
+    }
+  } 
 }

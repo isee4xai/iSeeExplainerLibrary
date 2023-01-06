@@ -1,4 +1,16 @@
 {
+  "alias": "DigitClassifier",
   "backend": "TF2",
-  "output_names": [ "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine" ]
+  "model_task": "classification",
+  "dataset_type": "Image",
+  "attributes": {
+    "target_names": [ "label" ],
+    "target_values": [ [ "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine" ] ],
+    "features": {
+      "image": {
+        "shape": [ 28, 28, 1]
+      },
+      "label": [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+    }
+  }
 }

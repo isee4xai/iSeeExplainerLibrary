@@ -1,19 +1,70 @@
 {
+  "alias": "xgbtcensus",
   "backend": "XGBoost",
   "model_task": "regression",
-  "feature_names": [
-    "CRIM",
-    "ZN",
-    "INDUS",
-    "CHAS",
-    "NOX",
-    "RM",
-    "AGE",
-    "DIS",
-    "RAD",
-    "TAX",
-    "PTRATIO",
-    "B",
-    "LSTAT"
-  ]
+  "dataset_type": "Tabular",
+  "attributes": {
+    "target_names": [ "MEDV" ],
+    "target_values": [],
+    "features": {
+      "CRIM": {
+        "min": 0.00632,
+        "max": 88.9762
+      },
+      "ZN": {
+        "min": 0.0,
+        "max": 100.0
+      },
+      "INDUS": {
+        "min": 0.46,
+        "max": 27.74
+      },
+      "CHAS": {
+        "min": 0.0,
+        "max": 1.0
+      },
+      "NOX": {
+        "min": 0.385,
+        "max": 0.871
+      },
+      "RM": {
+        "min": 3.561,
+        "max": 8.78
+      },
+      "AGE": {
+        "min": 2.9,
+        "max": 100.0
+      },
+      "DIS": {
+        "min": 1.1296,
+        "max": 12.1265
+      },
+      "RAD": {
+        "min": 1.0,
+        "max": 24.0
+      },
+      "TAX": {
+        "min": 187.0,
+        "max": 711.0
+      },
+      "PTRATIO": {
+        "min": 12.6,
+        "max": 22.0
+      },
+      "B": {
+        "min": 0.32,
+        "max": 396.9
+      },
+      "LSTAT": {
+        "min": 1.73,
+        "max": 37.97
+      },
+      "MEDV": {
+        "min": 5.0,
+        "max": 50.0
+      }
+    }
+
+  }
+
 }

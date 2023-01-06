@@ -1,15 +1,50 @@
 {
+  "alias": "Titanic",
   "backend": "TF2",
-  "feature_names": [
-    "Pclass",
-    "Sex",
-    "Age",
-    "SibSp",
-    "Parch",
-    "Fare",
-    "Embarked_C",
-    "Embarked_Q",
-    "Embarked_S"
-  ],
-  "output_names": ["Deceased","Survived"]
-}
+  "model_task": "classification",
+  "dataset_type": "Tabular",
+  "attributes": {
+    "target_values": [ [ "Deceased", "Survived" ] ],
+    "target_names": [ "last" ],
+    "features": {
+      "Pclass": {
+        "min": -10,
+        "max": 10
+      },
+      "Sex": {
+        "min": -10,
+        "max": 10
+      },
+      "Age": {
+        "min": -10,
+        "max": 10
+      },
+      "SibSp": {
+        "min": -10,
+        "max": 10
+      },
+      "Parch": {
+        "min": -10,
+        "max": 10
+      },
+      "Fare": {
+        "min": -10,
+        "max": 10
+      },
+      "Embarked_C": {
+        "min": -10,
+        "max": 10
+      },
+      "Embarked_Q": {
+        "min": -10,
+        "max": 10
+      },
+      "Embarked_S": {
+        "min": -10,
+        "max": 10
+      },
+      "last": [ 0, 1 ]
+    }
+  }
+
+  }

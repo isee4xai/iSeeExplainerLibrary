@@ -1,0 +1,8 @@
+{
+  "alias": "weather_cbrfox",
+  "datatype": "timeseries",
+  "model_task": "forecasting",
+  "backend": "TF2",
+  "target_columns": [ 1, 4, 7 ],
+  "feature_names": [ "HUM_MIN", "HUM_AVG", "HUM_MAX", "PRES_MIN", "PRES_AVG", "PRES_MAX", "TEMP_MIN", "TEMP_AVG", "TEMP_MAX" ]
+}
