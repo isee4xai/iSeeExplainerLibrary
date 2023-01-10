@@ -5,6 +5,7 @@ class Explainers(Resource):
         return [ '/Images/Anchors',
                  '/Images/Counterfactuals',
                  '/Images/GradCamTorch',
+                 '/Images/IntegratedGradients',
                  '/Images/LIME',
                  '/Tabular/ALE',
                  '/Tabular/Anchors',
