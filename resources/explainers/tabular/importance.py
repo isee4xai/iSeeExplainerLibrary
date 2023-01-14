@@ -66,7 +66,11 @@ class Importance(Resource):
         fig.write_html(upload_folder+filename+'.html')
         hti = Html2Image()
         hti.output_path= upload_folder
-        hti.screenshot(html_file=upload_folder+filename+'.html', save_as=filename+".png") 
+        if "png_height" in params_json and "png_width" in params_json:
+            size=(int(params_json["png_width"]),int(params_json["png_height"]))
+            hti.screenshot(html_file=upload_folder+filename+'.html', save_as=filename+".png",size=size) 
+        else:
+            hti.screenshot(html_file=upload_folder+filename+'.html', save_as=filename+".png") 
 
         response={"plot_html":getcall+'.html',"plot_png":getcall+'.png', "explanation":json.loads(parts.result.to_json())}
         return response
@@ -81,6 +85,8 @@ class Importance(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "params": { 
                 "variables": "(Optional) Array of strings with the names of the features for which the importance will be calculated. Defaults to all features.",
+                "png_height": "(optional) height (in pixels) of the png image containing the explanation.",
+                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
                 },
         "output_description":{
                 "bar_plot": "A bar plot representing the increase in the prediction error (importance) for the features with the highest values."

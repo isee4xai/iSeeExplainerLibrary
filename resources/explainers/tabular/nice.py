@@ -120,7 +120,12 @@ class Nice(Resource):
         file.close()
         hti = Html2Image()
         hti.output_path= upload_folder
-        hti.screenshot(html_str=df.to_html(), save_as=filename+".png")
+        if "png_height" in params_json and "png_width" in params_json:
+            size=(int(params_json["png_width"]),int(params_json["png_height"]))
+            hti.screenshot(html_str=df.to_html(), save_as=filename+".png",size=size)
+        else:
+            hti.screenshot(html_str=df.to_html(), save_as=filename+".png")
+        
 
         response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":df.to_dict()}
         return response
@@ -137,7 +142,9 @@ class Nice(Resource):
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
                 "desired_class": "(optional) Integer representing the index of the desired counterfactual class. Defaults to string 'other', which will look for any different class.",
-                "optimization_criteria": "(optional) The counterfactual criteria to optimize. It can be 'sparsity','proximity', or 'plausibility'. Defaults to 'sparsity.'"
+                "optimization_criteria": "(optional) The counterfactual criteria to optimize. It can be 'sparsity','proximity', or 'plausibility'. Defaults to 'sparsity.'",
+                "png_height": "(optional) height (in pixels) of the png image containing the explanation.",
+                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
                 },
         "output_description":{
                 "html_table": "An html page containing a table with the original instance compared against the generated counterfactual."

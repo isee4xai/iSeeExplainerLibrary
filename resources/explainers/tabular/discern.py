@@ -103,7 +103,12 @@ class DisCERN(Resource):
 
         hti = Html2Image()
         hti.output_path= upload_folder
-        hti.screenshot(html_str=str_html, save_as=filename+".png")
+        if "png_height" in params_json and "png_width" in params_json:
+            size=(int(params_json["png_width"]),int(params_json["png_height"]))
+            hti.screenshot(html_str=str_html, save_as=filename+".png",size=size)
+        else:
+            hti.screenshot(html_str=str_html, save_as=filename+".png")
+       
         
         response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":result_df.to_json()}
         return response
@@ -120,7 +125,10 @@ class DisCERN(Resource):
                 
                 "desired_class": "Integer representing the index of the desired counterfactual class, or 'opposite' in the case of binary classification. Defaults to 'opposite'.",
                 "feature_attribution_method": "Feature attribution method used for obtaining feature weights; currently supports LIME, SHAP and Integrated Gradients. Defaults to LIME.",
-                "attributed_instance": "Indicate on which instance to use feature attribution: Q for query or N for NUN. Defaults to Q."},
+                "attributed_instance": "Indicate on which instance to use feature attribution: Q for query or N for NUN. Defaults to Q.",
+                "png_height": "(optional) height (in pixels) of the png image containing the explanation.",
+                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
+                },
 
         "output_description":{
                 "html_table": "An html page containing a table with the generated couterfactuals."

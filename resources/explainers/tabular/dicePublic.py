@@ -120,8 +120,11 @@ class DicePublic(Resource):
 
         hti = Html2Image()
         hti.output_path= upload_folder
-        hti.screenshot(html_str=str_html, save_as=filename+".png")
-
+        if "png_height" in params_json and "png_width" in params_json:
+            size=(int(params_json["png_width"]),int(params_json["png_height"]))
+            hti.screenshot(html_str=str_html, save_as=filename+".png",size=size)
+        else:
+            hti.screenshot(html_str=str_html, save_as=filename+".png")
         response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":json.loads(e1.to_json())}
         return response
 
@@ -138,7 +141,9 @@ class DicePublic(Resource):
                 "features_to_vary": "(optional) Either a string 'all' or a list of strings representing the feature names to vary. Defaults to all features.",
                 "num_cfs": "(optional) number of counterfactuals to be generated for each instance.",
                 "permitted_range": "(optional) JSON object with feature names as keys and permitted range in array as values.",
-                "continuous_features_precision": "(optional) JSON object with feature names as keys and precisions as values."
+                "continuous_features_precision": "(optional) JSON object with feature names as keys and precisions as values.",
+                "png_height": "(optional) height (in pixels) of the png image containing the explanation.",
+                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
                 },
         "output_description":{
                 "html_table": "An html page containing a table with the original instance compared against a table with the generated couterfactuals."
