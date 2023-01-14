@@ -93,7 +93,10 @@ class LimeText(Resource):
         upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         hti = Html2Image()
         hti.output_path= upload_folder
-        hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png")   
+        size=(1000, 400)
+        if "png_height" in params_json and "png_width" in params_json:
+            size=(int(params_json["png_width"]),int(params_json["png_height"]))
+        hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png",size=size)   
         explanation.save_to_file(upload_folder+filename+".html")
         
         response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":ret}
@@ -112,7 +115,9 @@ class LimeText(Resource):
         "params": { 
                 "output_classes" : "(Optional) Array of ints representing the classes to be explained.",
                 "top_classes": "(Optional) Int representing the number of classes with the highest prediction probablity to be explained.",
-                "num_features": "(Optional) Int representing the maximum number of features to be included in the explanation."
+                "num_features": "(Optional) Int representing the maximum number of features to be included in the explanation.",
+                "png_height": "(optional) height (in pixels) of the png image containing the explanation.",
+                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
                 },
         "output_description":{
                 "lime_plot": "An image contaning a plot with the most influyent words for the given instance. For regression models, the plot displays both positive and negative contributions of each word to the predicted outcome."
