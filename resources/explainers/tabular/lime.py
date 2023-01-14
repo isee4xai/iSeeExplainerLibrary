@@ -95,6 +95,7 @@ class Lime(Resource):
   
         
         #getting params from request
+
         kwargsData2 = dict(labels=(1,), top_labels=None, num_features=None)
         if "output_classes" in params_json: #labels
             kwargsData2["labels"] = json.loads(params_json["output_classes"]) if isinstance(params_json["output_classes"],str) else params_json["output_classes"]  
@@ -102,8 +103,6 @@ class Lime(Resource):
             kwargsData2["top_labels"] = int(params_json["top_classes"])   #top labels
         if "num_features" in params_json:
             kwargsData2["num_features"] = int(params_json["num_features"])
-
-
 
         explainer = lime.lime_tabular.LimeTabularExplainer(dataframe.drop([target_name], axis=1, inplace=False).to_numpy(),
                                                             **{k: v for k, v in kwargsData.items() if v is not None})
@@ -119,10 +118,14 @@ class Lime(Resource):
         ret=json.loads(json.dumps(ret))
 
         ##saving
+
         upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         hti = Html2Image()
         hti.output_path= upload_folder
-        hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png", size=(1000, 400))   
+        size=(1000, 400)
+        if "png_height" in params_json and "png_width" in params_json:
+            size=(int(params_json["png_width"]),int(params_json["png_height"]))
+        hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png", size=size)   
         explanation.save_to_file(upload_folder+filename+".html")
         
         response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":ret}
@@ -141,7 +144,9 @@ class Lime(Resource):
         "params": { 
                 "output_classes" : "(Optional) Array of ints representing the classes to be explained.",
                 "top_classes": "(Optional) Int representing the number of classes with the highest prediction probability to be explained. Overrides 'output_classes' if provided.",
-                "num_features": "(Optional) Int representing the maximum number of features to be included in the explanation."
+                "num_features": "(Optional) Int representing the maximum number of features to be included in the explanation.",
+                "png_height": "(optional) height (in pixels) of the png image containing the explanation.",
+                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
                 },
         "output_description":{
                 "lime_plot": "An image contaning a plot with the most influent features for the given instance. For regression models, the plot displays both positive and negative contributions of each feature value to the predicted outcome."
