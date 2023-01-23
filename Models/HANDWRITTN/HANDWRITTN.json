@@ -1,16 +1,1 @@
-{
-  "alias": "DigitClassifier",
-  "backend": "TF2",
-  "model_task": "classification",
-  "dataset_type": "Image",
-  "attributes": {
-    "target_names": [ "label" ],
-    "target_values": [ [ "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine" ] ],
-    "features": {
-      "image": {
-        "shape": [ 28, 28, 1]
-      },
-      "label": [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
-    }
-  }
-}
+{"alias": "DigitClassifier", "attributes": {"features": {"image": {"data_type": "image", "max": 0.5, "max_raw": 255, "min": -0.5, "min_raw": 0, "shape": [28, 28, 1], "shape_raw": [28, 28]}, "label": {"data_type": "categorical", "values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "values_raw": ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"]}}, "target_names": ["label"]}, "backend": "TF2", "dataset_type": "Image", "model_task": "classification"}

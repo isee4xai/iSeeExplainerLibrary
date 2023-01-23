@@ -5,12 +5,21 @@
   "dataset_type": "Image",
   "attributes": {
     "target_names": [ "label" ],
-    "target_values": [ [ "T-shirt/top", "Trouser", "Pullover", "Dress", "Coat", "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot" ] ],
     "features": {
       "image": {
-        "shape": [28,28,1]
+        "data_type": "image",
+        "shape": [ 28, 28, 1 ],
+        "shape_raw": [ 28, 28 ],
+        "min": -0.5,
+        "max": 0.5,
+        "min_raw": 0,
+        "max_raw": 255
       },
-      "label": [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+      "label": {
+        "data_type": "categorical",
+        "values": [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ],
+        "values_raw": [ "T-shirt/top", "Trouser", "Pullover", "Dress", "Coat", "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot" ]
+      }
     }
   }
 }

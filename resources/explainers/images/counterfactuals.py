@@ -7,6 +7,7 @@ import torch
 import h5py
 import joblib
 import json
+import math
 import werkzeug
 import matplotlib.pyplot as plt
 from alibi.explainers import Counterfactual
@@ -47,7 +48,7 @@ class CounterfactualsImage(Resource):
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
-        output_names=model_info["attributes"]["target_values"][0]
+        output_names=model_info["attributes"]["features"][model_info["attributes"]["target_names"][0]]["values_raw"]
 
         if model_file!=None:
             if backend=="TF1" or backend=="TF2":
@@ -77,16 +78,33 @@ class CounterfactualsImage(Resource):
             except:
                 raise Exception("Could not read instance from JSON.")
         elif image!=None:
-             try:
-                image = np.asarray(Image.open(image))
-             except:
-                 raise Exception("Could not load image from file.")
+            try:
+                im=Image.open(image)
+            except:
+                raise Exception("Could not load image from file.")
+            #cropping
+            shape_raw=model_info["attributes"]["features"]["image"]["shape_raw"]
+            im=im.crop((math.ceil((im.width-shape_raw[0])/2.0),math.ceil((im.height-shape_raw[1])/2.0),math.ceil((im.width+shape_raw[0])/2.0),math.ceil((im.height+shape_raw[1])/2.0)))
+            image=np.asarray(im)
+            #normalizing
+            try:
+                nmin=model_info["attributes"]["features"]["image"]["min"]
+                nmax=model_info["attributes"]["features"]["image"]["max"]
+                min_raw=model_info["attributes"]["features"]["image"]["min_raw"]
+                max_raw=model_info["attributes"]["features"]["image"]["max_raw"]
+            except:
+                return "Could not normalize the image. One or more of this parameters are missing from the configuration file: 'min', 'max', 'min_raw', 'max_raw'."\
+                       " You may also provide the image as a normalized array using the 'instance' parameter in this call."
+            try:
+                image=((image-min_raw) / (max_raw - min_raw)) * (nmax - nmin) + nmin
+            except:
+                return "Could not normalize image."
         else:
             raise Exception("Either an image file or a matrix representative of the image must be provided.")
         
         if image.shape!=tuple(model_info["attributes"]["features"]["image"]["shape"]):
             image = image.reshape(tuple(model_info["attributes"]["features"]["image"]["shape"]))
-        if image.shape[-1]==1:
+        if len(model_info["attributes"]["features"]["image"]["shape_raw"])==2 or model_info["attributes"]["features"]["image"]["shape_raw"][-1]==1:
             plt.gray()
         image=image.reshape((1,) + image.shape)
         
@@ -98,14 +116,21 @@ class CounterfactualsImage(Resource):
         if "target_class" in params_json:
              kwargsData["target_class"] = params_json["target_class"]
 
+        size=(6, 6)
+        if "png_height" in params_json and "png_width" in params_json:
+            try:
+                size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
+            except:
+                print("Could not convert dimensions for .PNG output file. Using default dimensions.")
+
         cf = Counterfactual(predic_func, shape=image.shape, **{k: v for k, v in kwargsData.items() if v is not None})
         explanation = cf.explain(image)
 
         pred_class = explanation.cf['class']
         proba = explanation.cf['proba'][0][pred_class]       
 
-        fig, axes = plt.subplots(1,1, figsize = (4, 4))
-        axes.imshow(explanation.cf['X'][0])
+        fig, axes = plt.subplots(1,1, figsize = size)
+        axes.imshow(explanation.cf['X'].reshape(tuple(model_info["attributes"]["features"]["image"]["shape_raw"])))
 
         if output_names!=None:
             axes.set_title('Original Class: {}\nCounterfactual Class: {}\nProbability {:.3f}'.format(output_names[explanation.orig_class],output_names[pred_class],proba))  
@@ -132,7 +157,10 @@ class CounterfactualsImage(Resource):
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
                 "target_class": "(optional) A string containing 'other' or 'same', or an integer denoting the desired class for the counterfactual instance. Defaults to 'other'.",
-                "target_proba": "(optional) Float from 0 to 1 representing the target probability for the counterfactual generated. Defaults to 1."
+                "target_proba": "(optional) Float from 0 to 1 representing the target probability for the counterfactual generated. Defaults to 1.",
+                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
+                "png_height": "(optional) height (in pixels) of the png image containing the explanation."
+                
                 },
         "output_description":{
                 "counterfactual_image":"Displays an image that is as similar as possible to the original but that the model predicts to be from a different class."

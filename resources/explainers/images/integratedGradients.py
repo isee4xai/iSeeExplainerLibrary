@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 import h5py
 import json
+import math
 import werkzeug
 import matplotlib.pyplot as plt
 from alibi.explainers import IntegratedGradients
@@ -41,7 +42,7 @@ class IntegratedGradientsImage(Resource):
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  
-        output_names=model_info["attributes"]["target_values"][0]
+        output_names=model_info["attributes"]["features"][model_info["attributes"]["target_names"][0]]["values_raw"]
 
 
         if model_file!=None:
@@ -59,16 +60,33 @@ class IntegratedGradientsImage(Resource):
             except:
                 raise Exception("Could not read instance from JSON.")
         elif image!=None:
-             try:
-                image = np.asarray(Image.open(image))
-             except:
-                 raise Exception("Could not load image from file.")
+            try:
+                im = Image.open(image)
+            except:
+                raise Exception("Could not load image from file.")
+            #cropping
+            shape_raw=model_info["attributes"]["features"]["image"]["shape_raw"]
+            im=im.crop((math.ceil((im.width-shape_raw[0])/2.0),math.ceil((im.height-shape_raw[1])/2.0),math.ceil((im.width+shape_raw[0])/2.0),math.ceil((im.height+shape_raw[1])/2.0)))
+            image=np.asarray(im)
+            #normalizing
+            try:
+                nmin=model_info["attributes"]["features"]["image"]["min"]
+                nmax=model_info["attributes"]["features"]["image"]["max"]
+                min_raw=model_info["attributes"]["features"]["image"]["min_raw"]
+                max_raw=model_info["attributes"]["features"]["image"]["max_raw"]
+            except:
+                return "Could not normalize the image. One or more of this parameters are missing from the configuration file: 'min', 'max', 'min_raw', 'max_raw'."\
+                       " You may also provide the image as a normalized array using the 'instance' parameter in this call."
+            try:
+                image=((image-min_raw) / (max_raw - min_raw)) * (nmax - nmin) + nmin
+            except:
+                return "Could not normalize image."
         else:
             raise Exception("Either an image file or a matrix representative of the image must be provided.")
 
         if image.shape!=tuple(model_info["attributes"]["features"]["image"]["shape"]):
             image = image.reshape(tuple(model_info["attributes"]["features"]["image"]["shape"]))
-        if image.shape[-1]==1:
+        if len(model_info["attributes"]["features"]["image"]["shape_raw"])==2 or model_info["attributes"]["features"]["image"]["shape_raw"][-1]==1:
             plt.gray()
         image=image.reshape((1,) + image.shape)
 
@@ -91,6 +109,13 @@ class IntegratedGradientsImage(Resource):
         if "target_class" in params_json:
              target_class = params_json["target_class"]
 
+        size=(12, 8)
+        if "png_height" in params_json and "png_width" in params_json:
+            try:
+                size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
+            except:
+                print("Could not convert dimensions for .PNG output file. Using default dimensions.")
+
         ## Generating explanation
         ig  = IntegratedGradients(mlp,
                                   n_steps=n_steps,
@@ -100,7 +125,7 @@ class IntegratedGradientsImage(Resource):
         explanation = ig.explain(image, target=target_class)
         attrs = explanation.attributions[0]
 
-        fig, ax = plt.subplots(nrows=1, ncols=5, figsize=(12, 8))
+        fig, ax = plt.subplots(nrows=1, ncols=5, figsize=size)
         fig.set_tight_layout(True)
         cmap_bound = np.abs(attrs).max()
 
@@ -149,7 +174,9 @@ class IntegratedGradientsImage(Resource):
                 "target_class": "(optional) Integer denoting the desired class for the computation of the attributions. Defaults to the predicted class of the instance.",
                 "method": "(optional) Method for the integral approximation. The methods available are: 'riemann_left', 'riemann_right', 'riemann_middle', 'riemann_trapezoid', 'gausslegendre'. Defaults to 'gausslegendre'.",
                 "n_steps": "(optional) Number of step in the path integral approximation from the baseline to the input instance. Defaults to 5.",
-                "internal_batch_size": "(optional) Batch size for the internal batching. Defaults to 100."
+                "internal_batch_size": "(optional) Batch size for the internal batching. Defaults to 100.",
+                "png_width":  "(optional) width (in pixels) of the png image containing the explanation.",
+                "png_height": "(optional) height (in pixels) of the png image containing the explanation."
                 },
         "output_description":{
                 "attribution_plot":"Subplot with four columns. The first column shows the original image and its prediction. The second column shows the values of the attributions for the target class. The third column shows the positive valued attributions. The fourth column shows the negative valued attributions."

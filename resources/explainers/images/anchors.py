@@ -7,6 +7,7 @@ import torch
 import h5py
 import joblib
 import json
+import math
 import werkzeug
 import matplotlib.pyplot as plt
 from alibi.explainers import AnchorImage
@@ -47,7 +48,7 @@ class AnchorsImage(Resource):
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
-        output_names=model_info["attributes"]["target_values"][0]
+        output_names=model_info["attributes"]["features"][model_info["attributes"]["target_names"][0]]["values_raw"]
 
         if model_file!=None:
             if backend=="TF1" or backend=="TF2":
@@ -76,19 +77,36 @@ class AnchorsImage(Resource):
             except:
                 raise Exception("Could not read instance from JSON.")
         elif image!=None:
-             try:
-                image = np.asarray(Image.open(image))
-             except:
-                 raise Exception("Could not load image from file.")
+            try:
+                im = Image.open(image)
+            except:
+                raise Exception("Could not load image from file.")
+            #cropping
+            shape_raw=model_info["attributes"]["features"]["image"]["shape_raw"]
+            im=im.crop((math.ceil((im.width-shape_raw[0])/2.0),math.ceil((im.height-shape_raw[1])/2.0),math.ceil((im.width+shape_raw[0])/2.0),math.ceil((im.height+shape_raw[1])/2.0)))
+            image=np.asarray(im)
+            #normalizing
+            try:
+                nmin=model_info["attributes"]["features"]["image"]["min"]
+                nmax=model_info["attributes"]["features"]["image"]["max"]
+                min_raw=model_info["attributes"]["features"]["image"]["min_raw"]
+                max_raw=model_info["attributes"]["features"]["image"]["max_raw"]
+            except:
+                return "Could not normalize the image. One or more of this parameters are missing from the configuration file: 'min', 'max', 'min_raw', 'max_raw'."\
+                       " You may also provide the image as a normalized array using the 'instance' parameter in this call."
+            try:
+                image=((image-min_raw) / (max_raw - min_raw)) * (nmax - nmin) + nmin
+            except:
+                return "Could not normalize image."
         else:
             raise Exception("Either an image file or a matrix representative of the image must be provided.")
 
         if image.shape!=tuple(model_info["attributes"]["features"]["image"]["shape"]):
             image = image.reshape(tuple(model_info["attributes"]["features"]["image"]["shape"]))
-
-        if image.shape[-1]==1:
+        if len(model_info["attributes"]["features"]["image"]["shape_raw"])==2 or model_info["attributes"]["features"]["image"]["shape_raw"][-1]==1:
             plt.gray()
 
+        print(image.shape)
 
         segmentation_fn='slic'
         if "segmentation_fn" in params_json:
@@ -98,10 +116,17 @@ class AnchorsImage(Resource):
         if "threshold" in params_json:
             threshold= float(params_json["threshold"])
 
+        size=(4, 4)
+        if "png_height" in params_json and "png_width" in params_json:
+            try:
+                size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
+            except:
+                print("Could not convert dimensions for .PNG output file. Using default dimensions.")
+
         explainer = AnchorImage(predic_func, image.shape, segmentation_fn=segmentation_fn)
         explanation = explainer.explain(image,threshold)
-       
-        fig, axes = plt.subplots(1,1, figsize = (4, 4))
+        
+        fig, axes = plt.subplots(1,1, figsize = size)
         axes.imshow(explanation.anchor)
         if output_names!=None:
             axes.set_title('Predicted Class: {}'.format(output_names[explanation.raw["prediction"][0]]))
@@ -128,7 +153,9 @@ class AnchorsImage(Resource):
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
                 "threshold": "(Optional) A float from 0 to 1 with the desired precision for the anchor.",
-                "segmentation_fn": "(Optional) A string with an image segmentation algorithm from the following:'quickshift', 'slic', or 'felzenszwalb'."
+                "segmentation_fn": "(Optional) A string with an image segmentation algorithm from the following:'quickshift', 'slic', or 'felzenszwalb'.",
+                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
+                "png_height": "(optional) height (in pixels) of the png image containing the explanation."
                 },
         "output_description":{
                 "anchor_image":"Displays the pixels that are sufficient for the model to justify the predicted class."
