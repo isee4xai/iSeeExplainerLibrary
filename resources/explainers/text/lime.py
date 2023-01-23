@@ -93,10 +93,12 @@ class LimeText(Resource):
         upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         hti = Html2Image()
         hti.output_path= upload_folder
-        size=(1000, 400)
+        #size=(1000, 400)
         if "png_height" in params_json and "png_width" in params_json:
             size=(int(params_json["png_width"]),int(params_json["png_height"]))
-        hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png",size=size)   
+            hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png",size=size)   
+        else:
+            hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png")
         explanation.save_to_file(upload_folder+filename+".html")
         
         response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":ret}
