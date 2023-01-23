@@ -4,9 +4,12 @@ from PIL import Image
 import numpy as np
 import torch
 import json
+import math
 import werkzeug
 import numpy as np
-from pytorch_grad_cam.utils.image import show_cam_on_image,preprocess_image
+from torchvision import transforms
+from torchvision.transforms import ToTensor,ToPILImage
+from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 from pytorch_grad_cam import GradCAM
 from saveinfo import save_file_info
@@ -64,7 +67,7 @@ class GradCamTorch(Resource):
             if hasattr(mlp,params_json["target_layer"]):
                 target_layers = [getattr(mlp,params_json["target_layer"])]
             else:
-                return "The specified target layer" + str(params_json["target_layer"]) + "does not exist."
+                return "The specified target layer " + str(params_json["target_layer"]) + " does not exist."
         else:
             return "This method requires the name of target layer to be provided as a string. This is the layer that you want to compute the visualization for."\
                 " Usually this will be the last convolutional layer in the model. It is also possible to specify internal components of this layer by passing the"\
@@ -87,36 +90,35 @@ class GradCamTorch(Resource):
         aug_smooth=True
         if "aug_smooth" in params_json:
             aug_smooth= bool(params_json["aug_smooth"])
-
-        rgb_img=None        
+      
+        input_tensor=None
         if instance!=None:
             try:
-                rgb_img = np.array(json.loads(instance))
+                input_tensor = torch.tensor(json.loads(instance))
             except:
                 raise Exception("Could not read instance from JSON.")
         elif image!=None:
-             try:
-                rgb_img  = np.asarray(Image.open(image))
-             except:
-                 raise Exception("Could not load image from file.")
+            try:
+                im = Image.open(image)
+            except:
+                raise Exception("Could not load image from file.")
+            try:
+                transform = transforms.Compose([transforms.ToTensor()])
+                input_tensor=transform(im.copy())
+            except Exception as e:
+                print(e)
+                return "Could not convert image to Tensor."
         else:
             raise Exception("Either an image file or a matrix representative of the image must be provided.")
-        
-        if len(rgb_img.shape)<3:
-            raise Exception("Grad-Cam only supports RGB images.")
 
-        rgb_img = np.float32(rgb_img) / 255
-        input_tensor = preprocess_image(rgb_img,
-                                mean=mean,
-                                std=std)
-
-        
-
+        input_tensor=input_tensor.reshape((1,)+input_tensor.shape)
         cam  = GradCAM(model=mlp,
                    target_layers=target_layers, use_cuda=torch.cuda.is_available())
         grayscale_cam = cam(input_tensor=input_tensor, targets=target,aug_smooth=aug_smooth,eigen_smooth=True)
         grayscale_cam = grayscale_cam[0, :]
-        cam_image = show_cam_on_image(rgb_img, grayscale_cam, use_rgb=True)
+        transform = transforms.Compose([transforms.ToPILImage()])
+        rgb_img=transform(input_tensor[0])
+        cam_image = show_cam_on_image(np.float32(rgb_img) / 255, grayscale_cam, use_rgb=True)
   
         #saving
         upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
@@ -147,8 +149,6 @@ class GradCamTorch(Resource):
                 "target_layer_index": "(Optional) index of the target layer to be accessed. Provide it when you want to focus on a specific component of the target layer."
                                       "If not provided, the whole layer specified as target when uploading the model will be used.",
                 "target_class": "(Optional) Integer representing the index of the target class to generate the explanation. If not provided, defaults to the class with the highest predicted probability.",
-                "mean":"Array of floats with the mean values of each chanel used to normalize the RGB Image.",
-                "std": "Array of floats with the standard deviation values of each chanel used to normalize the RGB Image.",
                 "aug_smooth": "(Optional) Boolean indicating whether to apply augmentation smoothing (defaults to True). This has the effect of better centering the CAM around the objects. However, it increases the run time by x6."
                 },
         "output_description":{

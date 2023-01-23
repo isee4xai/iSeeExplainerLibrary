@@ -22,6 +22,9 @@ def get_model_files(_id,model_folder):
         data=None
         if exists(path + '_data.pkl'):
             data=open(path + '_data.pkl','rb')
+        elif exists(path + '_data.csv'):
+            data=open(path + '_data.csv','csv')
+
         return model, model_info, data
     else:
         raise Exception("No directory with id '"+ _id +"' was found in the database.")

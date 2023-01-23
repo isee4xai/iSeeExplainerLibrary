@@ -9,6 +9,7 @@ import torch
 import h5py
 import joblib
 import json
+import math
 import werkzeug
 import matplotlib.pyplot as plt
 from lime import lime_image
@@ -46,7 +47,7 @@ class LimeImage(Resource):
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
-        output_names=model_info["attributes"]["target_values"][0]
+        output_names=model_info["attributes"]["features"][model_info["attributes"]["target_names"][0]]["values_raw"]
         predic_func=None
 
         if model_file!=None:
@@ -77,30 +78,53 @@ class LimeImage(Resource):
             except:
                 raise Exception("Could not read instance from JSON.")
         elif image!=None:
-             try:
-                image = np.asarray(Image.open(image))
-             except:
-                 raise Exception("Could not load image from file.")
+            try:
+                im = Image.open(image)
+            except:
+                raise Exception("Could not load image from file.")
+            #cropping
+            shape_raw=model_info["attributes"]["features"]["image"]["shape_raw"]
+            im=im.crop((math.ceil((im.width-shape_raw[0])/2.0),math.ceil((im.height-shape_raw[1])/2.0),math.ceil((im.width+shape_raw[0])/2.0),math.ceil((im.height+shape_raw[1])/2.0)))
+            image=np.asarray(im)
+            #normalizing
+            try:
+                nmin=model_info["attributes"]["features"]["image"]["min"]
+                nmax=model_info["attributes"]["features"]["image"]["max"]
+                min_raw=model_info["attributes"]["features"]["image"]["min_raw"]
+                max_raw=model_info["attributes"]["features"]["image"]["max_raw"]
+            except:
+                return "Could not normalize the image. One or more of this parameters are missing from the configuration file: 'min', 'max', 'min_raw', 'max_raw'."\
+                       " You may also provide the image as a normalized array using the 'instance' parameter in this call."
+            try:
+                image=((image-min_raw) / (max_raw - min_raw)) * (nmax - nmin) + nmin
+            except:
+                return "Could not normalize image."
         else:
             raise Exception("Either an image file or a matrix representative of the image must be provided.")
 
         if image.shape!=tuple(model_info["attributes"]["features"]["image"]["shape"]):
+            print(image.shape)
             image = image.reshape(tuple(model_info["attributes"]["features"]["image"]["shape"]))
-
-        if image.shape[-1]==1:
-            #image.reshape(tuple(model_info["attributes"]["features"]["image"]["shape"][:-1]))
-            return "LIME only supports RGB images."
+        if len(model_info["attributes"]["features"]["image"]["shape_raw"])==2 or model_info["attributes"]["features"]["image"]["shape_raw"][-1]==1:
+           return "LIME only supports RGB images."
 
         kwargsData = dict(top_labels=3,segmentation_fn=None)
         if "top_classes" in params_json:
             kwargsData["top_labels"] = int(params_json["top_classes"])   #top labels
         if "segmentation_fn" in params_json:
             kwargsData["segmentation_fn"] = SegmentationAlgorithm(params_json["segmentation_fn"])
+
+        size=(12, 12)
+        if "png_height" in params_json and "png_width" in params_json:
+            try:
+                size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
+            except:
+                print("Could not convert dimensions for .PNG output file. Using default dimensions.")
         
         explainer = lime_image.LimeImageExplainer()
         explanation = explainer.explain_instance(image, classifier_fn=predic_func,**{k: v for k, v in kwargsData.items() if v is not None})
 
-        fig, axes = plt.subplots(1,len(explanation.top_labels), figsize = (12, 12))
+        fig, axes = plt.subplots(1,len(explanation.top_labels), figsize = size)
         i=0
         for cat in explanation.top_labels:
             temp, mask = explanation.get_image_and_mask(cat, positive_only=False,hide_rest=False)
@@ -109,7 +133,7 @@ class LimeImage(Resource):
                 cat = output_names[cat]
             axes[i].set_title('Positive/Negative Regions for {}'.format(cat))
             i=i+1
-         
+        fig.tight_layout()
         ##formatting json explanation
         dict_exp={}
         for key in explanation.local_exp:
@@ -134,7 +158,9 @@ class LimeImage(Resource):
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
                 "top_classes": "(Optional) Int representing the number of classes with the highest prediction probablity to be explained.",
-                "segmentation_fn": "(Optional) A string with a segmentation algorithm to be used from the following:'quickshift', 'slic', or 'felzenszwalb'"
+                "segmentation_fn": "(Optional) A string with a segmentation algorithm to be used from the following:'quickshift', 'slic', or 'felzenszwalb'",
+                "png_width":  "(optional) width (in pixels) of the png image containing the explanation.",
+                "png_height": "(optional) height (in pixels) of the png image containing the explanation."
 
                 },
         "output_description":{
