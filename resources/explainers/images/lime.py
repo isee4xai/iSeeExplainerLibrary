@@ -69,7 +69,7 @@ class LimeImage(Resource):
                 return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
             predic_func=predict
         else:
-            raise Exception("Either an ID for a locally stored model or an URL for the prediction function of the model must be provided.")
+            raise Exception("Either an ID for a locally stored model or an URL for the prediction function must be provided.")
         
         
         if instance!=None:
