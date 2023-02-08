@@ -85,23 +85,25 @@ class LimeImage(Resource):
             #cropping
             shape_raw=model_info["attributes"]["features"]["image"]["shape_raw"]
             im=im.crop((math.ceil((im.width-shape_raw[0])/2.0),math.ceil((im.height-shape_raw[1])/2.0),math.ceil((im.width+shape_raw[0])/2.0),math.ceil((im.height+shape_raw[1])/2.0)))
-            image=np.asarray(im)
+            instance=np.asarray(im)
             #normalizing
-            try:
+            if("min" in model_info["attributes"]["features"]["image"] and "max" in model_info["attributes"]["features"]["image"] and
+                "min_raw" in model_info["attributes"]["features"]["image"] and "max_raw" in model_info["attributes"]["features"]["image"]):
                 nmin=model_info["attributes"]["features"]["image"]["min"]
                 nmax=model_info["attributes"]["features"]["image"]["max"]
                 min_raw=model_info["attributes"]["features"]["image"]["min_raw"]
                 max_raw=model_info["attributes"]["features"]["image"]["max_raw"]
-            except:
-                return "Could not normalize the image. One or more of this parameters are missing from the configuration file: 'min', 'max', 'min_raw', 'max_raw'."\
-                       " You may also provide the image as a normalized array using the 'instance' parameter in this call."
-            try:
-                image=((image-min_raw) / (max_raw - min_raw)) * (nmax - nmin) + nmin
-            except:
-                return "Could not normalize image."
-        else:
-            raise Exception("Either an image file or a matrix representative of the image must be provided.")
-
+                try:
+                    image=((instance-min_raw) / (max_raw - min_raw)) * (nmax - nmin) + nmin
+                except:
+                    return "Could not normalize instance."
+            elif("mean_raw" in model_info["attributes"]["features"]["image"] and "std_raw" in model_info["attributes"]["features"]["image"]):
+                mean=np.array(model_info["attributes"]["features"]["image"]["mean_raw"])
+                std=np.array(model_info["attributes"]["features"]["image"]["std_raw"])
+                try:
+                    image=((instance-mean)/std).astype(np.uint8)
+                except:
+                    return "Could not normalize instance using mean and std dev."
         if image.shape!=tuple(model_info["attributes"]["features"]["image"]["shape"]):
             print(image.shape)
             image = image.reshape(tuple(model_info["attributes"]["features"]["image"]["shape"]))
