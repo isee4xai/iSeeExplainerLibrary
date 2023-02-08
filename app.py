@@ -115,7 +115,7 @@ api.add_resource(CBRFox, "/Timeseries/CBRFox", resource_class_kwargs=path_dict)
 @api.representation('image/png')
 def output_file_png(data, code, headers):
     response = send_from_directory(UPLOAD_FOLDER,
-    data["filename"],mimetype="image/png")
+    data["filename"],mimetype="image/png",as_attachment=True)
     return response
 
 @api.representation('text/html')
