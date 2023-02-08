@@ -12,7 +12,13 @@ from alibi.explainers import IntegratedGradients
 from saveinfo import save_file_info
 from getmodelfiles import get_model_files
 
-
+BACKENDS=["TF1",
+	"TF2",
+	"TF",
+    "TensorFlow1",
+    "TensorFlow2",
+    "tensorflow1",
+    "tensorflow2"]
 
 class IntegratedGradientsImage(Resource):
 
@@ -46,7 +52,7 @@ class IntegratedGradientsImage(Resource):
 
 
         if model_file!=None:
-            if backend=="TF1" or backend=="TF2":
+            if backend in BACKENDS:
                 model=h5py.File(model_file, 'w')
                 mlp = tf.keras.models.load_model(model)
             else:
