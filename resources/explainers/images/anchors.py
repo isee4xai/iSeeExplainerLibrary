@@ -15,6 +15,14 @@ from saveinfo import save_file_info
 from getmodelfiles import get_model_files
 import requests
 
+BACKENDS=["TF1",
+	"TF2",
+	"TF",
+    "TensorFlow1",
+    "TensorFlow2",
+    "tensorflow1",
+    "tensorflow2"]
+
 class AnchorsImage(Resource):
 
     def __init__(self,model_folder,upload_folder):
@@ -51,7 +59,7 @@ class AnchorsImage(Resource):
         output_names=model_info["attributes"]["features"][model_info["attributes"]["target_names"][0]]["values_raw"]
 
         if model_file!=None:
-            if backend=="TF1" or backend=="TF2":
+            if backend in BACKENDS:
                 model=h5py.File(model_file, 'w')
                 mlp = tf.keras.models.load_model(model)
                 predic_func=mlp.predict
