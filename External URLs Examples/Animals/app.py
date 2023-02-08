@@ -13,14 +13,16 @@ api = Api(app)
 
 
 class Predict(Resource):
+    
+    def __init__(self):
+        self.model = tf.keras.models.load_model("animals_model.h5")
    
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument("inputs", required=True)
         args = parser.parse_args()
         inputs = np.array(json.loads(args.get("inputs")))
-        model = tf.keras.models.load_model("animals_model.h5")
-        return model.predict(inputs).tolist()
+        return self.model.predict(inputs).tolist()
 
 
 api.add_resource(Predict, '/Predict')
