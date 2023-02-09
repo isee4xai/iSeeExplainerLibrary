@@ -48,8 +48,11 @@ class IntegratedGradientsImage(Resource):
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  
-        output_names=model_info["attributes"]["features"][model_info["attributes"]["target_names"][0]]["values_raw"]
-
+        output_names=None
+        try:
+            output_names=model_info["attributes"]["features"][model_info["attributes"]["target_names"][0]]["values_raw"]
+        except:
+            pass
 
         if model_file!=None:
             if backend in BACKENDS:
@@ -60,11 +63,30 @@ class IntegratedGradientsImage(Resource):
         else:
             raise Exception("This method requires a model file.")
 
+        im=None
         if instance!=None:
             try:
                 image = np.array(json.loads(instance))
             except:
                 raise Exception("Could not read instance from JSON.")
+            #denormalize to get original image
+            if("min" in model_info["attributes"]["features"]["image"] and "max" in model_info["attributes"]["features"]["image"] and
+                "min_raw" in model_info["attributes"]["features"]["image"] and "max_raw" in model_info["attributes"]["features"]["image"]):
+                nmin=model_info["attributes"]["features"]["image"]["min"]
+                nmax=model_info["attributes"]["features"]["image"]["max"]
+                min_raw=model_info["attributes"]["features"]["image"]["min_raw"]
+                max_raw=model_info["attributes"]["features"]["image"]["max_raw"]
+                try:
+                    im=(((image-nmin)/(nmax-nmin))*(max_raw-min_raw)+min_raw).astype(np.uint8)
+                except:
+                    return "Could not denormalize instance using min and max."
+            elif("mean_raw" in model_info["attributes"]["features"]["image"] and "std_raw" in model_info["attributes"]["features"]["image"]):
+                mean=np.array(model_info["attributes"]["features"]["image"]["mean_raw"])
+                std=np.array(model_info["attributes"]["features"]["image"]["std_raw"])
+                try:
+                    im=((image*std)+mean).astype(np.uint8)
+                except:
+                    return "Could not denormalize instance using mean and std dev."
         elif image!=None:
             try:
                 im = Image.open(image)
@@ -113,10 +135,16 @@ class IntegratedGradientsImage(Resource):
         if "internal_batch_size" in params_json:
             internal_batch_size = params_json["internal_batch_size"]
 
-        prediction=mlp(image).numpy().argmax(axis=1)
-        target_class=int(prediction[0])
-        if "target_class" in params_json:
-             target_class = params_json["target_class"]
+        prediction=mlp(image).numpy()
+        target_class=int(prediction.argmax(axis=1)[0])
+
+        is_class=True
+        if(prediction.shape[-1]==1): ## it's regression
+            is_class=False
+
+        if(is_class):
+            if "target_class" in params_json:
+                    target_class = params_json["target_class"]
 
         size=(12, 8)
         if "png_height" in params_json and "png_width" in params_json:
@@ -134,37 +162,40 @@ class IntegratedGradientsImage(Resource):
         explanation = ig.explain(image, target=target_class)
         attrs = explanation.attributions[0]
 
-        fig, ax = plt.subplots(nrows=1, ncols=5, figsize=size)
-        fig.set_tight_layout(True)
+        fig, (a0,a1,a2,a3,a4) = plt.subplots(nrows=1, ncols=5, figsize=size,gridspec_kw={'width_ratios':[3,3,3,3,1]})
         cmap_bound = np.abs(attrs).max()
 
-        ax[0].imshow(image.squeeze(), cmap='gray')
-        ax[0].set_title("Prediction: " + output_names[prediction[0]],wrap=True)
+        a0.imshow(im)
+        a0.set_title("Original Image")
 
         # attributions
         attr = attrs[0]
-        im = ax[1].imshow(attr.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+        im = a1.imshow(attr.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
 
         # positive attributions
         attr_pos = attr.clip(0, 1)
-        im_pos = ax[2].imshow(attr_pos.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+        im_pos = a2.imshow(attr_pos.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
 
         # negative attributions
         attr_neg = attr.clip(-1, 0)
-        im_neg = ax[3].imshow(attr_neg.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+        im_neg = a3.imshow(attr_neg.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
 
-        ax[1].set_title('Attributions for Class ' + output_names[target_class] + ':', wrap=True)
-        ax[2].set_title('Positive attributions',wrap=True);
-        ax[3].set_title('Negative attributions',wrap=True);
+        if(is_class):
+            a1.set_title('Attributions for Pred Class: ' + output_names[prediction[0]])
+        else:
+           a1.set_title("Attributions for Pred: " + str(np.squeeze(prediction).round(4)))
+        a2.set_title('Positive attributions');
+        a3.set_title('Negative attributions');
 
         for ax in fig.axes:
             ax.axis('off')
-    
-        fig.colorbar(im);
+   
+        fig.colorbar(im)
+        fig.tight_layout()
 
         #saving
         upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
-        fig.savefig(upload_folder+filename+".png")
+        fig.savefig(upload_folder+filename+".png",bbox_inches='tight',pad_inches = 0)
 
         response={"plot_png":getcall+".png"}#,"explanation":json.loads(explanation.to_json())}
         return response
@@ -180,7 +211,7 @@ class IntegratedGradientsImage(Resource):
         "instance": "Matrix representing the image to be explained.",
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
-                "target_class": "(optional) Integer denoting the desired class for the computation of the attributions. Defaults to the predicted class of the instance.",
+                "target_class": "(optional) Integer denoting the desired class for the computation of the attributions. Ignore for regression models. Defaults to the predicted class of the instance.",
                 "method": "(optional) Method for the integral approximation. The methods available are: 'riemann_left', 'riemann_right', 'riemann_middle', 'riemann_trapezoid', 'gausslegendre'. Defaults to 'gausslegendre'.",
                 "n_steps": "(optional) Number of step in the path integral approximation from the baseline to the input instance. Defaults to 5.",
                 "internal_batch_size": "(optional) Batch size for the internal batching. Defaults to 100.",
