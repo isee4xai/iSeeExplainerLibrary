@@ -83,11 +83,15 @@ path_dict={"model_folder":MODEL_FOLDER,"upload_folder":UPLOAD_FOLDER}
 cli = sys.modules['flask.cli']
 cli.show_server_banner = lambda *x: None
 app = Flask(__name__)
+
+
+
+
 app.config['CORS_HEADERS'] = 'Content-Type'
 cors = CORS(app)
 api = Api(app)
 api.add_resource(Explainers,'/Explainers')
-api.add_resource(ViewExplanation, '/ViewExplanation/<string:filename>')
+#api.add_resource(ViewExplanation, '/ViewExplanation/<string:filename>')
 api.add_resource(DicePublic, '/Tabular/DicePublic',resource_class_kwargs=path_dict)
 api.add_resource(DicePrivate, '/Tabular/DicePrivate',resource_class_kwargs=path_dict)
 api.add_resource(Lime, '/Tabular/LIME',resource_class_kwargs=path_dict)
@@ -115,7 +119,7 @@ api.add_resource(CBRFox, "/Timeseries/CBRFox", resource_class_kwargs=path_dict)
 @api.representation('image/png')
 def output_file_png(data, code, headers):
     response = send_from_directory(UPLOAD_FOLDER,
-    data["filename"],mimetype="image/png",as_attachment=True)
+    data["filename"],mimetype="image/png")
     return response
 
 @api.representation('text/html')
@@ -133,6 +137,14 @@ def index():
     readme_file = open('README.md', 'r')
     md_template_string = markdown.markdown(readme_file.read(), extensions=["fenced_code"])
     return md_template_string
+
+@app.route('/ViewExplanation/<string:filename>',methods=['GET'])
+def view_explanation(filename):
+    if filename is None:
+        return "The filename is missing."
+    if not os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
+        return "The file does not exist"
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
