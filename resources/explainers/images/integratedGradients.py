@@ -146,7 +146,7 @@ class IntegratedGradientsImage(Resource):
             if "target_class" in params_json:
                     target_class = params_json["target_class"]
 
-        size=(12, 8)
+        size=(12, 4)
         if "png_height" in params_json and "png_width" in params_json:
             try:
                 size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
