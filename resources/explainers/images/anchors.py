@@ -1,5 +1,4 @@
 from flask_restful import Resource,reqparse
-from flask import request
 from PIL import Image
 import numpy as np
 import tensorflow as tf
@@ -7,21 +6,15 @@ import torch
 import h5py
 import joblib
 import json
-import math
-import werkzeug
 import matplotlib.pyplot as plt
 from alibi.explainers import AnchorImage
-from saveinfo import save_file_info
 from getmodelfiles import get_model_files
+from utils import ontologyConstants
+from utils.base64 import base64_to_vector,PIL_to_base64
+from utils.img_processing import normalize_img
+from io import BytesIO
 import requests
 
-BACKENDS=["TF1",
-	"TF2",
-	"TF",
-    "TensorFlow1",
-    "TensorFlow2",
-    "tensorflow1",
-    "tensorflow2"]
 
 class AnchorsImage(Resource):
 
@@ -31,22 +24,37 @@ class AnchorsImage(Resource):
         
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("id", required=True)
-        parser.add_argument('instance')        
-        parser.add_argument("image", type=werkzeug.datastructures.FileStorage, location='files')
-        parser.add_argument("url")
-        parser.add_argument('params')
+        parser.add_argument("params", required=True)
         args = parser.parse_args()
-        
-        _id = args.get("id")
-        instance = args.get("instance")
-        image = args.get("image")
-        url = args.get("url")
-        params=args.get("params")
-        params_json={}
-        if(params !=None):
-            params_json = json.loads(params)
 
+        #Check params
+        params_str = args.get('params')
+        if params_str is None:
+            return "The params were not specified."
+        params={}
+        try:
+            params = json.loads(params_str)
+        except Exception as e:
+            return "Could not convert params to JSON: " + str(e)
+
+        if("id" not in params):
+            return "The model id was not specified in the params."
+        if("type" not in params):
+            return "The instance type was not specified in the params."
+        if("instance" not in params):
+            return "The instance was not specified in the params."
+
+
+        _id =params["id"]
+        instance = params["instance"]
+        inst_type=params["type"]
+        url=None
+        if "url" in params:
+            url=params["url"]
+        params_json={}
+        if "ex_params" in params:
+            params_json=params["ex_params"]
+        
         output_names=None
         predic_func=None
         
@@ -55,18 +63,18 @@ class AnchorsImage(Resource):
 
         ## params from info
         model_info=json.load(model_info_file)
-        backend = model_info["backend"]  ##error handling?
+        backend = model_info["backend"] 
         output_names=model_info["attributes"]["features"][model_info["attributes"]["target_names"][0]]["values_raw"]
 
         if model_file!=None:
-            if backend in BACKENDS:
+            if backend in ontologyConstants.TENSORFLOW_URIS:
                 model=h5py.File(model_file, 'w')
                 mlp = tf.keras.models.load_model(model)
                 predic_func=mlp.predict
-            elif backend=="sklearn":
+            elif backend in ontologyConstants.SKLEARN_URIS:
                 mlp = joblib.load(model_file)
                 predic_func=mlp.predict_proba
-            elif backend=="PYT":
+            elif backend in ontologyConstants.PYTORCH_URIS:
                 mlp = torch.load(model_file)
                 predic_func=mlp.predict
             else:
@@ -77,49 +85,24 @@ class AnchorsImage(Resource):
                 return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
             predic_func=predict
         else:
-            raise Exception("Either a locally stored model or an URL for the prediction function of the model must be provided.")
+            raise Exception("Either a locally stored model or a URL for the prediction function of the model must be provided.")
                 
-        if instance!=None:
-            try:
-                image = np.array(json.loads(instance))
-            except:
-                raise Exception("Could not read instance from JSON.")
-        elif image!=None:
-            try:
-                im = Image.open(image)
-            except:
-                raise Exception("Could not load image from file.")
-            #cropping
-            shape_raw=model_info["attributes"]["features"]["image"]["shape_raw"]
-            im=im.crop((math.ceil((im.width-shape_raw[0])/2.0),math.ceil((im.height-shape_raw[1])/2.0),math.ceil((im.width+shape_raw[0])/2.0),math.ceil((im.height+shape_raw[1])/2.0)))
-            instance=np.asarray(im)
-            #normalizing
-            if("min" in model_info["attributes"]["features"]["image"] and "max" in model_info["attributes"]["features"]["image"] and
-                "min_raw" in model_info["attributes"]["features"]["image"] and "max_raw" in model_info["attributes"]["features"]["image"]):
-                nmin=model_info["attributes"]["features"]["image"]["min"]
-                nmax=model_info["attributes"]["features"]["image"]["max"]
-                min_raw=model_info["attributes"]["features"]["image"]["min_raw"]
-                max_raw=model_info["attributes"]["features"]["image"]["max_raw"]
-                try:
-                    image=((instance-min_raw) / (max_raw - min_raw)) * (nmax - nmin) + nmin
-                except:
-                    return "Could not normalize instance."
-            elif("mean_raw" in model_info["attributes"]["features"]["image"] and "std_raw" in model_info["attributes"]["features"]["image"]):
-                mean=np.array(model_info["attributes"]["features"]["image"]["mean_raw"])
-                std=np.array(model_info["attributes"]["features"]["image"]["std_raw"])
-                try:
-                    image=((instance-mean)/std).astype(np.uint8)
-                except:
-                    return "Could not normalize instance using mean and std dev."
-        else:
-            raise Exception("Either an image file or a matrix representative of the image must be provided.")
 
-        if image.shape!=tuple(model_info["attributes"]["features"]["image"]["shape"]):
-            image = image.reshape(tuple(model_info["attributes"]["features"]["image"]["shape"]))
+        #converting to vector
+        try:
+            instance=base64_to_vector(instance)
+        except Exception as e:  
+            return "Could not convert base64 Image to vector: " + str(e)
+
+        #normalizing
+        try:
+            instance=normalize_img(instance,model_info)
+        except Exception as e:
+                return  "Could not normalize instance: " + str(e)
+
         if len(model_info["attributes"]["features"]["image"]["shape_raw"])==2 or model_info["attributes"]["features"]["image"]["shape_raw"][-1]==1:
             plt.gray()
 
-        print(image.shape)
 
         segmentation_fn='slic'
         if "segmentation_fn" in params_json:
@@ -136,8 +119,8 @@ class AnchorsImage(Resource):
             except:
                 print("Could not convert dimensions for .PNG output file. Using default dimensions.")
 
-        explainer = AnchorImage(predic_func, image.shape, segmentation_fn=segmentation_fn)
-        explanation = explainer.explain(image,threshold)
+        explainer = AnchorImage(predic_func, instance.shape[1:], segmentation_fn=segmentation_fn)
+        explanation = explainer.explain(instance[0],threshold)
         
         fig, axes = plt.subplots(1,1, figsize = size)
         axes.imshow(explanation.anchor)
@@ -147,10 +130,12 @@ class AnchorsImage(Resource):
             axes.set_title('Predicted Class: {}'.format(explanation.raw["prediction"][0]))
         
         #saving
-        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
-        fig.savefig(upload_folder+filename+".png")
+        img_buf = BytesIO()
+        plt.savefig(img_buf, format='png')
+        im = Image.open(img_buf)
+        b64Image=PIL_to_base64(im)
 
-        response={"plot_png":getcall+".png"}#,"explanation":json.loads(explanation.to_json())}
+        response={"type":"image","explanation":b64Image}#,"explanation":json.loads(explanation.to_json())}
         return response
 
     def get(self):
