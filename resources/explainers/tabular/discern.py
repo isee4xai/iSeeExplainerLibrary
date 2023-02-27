@@ -5,9 +5,11 @@ import numpy as np
 from getmodelfiles import get_model_files
 from saveinfo import save_file_info
 import joblib
+import h5py
 from html2image import Html2Image
 from flask import request
 from discern import discern_tabular
+import tensorflow as tf
 
 class DisCERN(Resource):
 
@@ -39,7 +41,7 @@ class DisCERN(Resource):
 
         ## params from info
         model_info=json.load(model_info_file)
-        backend = model_info["backend"]  ##error handling?
+        backend = model_info["backend"]
         outcome_name=model_info["attributes"]["target_names"][0]
         feature_names=list(model_info["attributes"]["features"].keys())
         feature_names.remove(outcome_name)
@@ -49,47 +51,43 @@ class DisCERN(Resource):
                 categorical_features.append(dataframe.columns.get_loc(feature))
       
         ## loading model
-        # if backend=="TF1" or backend=="TF2":
-        #     model=h5py.File(model_file, 'w')
-        #     mlp = tf.keras.models.load_model(model)
-        #     predic_func=mlp
-        # elif backend=="sklearn":
-        #     mlp = joblib.load(model_file)
-        #     predic_func=mlp.predict_proba
+        if backend=="TF1" or backend=="TF2":
+            model=h5py.File(model_file, 'w')
+            model = tf.keras.models.load_model(model)
+        elif backend=="sklearn":
+            model = joblib.load(model_file)
         # elif backend=="PYT":
         #     mlp = torch.load(model_file)
         #     predic_func=mlp.predict
-        # else:
-        #     mlp = joblib.load(model_file)
-        #     predic_func=mlp.predict
-        try:
-            # if backend=="sklearn":
-            mlp = joblib.load(model_file)
-            # predic_func=mlp.predict_proba
-        except:
-            raise "Currently only supports sklearn models"
-
+        else:
+            raise Exception("Currently supports Tensoflow and scikit-learn classification models.")
         
 
         #getting params from request
         desired_class='opposite'
         feature_attribution_method='LIME'
-        attributed_instance='Q'
+        imm_features = []
         if "desired_class" in params_json:
             desired_class = params_json["desired_class"] if params_json["desired_class"]=="opposite" else int(params_json["desired_class"])
         if "feature_attribution_method" in params_json: 
             feature_attribution_method = params_json["feature_attribution_method"]  
-        if "attributed_instance" in params_json:
-            attributed_instance = params_json["attributed_instance"]
+        if "immutable_features" in params_json: 
+            imm_features = params_json["immutable_features"]  
 
         ## init discern
-        discern_obj = discern_tabular.DisCERNTabular(mlp, feature_attribution_method, attributed_instance)    
+        discern_obj = discern_tabular.DisCERNTabular(model, feature_attribution_method)    
         dataframe_features = dataframe.drop(dataframe.columns[-1],axis=1).values
         dataframe_labels = dataframe.iloc[:,-1].values
         target_values = dataframe[outcome_name].unique().tolist()
-        discern_obj.init_data(dataframe_features, dataframe_labels, feature_names, target_values,**{'cat_feature_indices':categorical_features})
+        discern_obj.init_data(dataframe_features, dataframe_labels, feature_names, target_values, **{'cat_feature_indices':categorical_features, 'immutable_feature_indices':imm_features})
 
-        cf, s, p = discern_obj.find_cf(instance, mlp.predict([instance])[0],desired_class)
+        test_label = None 
+        if backend=="TF1" or backend=="TF2":
+            test_label = model.predict(np.array([instance])).argmax(axis=-1)[0]
+        elif backend=="sklearn":
+            test_label = model.predict([instance])[0]
+        
+        cf, cf_label, s, p = discern_obj.find_cf(instance, test_label, desired_class)
 
         result_df = pd.DataFrame(np.array([instance, cf]), columns=feature_names)
 
@@ -121,13 +119,10 @@ class DisCERN(Resource):
 
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "Array of feature values of the instance to be explained.",
-        "params": { 
-                
+        "params": {
                 "desired_class": "Integer representing the index of the desired counterfactual class, or 'opposite' in the case of binary classification. Defaults to 'opposite'.",
                 "feature_attribution_method": "Feature attribution method used for obtaining feature weights; currently supports LIME, SHAP and Integrated Gradients. Defaults to LIME.",
-                "attributed_instance": "Indicate on which instance to use feature attribution: Q for query or N for NUN. Defaults to Q.",
-                "png_height": "(optional) height (in pixels) of the png image containing the explanation.",
-                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
+                "immutable_features": "Array of feature indices that are immutable. The counterfactual will not recommend to change these features. Default is an empty array",
                 },
 
         "output_description":{
