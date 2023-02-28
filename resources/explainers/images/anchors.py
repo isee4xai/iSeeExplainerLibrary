@@ -1,4 +1,5 @@
-from flask_restful import Resource,reqparse
+from flask_restful import Resource
+from flask import request
 from PIL import Image
 import numpy as np
 import tensorflow as tf
@@ -23,27 +24,18 @@ class AnchorsImage(Resource):
         self.upload_folder = upload_folder
         
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument("params", required=True)
-        args = parser.parse_args()
+       
+        params = request.json
+        if params is None:
+            return "The params are missing"
 
-        #Check params
-        params_str = args.get('params')
-        if params_str is None:
-            return "The params were not specified."
-        params={}
-        try:
-            params = json.loads(params_str)
-        except Exception as e:
-            return "Could not convert params to JSON: " + str(e)
-
+        #check params
         if("id" not in params):
             return "The model id was not specified in the params."
         if("type" not in params):
             return "The instance type was not specified in the params."
         if("instance" not in params):
             return "The instance was not specified in the params."
-
 
         _id =params["id"]
         instance = params["instance"]
@@ -52,8 +44,8 @@ class AnchorsImage(Resource):
         if "url" in params:
             url=params["url"]
         params_json={}
-        if "ex_params" in params:
-            params_json=params["ex_params"]
+        if "params" in params:
+            params_json=params["params"]
         
         output_names=None
         predic_func=None
