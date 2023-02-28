@@ -1,4 +1,4 @@
-from flask_restful import Resource,reqparse
+from flask_restful import Resource
 from flask import request
 from lime.wrappers.scikit_image import SegmentationAlgorithm
 from skimage.segmentation import mark_boundaries
@@ -28,27 +28,17 @@ class LimeImage(Resource):
         self.upload_folder = upload_folder
         
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument("params", required=True)
-        args = parser.parse_args()
-        
-        #Check params
-        params_str = args.get('params')
-        if params_str is None:
-            return "The params were not specified."
-        params={}
-        try:
-            params = json.loads(params_str)
-        except Exception as e:
-            return "Could not convert params to JSON: " + str(e)
+        params = request.json
+        if params is None:
+            return "The params are missing"
 
+        #Check params
         if("id" not in params):
             return "The model id was not specified in the params."
         if("type" not in params):
             return "The instance type was not specified in the params."
         if("instance" not in params):
             return "The instance was not specified in the params."
-
 
         _id =params["id"]
         instance = params["instance"]
@@ -57,8 +47,8 @@ class LimeImage(Resource):
         if "url" in params:
             url=params["url"]
         params_json={}
-        if "ex_params" in params:
-            params_json=params["ex_params"]
+        if "params" in params:
+            params_json=params["params"]
        
         #Getting model info, data, and file from local repository
         model_file, model_info_file, _ = get_model_files(_id,self.model_folder)

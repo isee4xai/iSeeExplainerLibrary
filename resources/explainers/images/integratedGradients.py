@@ -1,4 +1,4 @@
-from flask_restful import Resource,reqparse
+from flask_restful import Resource
 from flask import request
 from PIL import Image
 import numpy as np
@@ -6,6 +6,7 @@ import tensorflow as tf
 import h5py
 import json
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from alibi.explainers import IntegratedGradients
 from io import BytesIO
 from getmodelfiles import get_model_files
@@ -22,20 +23,11 @@ class IntegratedGradientsImage(Resource):
         self.upload_folder = upload_folder
 
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument("params", required=True)
-        args = parser.parse_args()
+        params = request.json
+        if params is None:
+            return "The params are missing"
 
         #Check params
-        params_str = args.get('params')
-        if params_str is None:
-            return "The params were not specified."
-        params={}
-        try:
-            params = json.loads(params_str)
-        except Exception as e:
-            return "Could not convert params to JSON: " + str(e)
-
         if("id" not in params):
             return "The model id was not specified in the params."
         if("type" not in params):
@@ -47,8 +39,8 @@ class IntegratedGradientsImage(Resource):
         instance = params["instance"]
         inst_type=params["type"]
         params_json={}
-        if "ex_params" in params:
-            params_json=params["ex_params"]
+        if "params" in params:
+            params_json=params["params"]
 
         #Getting model info, data, and file from local repository
         model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
@@ -84,10 +76,6 @@ class IntegratedGradientsImage(Resource):
             instance=normalize_img(instance,model_info)
         except Exception as e:
                 return  "Could not normalize instance: " + str(e)
-
-        if len(model_info["attributes"]["features"]["image"]["shape_raw"])==2 or model_info["attributes"]["features"]["image"]["shape_raw"][-1]==1:
-            plt.gray()
-
         ## params from request
         n_steps = 50
         if "n_steps" in params_json:
@@ -119,6 +107,11 @@ class IntegratedGradientsImage(Resource):
             except:
                 print("Could not convert dimensions for .PNG output file. Using default dimensions.")
 
+        plot_type="heatmap"
+        if "plot_type" in params_json:
+            if str(params_json["plot_type"])=="attributions":
+                plot_type="attributions"
+
         ## Generating explanation
         ig  = IntegratedGradients(mlp,
                                   n_steps=n_steps,
@@ -127,38 +120,104 @@ class IntegratedGradientsImage(Resource):
 
         explanation = ig.explain(instance, target=target_class)
         attrs = explanation.attributions[0]
+        attr = attrs[0]
 
         fig, (a0,a1,a2,a3,a4) = plt.subplots(nrows=1, ncols=5, figsize=size,gridspec_kw={'width_ratios':[3,3,3,3,1]})
-        cmap_bound = np.abs(attrs).max()
 
         a0.imshow(im)
         a0.set_title("Original Image")
 
-        # attributions
-        attr = attrs[0]
-        im = a1.imshow(attr.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+        if(plot_type=="attributions"):
 
-        # positive attributions
-        attr_pos = attr.clip(0, 1)
-        im_pos = a2.imshow(attr_pos.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+            cmap_bound = np.abs(attrs).max()
 
-        # negative attributions
-        attr_neg = attr.clip(-1, 0)
-        im_neg = a3.imshow(attr_neg.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+            # attributions
+            im = a1.imshow(attr.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
 
-        if(is_class):
-            a1.set_title('Attributions for Class: ' + output_names[target_class])
-        else:
-           a1.set_title("Attributions for Pred: " + str(np.squeeze(prediction).round(4)))
-        a2.set_title('Positive attributions');
-        a3.set_title('Negative attributions');
+            # positive attributions
+            attr_pos = attr.clip(0, 1)
+            im_pos = a2.imshow(attr_pos.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
 
-        for ax in fig.axes:
-            ax.axis('off')
+            # negative attributions
+            attr_neg = attr.clip(-1, 0)
+            im_neg = a3.imshow(attr_neg.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+
+            if(is_class):
+                a1.set_title('Attributions for Class: ' + output_names[target_class])
+            else:
+               a1.set_title("Attributions for Pred: " + str(np.squeeze(prediction).round(4)))
+            a2.set_title('Positive attributions');
+            a3.set_title('Negative attributions');
+
+            for ax in fig.axes:
+                ax.axis('off')
    
-        fig.colorbar(im)
-        fig.tight_layout()
+            fig.colorbar(im)
+            fig.tight_layout()
 
+        elif(plot_type=="heatmap"):
+
+            # attributions
+            attr_all=np.abs(attr.squeeze())
+            heatmap=((attr_all-np.min(attr_all)) / (np.max(attr_all) - np.min(attr_all))).astype("float32")
+            heatmap = np.uint8(255 * heatmap)
+
+            jet = cm.get_cmap("jet")
+            jet_colors = jet(np.arange(256))[:, :3]
+            jet_heatmap = jet_colors[heatmap]
+            jet_heatmap=np.uint8(255 * jet_heatmap)
+            if len(im.shape)==2:
+                im=im.reshape(im.shape+(1,))
+            print(jet_heatmap.shape)
+            print(np.max(jet_heatmap))
+            print(im.shape)
+            print(np.max(im))
+            superimposed_img = (jet_heatmap * 0.4 + im).astype("uint8")
+            img=Image.fromarray(superimposed_img)
+            im1 = a1.imshow(img)
+
+
+            # positive attributions
+            attr_pos=attr.squeeze().clip(min=0)
+            heatmap=((attr_pos-np.min(attr_pos)) / (np.max(attr_pos) - np.min(attr_pos))).astype("float32")
+            heatmap = np.uint8(255 * heatmap)
+            jet = cm.get_cmap("jet")
+            jet_colors = jet(np.arange(256))[:, :3]
+            jet_heatmap = jet_colors[heatmap]
+            jet_heatmap=np.uint8(255 * jet_heatmap)
+            if len(im.shape)==2:
+                im=im.reshape(im.shape+(1,))
+            superimposed_img = (jet_heatmap * 0.4 + im).astype("uint8")
+            img=Image.fromarray(superimposed_img)
+            im2 = a2.imshow(img)
+
+            # negative attributions
+            attr_neg=np.abs(attr.squeeze().clip(max=0))
+            heatmap=((attr_neg-np.min(attr_neg)) / (np.max(attr_neg) - np.min(attr_neg))).astype("float32")
+            heatmap = np.uint8(255 * heatmap)
+            jet = cm.get_cmap("jet")
+            jet_colors = jet(np.arange(256))[:, :3]
+            jet_heatmap = jet_colors[heatmap]
+            jet_heatmap=np.uint8(255 * jet_heatmap)
+            if len(im.shape)==2:
+                im=im.reshape(im.shape+(1,))
+            superimposed_img = (jet_heatmap * 0.4 + im).astype("uint8")
+            img=Image.fromarray(superimposed_img)
+            im3 = a3.imshow(img)
+
+            if(is_class):
+                a1.set_title('Attributions for Class: ' + output_names[target_class])
+            else:
+               a1.set_title("Attributions for Pred: " + str(np.squeeze(prediction).round(4)))
+            a2.set_title('Positive attributions');
+            a3.set_title('Negative attributions');
+
+            for ax in fig.axes:
+                ax.axis('off')
+   
+            fig.colorbar(im1)
+            fig.tight_layout()     
+            
         #saving
         img_buf = BytesIO()
         fig.savefig(img_buf,bbox_inches='tight',pad_inches = 0)
