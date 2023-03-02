@@ -30,7 +30,7 @@ from resources.explainers.images.counterfactuals import CounterfactualsImage
 from resources.explainers.images.gradcam import GradCam
 from resources.explainers.images.integratedGradients import IntegratedGradientsImage
 from resources.explainers.text.lime import LimeText
-from resources.explainers.text.nlp_clf_explainer import NLPClassifierExpl
+#from resources.explainers.text.nlp_clf_explainer import NLPClassifierExpl
 from resources.explainers.timeseries.cbrFox import CBRFox
 
 
@@ -113,7 +113,7 @@ api.add_resource(CounterfactualsImage, '/Images/Counterfactuals',resource_class_
 api.add_resource(GradCam, '/Images/GradCam',resource_class_kwargs=path_dict)
 api.add_resource(IntegratedGradientsImage, '/Images/IntegratedGradients',resource_class_kwargs=path_dict)
 api.add_resource(LimeText, '/Text/LIME',resource_class_kwargs=path_dict)
-api.add_resource(NLPClassifierExpl, "/Text/NLPClassifier", resource_class_kwargs=path_dict)
+#api.add_resource(NLPClassifierExpl, "/Text/NLPClassifier", resource_class_kwargs=path_dict)
 api.add_resource(CBRFox, "/Timeseries/CBRFox", resource_class_kwargs=path_dict)
 
 @api.representation('image/png')
