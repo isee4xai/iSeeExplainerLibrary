@@ -2,9 +2,12 @@
 
 
 from flask_restful import Resource,reqparse
+from flask import request
 import json
+import joblib
 from getmodelfiles import get_model_files
-from NLPClassifierExplainer.NLPClassifierModel import NLPClassifier
+from saveinfo import save_file_info
+from NLPClassifierExplainer.NLPClassificationExplainer import NLPClassificationExplainer
 from string import Template
 
 
@@ -144,6 +147,8 @@ def _generate_html(explanation):
 
 
 
+
+
 class NLPClassifierExpl(Resource):
 
     def __init__(self,model_folder,upload_folder):
@@ -166,26 +171,43 @@ class NLPClassifierExpl(Resource):
 
 
         #Getting model info, data, and file from local repository
-        model_file, _, _ = get_model_files(_id,self.model_folder)
+        model_file, model_info_file, data_file = get_model_files(_id, self.model_folder)
 
-        NLP_model = NLPClassifier()
-        NLP_model.load_model(model_file)
-        explanation = NLP_model.explain(instance)
+        model = joblib.load (model_file)
+        if data_file is not None: 
+            tmp = joblib.load (data_file)
+            source = tmp[tmp.columns[0]].values # tmp is a dataframe, turn it into a list of str
+        else:
+            source = None
+        
+        explainer = NLPClassificationExplainer(model=model)
+        explanation =explainer.explain(instance,  source=source)
 
-        if params_json.get ('format', None) == 'html':
-            html = _generate_html(explanation)
-            return html
+        upload_folder, filename, getcall = save_file_info(request.path, self.upload_folder)
+        
+        # word cloud (PNG image)
+        word_cloud = explainer.generate_word_cloud(explanation)
+        word_cloud.to_file(upload_folder + filename  + ".png")
 
-        return explanation
+        # HTML explanation
+        with open (upload_folder + filename  + ".html", "w") as f:
+            html = _generate_html (explanation)
+            f.write ( html)
+
+        response = {
+            "plot_png": getcall + ".png",
+            "plot_html": getcall + ".html",
+            "explanation": explanation, 
+        }
+
+
+        return response
 
     def get(self):
         return {
         "_method_description": "An explainer for NLP classification models. ",
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "A string with the text to be explained.",
-        "params":{
-                    "format": "string defining the output format of the explanation. Can be set to either 'json' (default value) so a JSON-formatted text is generated, or 'html' for an HTML output."   
-              },
         "meta":{
                 "supportsAPI":False,
                 "needsData": False,
