@@ -5,10 +5,13 @@ import joblib
 import h5py
 import json
 import shap
-from flask_restful import Resource,reqparse
+from flask_restful import Resource
 from flask import request
-from saveinfo import save_file_info
 from getmodelfiles import get_model_files
+from io import BytesIO
+from PIL import Image
+from utils import ontologyConstants
+from utils.base64 import PIL_to_base64
 
 
 class ShapDeepGlobal(Resource):
@@ -18,45 +21,61 @@ class ShapDeepGlobal(Resource):
         self.upload_folder = upload_folder   
 
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument("id",required=True)
-        parser.add_argument('params')
-        args = parser.parse_args()
+        params = request.json
+        if params is None:
+            return "The json body is missing"
         
-        _id = args.get("id")
-        params=args.get("params")
+        #Check params
+        if("id" not in params):
+            return "The model id was not specified in the params."
+
+        _id =params["id"]
+        if("type"  in params):
+            inst_type=params["type"]
+        url=None
+        if "url" in params:
+            url=params["url"]
         params_json={}
-        if(params !=None):
-            params_json = json.loads(params)
+        if "params" in params:
+            params_json=params["params"]
         
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
         #getting params from info
         model_info=json.load(model_info_file)
-        try:
-            output_names=model_info["attributes"]["target_values"][0]
-        except:
-            output_names=None
+        backend = model_info["backend"]
         target_name=model_info["attributes"]["target_names"][0]
+        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         feature_names=list(model_info["attributes"]["features"].keys())
         feature_names.remove(target_name)
+        
+        #getting params from request
+        index=0
+        if "target_class" in params_json:
+            target_class=str(params_json["target_class"])
+            try:
+                index=output_names.index(target_class)
+            except:
+                pass
 
         #loading data
         if data_file!=None:
-            dataframe = joblib.load(data_file) 
-            dataframe.drop([target_name], axis=1, inplace=True)
+            dataframe = joblib.load(data_file) ##error handling?
         else:
             raise Exception("The training data file was not provided.")
 
-        #loading model (.h5 file)
-        model=h5py.File(model_file, 'w')
-        model = tf.keras.models.load_model(model)
+        dataframe.drop([target_name], axis=1, inplace=True)
 
-        #getting params from request
-        index=1
-        if "output_index" in params_json:
-            index=int(params_json["output_index"]);
+        #loading model (.h5 file)
+        if model_file!=None:
+            if backend in ontologyConstants.TENSORFLOW_URIS:
+                model=h5py.File(model_file, 'w')
+                model=tf.keras.models.load_model(model)
+            else:
+                return "The model backend is not supported: " + backend
+        else:
+            return "Model file was not uploaded."
 
         #creating explanation
         explainer = shap.DeepExplainer(model,dataframe.to_numpy())
@@ -65,19 +84,22 @@ class ShapDeepGlobal(Resource):
         if(len(np.array(shap_values).shape)==3): #multiclass shape: (#_of_classes, #_of_instances,#_of_features)
             shap_values=shap_values[index]
            
-        #plotting
+        #plotting   
         plt.switch_backend('agg')
-        shap.summary_plot(shap_values,features=dataframe,feature_names=feature_names,class_names=output_names)
+        shap.summary_plot(shap_values,features=dataframe, feature_names=feature_names,class_names=output_names,show=False)
 
-        #saving
-        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
-        plt.savefig(upload_folder+filename+".png",bbox_inches="tight")
-       
         #formatting json output
-        shap_values = [x.tolist() for x in shap_values]
-        ret=json.loads(json.dumps(shap_values))
+        #shap_values = [x.tolist() for x in shap_values]
+        #ret=json.loads(json.dumps(shap_values))
+
+        ##saving
+        img_buf = BytesIO()
+        plt.savefig(img_buf,bbox_inches="tight")
+        im = Image.open(img_buf)
+        b64Image=PIL_to_base64(im)
         
-        response={"plot_png":getcall+".png","explanation":ret}
+        #Insert code for image uploading and getting url
+        response={"type":"image","explanation":b64Image}
 
         return response
 
@@ -89,7 +111,7 @@ class ShapDeepGlobal(Resource):
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
         "params": { 
-                "output_index": "(Optional) Integer representing the index of the class to be explained. Ignore for regression models. Defaults to class 1.",
+                "target_class": "(Optional) Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file.",
                 },
 
         "output_description":{

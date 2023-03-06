@@ -1,4 +1,4 @@
-from flask_restful import Resource,reqparse
+from flask_restful import Resource
 import tensorflow as tf
 import torch
 import numpy as np
@@ -8,9 +8,12 @@ import json
 from alibi.explainers import ALE, plot_ale
 import math
 import matplotlib.pyplot as plt
+from io import BytesIO
+from PIL import Image
 from flask import request
-from saveinfo import save_file_info
 from getmodelfiles import get_model_files
+from utils import ontologyConstants
+from utils.base64 import PIL_to_base64
 import requests
 
 class Ale(Resource):
@@ -20,25 +23,30 @@ class Ale(Resource):
         self.upload_folder = upload_folder
 
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument("id",required=True)
-        parser.add_argument("url")
-        parser.add_argument('params')
-        args = parser.parse_args()
+        params = request.json
+        if params is None:
+            return "The json body is missing"
         
-        _id = args.get("id")
-        url = args.get("url")
-        params=args.get("params")
+        #Check params
+        if("id" not in params):
+            return "The model id was not specified in the params."
+
+        _id =params["id"]
+        if("type"  in params):
+            inst_type=params["type"]
+        url=None
+        if "url" in params:
+            url=params["url"]
         params_json={}
-        if(params !=None):
-            params_json = json.loads(params)
+        if "params" in params:
+            params_json=params["params"]
         
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
         ## loading data
         if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
+            dataframe = joblib.load(data_file)
         else:
             raise Exception("The training data file was not provided.")
 
@@ -47,10 +55,7 @@ class Ale(Resource):
         backend = model_info["backend"] 
 
         target_name=model_info["attributes"]["target_names"][0]
-        try:
-            output_names=model_info["attributes"]["target_values"][0]
-        except:
-            output_names=None
+        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         feature_names=list(model_info["attributes"]["features"].keys())
         feature_names.remove(target_name)
 
@@ -59,22 +64,25 @@ class Ale(Resource):
         ## getting predict function
         predic_func=None
         if model_file!=None:
-            if backend=="TF1" or backend=="TF2":
+            if backend in ontologyConstants.TENSORFLOW_URIS:
                 model=h5py.File(model_file, 'w')
                 mlp = tf.keras.models.load_model(model)
                 predic_func=mlp
-            elif backend=="sklearn":
+            elif backend in ontologyConstants.SKLEARN_URIS:
                 mlp = joblib.load(model_file)
                 try:
                     predic_func=mlp.predict_proba
                 except:
                     predic_func=mlp.predict
-            elif backend=="PYT":
+            elif backend in ontologyConstants.PYTORCH_URIS:
                 mlp = torch.load(model_file)
                 predic_func=mlp.predict
             else:
-                mlp = joblib.load(model_file)
-                predic_func=mlp.predict
+                try:
+                    mlp = joblib.load(model_file)
+                    predic_func=mlp.predict
+                except Exception as e:
+                    return "Could not extract prediction function from model: " + str(e)
         elif url!=None:
             def predict(X):
                 return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
@@ -91,7 +99,6 @@ class Ale(Resource):
         proba_ale_lr = ALE(predic_func, **{k: v for k, v in kwargsData.items()})
         proba_exp_lr = proba_ale_lr.explain(dataframe.drop([target_name], axis=1, inplace=False).to_numpy(),**{k: v for k, v in kwargsData2.items()})
         
-        
         if(kwargsData2["features"]!=None):
             dim = math.ceil(len(kwargsData2["features"])**(1/2))
         else:
@@ -99,11 +106,14 @@ class Ale(Resource):
 
         fig, ax = plt.subplots(dim, dim, sharey='all');
         plot_ale(proba_exp_lr,ax=ax,fig_kw={'figwidth': 12, 'figheight': 10})
+        
         #saving
-        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
-        fig.savefig(upload_folder+filename+'.png')
+        img_buf = BytesIO()
+        fig.savefig(img_buf)
+        im = Image.open(img_buf)
+        b64Image=PIL_to_base64(im)
 
-        response = {"plot_png":getcall+'.png',"explanation":json.loads(proba_exp_lr.to_json())}
+        response={"type":"image","explanation":b64Image}#,"explanation":dict_exp}
         return response
 
 

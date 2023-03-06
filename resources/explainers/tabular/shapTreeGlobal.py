@@ -3,11 +3,13 @@ import numpy as np
 import joblib
 import json
 import shap
-from flask_restful import Resource,reqparse
+from flask_restful import Resource
 from flask import request
-from saveinfo import save_file_info
+from PIL import Image
+from io import BytesIO
 from getmodelfiles import get_model_files
-
+from utils import ontologyConstants
+from utils.base64 import PIL_to_base64
 
 class ShapTreeGlobal(Resource):
 
@@ -16,46 +18,62 @@ class ShapTreeGlobal(Resource):
         self.upload_folder = upload_folder  
 
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument("id",required=True)
-        parser.add_argument('params')
-        args = parser.parse_args()
+        params = request.json
+        if params is None:
+            return "The json body is missing"
         
-        _id = args.get("id")
-        params=args.get("params")
-        params_json={}
-        if(params !=None):
-            params_json = json.loads(params)
-        
-        #getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+        #Check params
+        if("id" not in params):
+            return "The model id was not specified in the params."
 
-        #getting params from request
-        index=1
-        if "output_index" in params_json:
-            index=int(params_json["output_index"]);
+        _id =params["id"]
+        if("type"  in params):
+            inst_type=params["type"]
+        params_json={}
+        if "params" in params:
+            params_json=params["params"]
+       
+        #Getting model info, data, and file from local repository
+        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
         #getting params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]
-        try:
-            output_names=model_info["attributes"]["target_values"][0]
-        except:
-            output_names=None
         target_name=model_info["attributes"]["target_names"][0]
+        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         feature_names=list(model_info["attributes"]["features"].keys())
         feature_names.remove(target_name)
         kwargsData = dict(feature_names=feature_names, output_names=output_names)
-    
+
+        #getting params from request
+        index=0
+        if "target_class" in params_json:
+            target_class=str(params_json["target_class"])
+            try:
+                index=output_names.index(target_class)
+            except:
+                pass
+
         #loading model (.pkl file)
-        model=joblib.load(model_file)
+        if model_file!=None:
+            if backend in ontologyConstants.SKLEARN_URIS:
+                model = joblib.load(model_file)
+            elif backend in ontologyConstants.XGBOOST_URIS:
+                model = joblib.load(model_file)
+            elif backend in ontologyConstants.LIGHTGBM_URIS:
+                model = joblib.load(model_file)
+            else:
+                return "The model backend is not supported: " + backend
+        else:
+            return "Model file was not uploaded."
 
         #loading data
         if data_file!=None:
             dataframe = joblib.load(data_file) ##error handling?
-            dataframe.drop([target_name], axis=1, inplace=True)
         else:
             raise Exception("The training data file was not provided.")
+
+        dataframe.drop([target_name], axis=1, inplace=True)
 
         #creating explanation
         explainer = shap.Explainer(model,**{k: v for k, v in kwargsData.items()})
@@ -67,16 +85,20 @@ class ShapTreeGlobal(Resource):
         #plotting
         plt.switch_backend('agg')
         shap.summary_plot(shap_values,features=dataframe,feature_names=explainer.feature_names,class_names=explainer.output_names)
-        ##saving
-        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
-        plt.savefig(upload_folder+filename+".png",bbox_inches="tight")
+        
        
         #formatting json output
-        shap_values = [x.tolist() for x in shap_values]
-        ret=json.loads(json.dumps(shap_values))
+        #shap_values = [x.tolist() for x in shap_values]
+        #ret=json.loads(json.dumps(shap_values))
+
+        ##saving
+        img_buf = BytesIO()
+        plt.savefig(img_buf)
+        im = Image.open(img_buf)
+        b64Image=PIL_to_base64(im)
         
         #Insert code for image uploading and getting url
-        response={"plot_png":getcall+".png","explanation":ret}
+        response={"type":"image","explanation":b64Image}
 
         return response
 
@@ -88,7 +110,7 @@ class ShapTreeGlobal(Resource):
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
         "params": { 
-                "output_index": "(Optional) Integer representing the index of the class to be explained. Ignore for regression models. The default index is 1.",
+                "target_class": "(Optional) Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file.",
                 },
         "output_description":{
                 "beeswarm_plot": "The beeswarm plot is designed to display an information-dense summary of how the top features in a dataset impact the model's output. Each instance the given explanation is represented by a single dot" 

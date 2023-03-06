@@ -1,14 +1,16 @@
-from flask_restful import Resource,reqparse
+from flask_restful import Resource
 import numpy as np
 import joblib
 import json
 import shap
-import xgboost
-import lightgbm
 from flask import request
 import matplotlib.pyplot as plt
-from saveinfo import save_file_info
 from getmodelfiles import get_model_files
+from io import BytesIO
+from PIL import Image
+from utils import ontologyConstants
+from utils.base64 import PIL_to_base64
+from utils.dataframe_processing import normalize_dict
 
 
 class ShapTreeLocal(Resource):
@@ -18,48 +20,70 @@ class ShapTreeLocal(Resource):
         self.upload_folder = upload_folder
         
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('id',required=True)
-        parser.add_argument('instance',required=True)
-        parser.add_argument('params')
-        args = parser.parse_args()
+        params = request.json
+        if params is None:
+            return "The json body is missing."
         
-        _id = args.get("id")
-        instance = json.loads(args.get("instance"))
-        params=args.get("params")
+        #Check params
+        if("id" not in params):
+            return "The model id was not specified in the params."
+        if("type" not in params):
+            return "The instance type was not specified in the params."
+        if("instance" not in params):
+            return "The instance was not specified in the params."
+
+        _id =params["id"]
+        if("type"  in params):
+            inst_type=params["type"]
+        instance=params["instance"]
         params_json={}
-        if(params !=None):
-            params_json = json.loads(params)
-       
-        #Getting model info, data, and file from local repository
+        if "params" in params:
+            params_json=params["params"]
+        
+        #getting model info, data, and file from local repository
         model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
 
-        #getting params from request
-        index=1
-        plot_type=None
-        if "output_index" in params_json:
-            index=int(params_json["output_index"]);
-        if "plot_type" in params_json:
-            plot_type=params_json["plot_type"];
-
-        ##getting params from info
+        #getting params from info
         model_info=json.load(model_info_file)
-        backend = model_info["backend"]  ##error handling?
-        try:
-            output_names=model_info["attributes"]["target_values"][0]
-        except:
-            output_names=None
+        backend = model_info["backend"]
         target_name=model_info["attributes"]["target_names"][0]
+        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         feature_names=list(model_info["attributes"]["features"].keys())
         feature_names.remove(target_name)
         kwargsData = dict(feature_names=feature_names, output_names=output_names)
 
-        #load model (.pkl file)
-        model=joblib.load(model_file)
+        #getting params from request
+        index=0
+        if "target_class" in params_json:
+            target_class=str(params_json["target_class"])
+            try:
+                index=output_names.index(target_class)
+            except:
+                pass
+        plot_type=None
+        if "plot_type" in params_json:
+            plot_type=params_json["plot_type"]
+
+        #loading model (.pkl file)
+        if model_file!=None:
+            if backend in ontologyConstants.SKLEARN_URIS:
+                model = joblib.load(model_file)
+            elif backend in ontologyConstants.XGBOOST_URIS:
+                model = joblib.load(model_file)
+            elif backend in ontologyConstants.LIGHTGBM_URIS:
+                model = joblib.load(model_file)
+            else:
+                return "The model backend is not supported: " + backend
+        else:
+            return "Model file was not uploaded."
+
+        
+        #normalize instance
+        norm_instance=np.array(list(normalize_dict(instance,model_info).values()))
 
         # Create explanation
         explainer = shap.Explainer(model,**{k: v for k, v in kwargsData.items()})
-        shap_values = explainer.shap_values(np.array([instance]))
+        shap_values = explainer.shap_values(np.expand_dims(norm_instance,axis=0))
 
         if(len(np.array(shap_values).shape)==3):
             explainer.expected_value=explainer.expected_value[index]
@@ -68,30 +92,32 @@ class ShapTreeLocal(Resource):
         #plotting
         plt.switch_backend('agg')
         if plot_type=="bar":
-            shap.plots._bar.bar_legacy(shap_values[0],features=np.array(instance),feature_names=kwargsData["feature_names"],show=False)
+            shap.plots._bar.bar_legacy(shap_values[0],features=np.array(list(instance.values())),feature_names=kwargsData["feature_names"],show=False)
         elif plot_type=="decision":
-            shap.decision_plot(explainer.expected_value,shap_values=shap_values[0],features=np.array(instance),feature_names=kwargsData["feature_names"])
+            shap.decision_plot(explainer.expected_value,shap_values=shap_values[0],features=np.array(list(instance.values())),feature_names=kwargsData["feature_names"])
         elif plot_type=="force":
-                shap.plots._force.force(explainer.expected_value,shap_values=shap_values[0],features=np.array(instance),feature_names=kwargsData["feature_names"],out_names=target_name,matplotlib=True,show=False)
+                shap.plots._force.force(explainer.expected_value,shap_values=shap_values[0],features=np.array(list(instance.values())),feature_names=kwargsData["feature_names"],out_names=target_name,matplotlib=True,show=False)
         else:
             if plot_type==None:
                 print("No plot type was specified. Defaulting to waterfall plot.")
             elif plot_type!="waterfall":
                 print("No plot with the specified name was found. Defaulting to waterfall plot.")
-            shap.plots._waterfall.waterfall_legacy(explainer.expected_value,shap_values=shap_values[0],features=np.array(instance),feature_names=kwargsData["feature_names"],show=False)
-       
-        ##saving
-        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
-        plt.savefig(upload_folder+filename+".png",bbox_inches="tight")
+            shap.plots._waterfall.waterfall_legacy(explainer.expected_value,shap_values=shap_values[0],features=np.array(list(instance.values())),feature_names=kwargsData["feature_names"],show=False)
        
         #formatting json output
-        shap_values = [x.tolist() for x in shap_values]
-        ret=json.loads(json.dumps(shap_values))
+        #shap_values = [x.tolist() for x in shap_values]
+        #ret=json.loads(json.dumps(shap_values))
+
+        ##saving
+        img_buf = BytesIO()
+        plt.savefig(img_buf,bbox_inches="tight")
+        im = Image.open(img_buf)
+        b64Image=PIL_to_base64(im)
         
-        #Insert code for image uploading and getting url
-        response={"plot_png":getcall+".png","explanation":ret}
+        response={"type":"image","explanation":b64Image}
 
         return response
+
 
 
     def get(self):
@@ -103,7 +129,7 @@ class ShapTreeLocal(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "Array with the feature values of an instance without including the target class.",
         "params": { 
-                "output_index": "(Optional) Integer representing the index of the class to be explained. Ignore for regression models. The default index is 1.",
+                "target_class": "(Optional) Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file.",
                 "plot_type": "(Optional) String with the name of the plot to be generated. The supported plots are 'waterfall', 'force', 'decision' and 'bar'. Defaults to 'waterfall'."
                 },
 

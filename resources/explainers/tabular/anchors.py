@@ -1,4 +1,5 @@
-from flask_restful import Resource,reqparse
+from flask_restful import Resource
+from flask import request
 import tensorflow as tf
 import torch
 import numpy as np
@@ -8,6 +9,8 @@ import json
 from alibi.explainers import AnchorTabular
 from getmodelfiles import get_model_files
 import requests
+from utils import ontologyConstants
+from utils.dataframe_processing import normalize_dict
 
 class Anchors(Resource):
 
@@ -16,62 +19,76 @@ class Anchors(Resource):
         self.upload_folder = upload_folder
     
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument("id",required=True)
-        parser.add_argument('instance',required=True)
-        parser.add_argument("url")
-        parser.add_argument('params')
-        args = parser.parse_args()
+        params = request.json
+        if params is None:
+            return "The json body is missing."
         
-        _id = args.get("id")
-        url = args.get("url")
-        instance = json.loads(args.get("instance"))
-        params=args.get("params")
+        #Check params
+        if("id" not in params):
+            return "The model id was not specified in the params."
+        if("type" not in params):
+            return "The instance type was not specified in the params."
+        if("instance" not in params):
+            return "The instance was not specified in the params."
+
+        _id =params["id"]
+        if("type"  in params):
+            inst_type=params["type"]
+        instance=params["instance"]
+        url=None
+        if "url" in params:
+            url=params["url"]
         params_json={}
-        if(params !=None):
-            params_json = json.loads(params)
+        if "params" in params:
+            params_json=params["params"]
         
-        #Getting model info, data, and file from local repository
+        #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        ## loading data
+
+        ##getting params from info
+        model_info=json.load(model_info_file)
+        backend = model_info["backend"] 
+        target_name=model_info["attributes"]["target_names"][0]
+        features=model_info["attributes"]["features"]
+        feature_names=list(features.keys())
+        feature_names.remove(target_name)
+
+        #loading data
         if data_file!=None:
             dataframe = joblib.load(data_file) ##error handling?
         else:
             raise Exception("The training data file was not provided.")
 
-        ##getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"]  ##error handling?
-
-        target_name=model_info["attributes"]["target_names"][0]
-        feature_names=list(model_info["attributes"]["features"].keys())
-        feature_names.remove(target_name)
+        dataframe.drop([target_name], axis=1, inplace=True)
 
         categorical_names={}
         for feature in feature_names:
-            if isinstance(model_info["attributes"]["features"][feature],list):
-                categorical_names.update({dataframe.columns.get_loc(feature):[ str(x) for x in model_info["attributes"]["features"][feature]]})
-
-        kwargsData = dict(feature_names=feature_names,categorical_names=categorical_names)
-
+            if features[feature]["data_type"]=="categorical":
+                categorical_names.update({dataframe.columns.get_loc(feature):[ str(x) for x in features[feature]["values_raw"]]})
 
         ## getting predict function
         predic_func=None
         if model_file!=None:
-            if backend=="TF1" or backend=="TF2":
+            if backend in ontologyConstants.TENSORFLOW_URIS:
                 model=h5py.File(model_file, 'w')
                 mlp = tf.keras.models.load_model(model)
                 predic_func=mlp
-            elif backend=="sklearn":
+            elif backend in ontologyConstants.SKLEARN_URIS:
                 mlp = joblib.load(model_file)
-                predic_func=mlp.predict_proba
-            elif backend=="PYT":
+                try:
+                    predic_func=mlp.predict_proba
+                except:
+                    predic_func=mlp.predict
+            elif backend in ontologyConstants.PYTORCH_URIS:
                 mlp = torch.load(model_file)
                 predic_func=mlp.predict
             else:
-                mlp = joblib.load(model_file)
-                predic_func=mlp.predict
+                try:
+                    mlp = joblib.load(model_file)
+                    predic_func=mlp.predict
+                except Exception as e:
+                    return "Could not extract prediction function from model: " + str(e)
         elif url!=None:
             def predict(X):
                 return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
@@ -79,23 +96,28 @@ class Anchors(Resource):
         else:
             raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
 
+        kwargsData = dict(feature_names=feature_names,categorical_names=categorical_names)
+
         #getting params from request
         kwargsData2 = dict(threshold=0.95)
         if "threshold" in params_json:
             kwargsData2["threshold"] = float(params_json["threshold"])
 
+        #normalize instance
+        norm_instance=np.array(list(normalize_dict(instance,model_info).values()))
+
         # Create data
         explainer = AnchorTabular(predic_func, **{k: v for k, v in kwargsData.items()})
 
-        explainer.fit(dataframe.drop(dataframe.columns[len(dataframe.columns)-1], axis=1, inplace=False).to_numpy(), disc_perc=(25, 50, 75))
+        explainer.fit(dataframe.to_numpy(), disc_perc=(25, 50, 75))
         
-        explanation = explainer.explain(np.array(instance), **{k: v for k, v in kwargsData2.items()})
+        explanation = explainer.explain(norm_instance, **{k: v for k, v in kwargsData2.items()})
         
         if explanation.anchor:
             ret = dict(anchor=(' AND '.join(explanation.anchor)),precision=explanation.precision, coverage=explanation.coverage)
         else:
             ret = dict(anchor=(' AND '.join(explanation.anchor)),precision=explanation.precision[0], coverage=explanation.coverage)
-        return json.loads(json.dumps(ret))
+        return {"type":"dict","explanation":json.loads(json.dumps(ret))}
 
 
     def get(self):

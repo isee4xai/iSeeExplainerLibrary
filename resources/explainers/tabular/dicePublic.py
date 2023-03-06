@@ -1,4 +1,4 @@
-from flask_restful import Resource,reqparse
+from flask_restful import Resource
 import tensorflow as tf
 import torch
 import pandas as pd
@@ -6,10 +6,11 @@ import joblib
 import h5py
 import json
 import dice_ml
-from html2image import Html2Image
-from saveinfo import save_file_info
+import numpy as np
 from getmodelfiles import get_model_files
 from flask import request
+from utils import ontologyConstants
+from utils.dataframe_processing import normalize_dict
 
 class DicePublic(Resource):
 
@@ -18,58 +19,83 @@ class DicePublic(Resource):
         self.upload_folder = upload_folder
    
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument("id", required=True)
-        parser.add_argument('instance',required=True)
-        parser.add_argument("params")
-
-        #parsing args
-        args = parser.parse_args()
-        _id = args.get("id")
-        instance = json.loads(args.get("instance"))
-        params=args.get("params")
-        params_json={}
-        if(params !=None):
-            params_json = json.loads(params)
+        params = request.json
+        if params is None:
+            return "The json body is missing."
         
-        #Getting model info, data, and file from local repository
+        #Check params
+        if("id" not in params):
+            return "The model id was not specified in the params."
+        if("type" not in params):
+            return "The instance type was not specified in the params."
+        if("instance" not in params):
+            return "The instance was not specified in the params."
+
+        _id =params["id"]
+        if("type"  in params):
+            inst_type=params["type"]
+        instance=params["instance"]
+        params_json={}
+        if "params" in params:
+            params_json=params["params"]
+        
+        #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        ## loading data
-        dataframe = joblib.load(data_file)
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) 
+        else:
+            raise Exception("The training data file was not provided.")
 
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
+        features=model_info["attributes"]["features"]
         target_names=model_info["attributes"]["target_names"]
-        feature_names=list(model_info["attributes"]["features"].keys())
+        outcome_name=target_names[0]
+        feature_names=list(features.keys())
         for target in target_names:
             feature_names.remove(target)
         cont_features=[]
         for feature in feature_names:
-            if isinstance(model_info["attributes"]["features"][feature],dict):
+            if features[feature]["data_type"]=="numerical":
                 cont_features.append(feature)
 
 
-
         ## loading model
-        if backend=="TF1" or backend=="TF2":
-           model_h5=h5py.File(model_file, 'w')
-           model = tf.keras.models.load_model(model_h5)
-        elif backend=="PYT":
-           model = torch.load(model_file)
+        model=None
+        back=None
+        if model_file!=None:
+            if backend in ontologyConstants.TENSORFLOW_URIS:
+                back="TF2"
+                model=h5py.File(model_file, 'w')
+                model = tf.keras.models.load_model(model)
+                if(backend==ontologyConstants.TENSORFLOW_URIS[0]):
+                    back="TF1"
+            elif backend in ontologyConstants.SKLEARN_URIS:
+                back="sklearn"
+                model = joblib.load(model_file)
+            elif backend in ontologyConstants.PYTORCH_URIS:
+                back="PYT"
+                model = torch.load(model_file)
+            else:
+                return "The backend is not supported: " + backend
         else:
-           model = joblib.load(model_file)
+            raise Exception("The model file was not uploaded.")
         
 
         ## params from request
-        kwargsData = dict(continuous_features=cont_features, outcome_name=dataframe.columns[-1])
+        kwargsData = dict(continuous_features=cont_features, outcome_name=outcome_name)
         if "permitted_range" in params_json:
            kwargsData["permitted_range"] = json.loads(params_json["permitted_range"]) if isinstance(params_json["permitted_range"],str) else params_json["permitted_range"]
         if "continuous_features_precision" in params_json:
            kwargsData["continuous_features_precision"] = json.loads(params_json["continuous_features_precision"]) if isinstance(params_json["continuous_features_precision"],str) else params_json["continuous_features_precision"]
 
-        kwargsData2 = dict(desired_class=1,total_CFs=3)
+        desired_class=0
+        if(len(features[outcome_name]["values_raw"])==2): #binary classification
+            desired_class="opposite"
+        kwargsData2 = dict(desired_class=desired_class,total_CFs=3)
         if "num_cfs" in params_json:
            kwargsData2["total_CFs"] = int(params_json["num_cfs"])
         if "desired_class" in params_json:
@@ -81,7 +107,7 @@ class DicePublic(Resource):
         d = dice_ml.Data(dataframe=dataframe, **{k: v for k, v in kwargsData.items() if v is not None})
   
         # Create model
-        m = dice_ml.Model(model=model, backend=backend)
+        m = dice_ml.Model(model=model, backend=back)
 
         # Create CFs generator
         method="random"
@@ -89,19 +115,18 @@ class DicePublic(Resource):
            method = params_json["method"]
         exp = dice_ml.Dice(d, m, method=method)
 
-        columns = list(dataframe.columns)
-        columns.remove(dataframe.columns[-1])
+        #normalize instance
+        norm_instance=np.array(list(normalize_dict(instance,model_info).values()))
 
-        instance = pd.DataFrame([instance], columns=columns)
+        instance_df = pd.DataFrame(np.expand_dims(norm_instance,axis=0), columns=feature_names)
        
         # Generate counterfactuals
-        if backend=="sklearn":
-            e1 = exp.generate_counterfactuals(query_instances=instance, **{k: v for k, v in kwargsData2.items() if v is not None})
+        if backend in ontologyConstants.SKLEARN_URIS:
+            e1 = exp.generate_counterfactuals(query_instances=instance_df, **{k: v for k, v in kwargsData2.items() if v is not None})
         else:
-            e1 = exp.generate_counterfactuals(instance, **{k: v for k, v in kwargsData2.items() if v is not None})
+            e1 = exp.generate_counterfactuals(instance_df, **{k: v for k, v in kwargsData2.items() if v is not None})
         
         #saving
-        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         str_html=''
         i=1
         for cf in e1.cf_examples_list:
@@ -114,18 +139,20 @@ class DicePublic(Resource):
             str_html =  str_html + '<h2>Instance ' + str(i) + '</h2>' + cf.test_instance_df.to_html() + '<h2>Counterfactuals</h2>'+ cfs + '<br><br><hr><br>'
             i=i+1
 
-        file = open(upload_folder+filename+".html", "w")
-        file.write(str_html)
-        file.close()
+        #file = open(upload_folder+filename+".html", "w")
+        #file.write(str_html)
+        #file.close()
 
-        hti = Html2Image()
-        hti.output_path= upload_folder
-        if "png_height" in params_json and "png_width" in params_json:
-            size=(int(params_json["png_width"]),int(params_json["png_height"]))
-            hti.screenshot(html_str=str_html, save_as=filename+".png",size=size)
-        else:
-            hti.screenshot(html_str=str_html, save_as=filename+".png")
-        response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":json.loads(e1.to_json())}
+        #hti = Html2Image()
+        #hti.output_path= upload_folder
+        #if "png_height" in params_json and "png_width" in params_json:
+        #    size=(int(params_json["png_width"]),int(params_json["png_height"]))
+        #    hti.screenshot(html_str=str_html, save_as=filename+".png",size=size)
+        #else:
+        #    hti.screenshot(html_str=str_html, save_as=filename+".png")
+        #response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":json.loads(e1.to_json())}
+        
+        response={"type":"html","explanation":str_html}
         return response
 
     def get(self):
@@ -136,7 +163,7 @@ class DicePublic(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "Array representing a row with the feature values of an instance without including the target class.",
         "params": { 
-                "desired_class": "(optional) Integer representing the index of the desired counterfactual class. Defaults to class 1.  You may also use the string 'opposite' for binary classification",
+                "desired_class": "(optional) Integer representing the index of the desired counterfactual class. Defaults to class 0.  You may also use the string 'opposite' for binary classification",
                 "method": "(optional) The method used for counterfactual generation. The supported methods are: 'random' (random sampling), 'genetic' (genetic algorithms), 'kdtrees'.  Defaults to 'random'.",
                 "features_to_vary": "(optional) Either a string 'all' or a list of strings representing the feature names to vary. Defaults to all features.",
                 "num_cfs": "(optional) number of counterfactuals to be generated for each instance.",

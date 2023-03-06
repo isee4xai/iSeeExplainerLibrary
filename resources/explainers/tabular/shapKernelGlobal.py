@@ -7,11 +7,13 @@ import h5py
 import json
 import shap
 import requests
-from flask_restful import Resource,reqparse
+from flask_restful import Resource
 from flask import request
-from saveinfo import save_file_info
 from getmodelfiles import get_model_files
-
+from io import BytesIO
+from PIL import Image
+from utils import ontologyConstants
+from utils.base64 import PIL_to_base64
 
 class ShapKernelGlobal(Resource):
 
@@ -20,65 +22,75 @@ class ShapKernelGlobal(Resource):
         self.upload_folder = upload_folder
         
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('id',required=True)
-        parser.add_argument('url')
-        parser.add_argument('params')
-        args = parser.parse_args()
+        params = request.json
+        if params is None:
+            return "The json body is missing"
         
-        _id = args.get("id")
-        url = args.get("url")
-        params=args.get("params")
+        #Check params
+        if("id" not in params):
+            return "The model id was not specified in the params."
+
+        _id =params["id"]
+        if("type"  in params):
+            inst_type=params["type"]
+        url=None
+        if "url" in params:
+            url=params["url"]
         params_json={}
-        if(params !=None):
-            params_json = json.loads(params)
+        if "params" in params:
+            params_json=params["params"]
         
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-
-        #getting params from request
-        index=1
-        if "output_index" in params_json:
-            index=int(params_json["output_index"]);
-
         #getting params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]
-        try:
-            output_names=model_info["attributes"]["target_values"][0]
-        except:
-            output_names=None
         target_name=model_info["attributes"]["target_names"][0]
+        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         feature_names=list(model_info["attributes"]["features"].keys())
         feature_names.remove(target_name)
         kwargsData = dict(feature_names=feature_names, output_names=output_names)
 
+        #getting params from request
+        index=0
+        if "target_class" in params_json:
+            target_class=str(params_json["target_class"])
+            try:
+                index=output_names.index(target_class)
+            except:
+                pass
+
         #loading data
         if data_file!=None:
-            dataframe = joblib.load(data_file)
-            dataframe.drop([target_name], axis=1, inplace=True)
+            dataframe = joblib.load(data_file) ##error handling?
         else:
             raise Exception("The training data file was not provided.")
-        #getting predict function
+
+        dataframe.drop([target_name], axis=1, inplace=True)
+        
+        ## getting predict function
         predic_func=None
         if model_file!=None:
-            if backend=="TF1" or backend=="TF2":
+            if backend in ontologyConstants.TENSORFLOW_URIS:
                 model=h5py.File(model_file, 'w')
                 mlp = tf.keras.models.load_model(model)
                 predic_func=mlp
-            elif backend=="sklearn":
+            elif backend in ontologyConstants.SKLEARN_URIS:
                 mlp = joblib.load(model_file)
                 try:
                     predic_func=mlp.predict_proba
                 except:
                     predic_func=mlp.predict
-            elif backend=="PYT":
+            elif backend in ontologyConstants.PYTORCH_URIS:
                 mlp = torch.load(model_file)
                 predic_func=mlp.predict
             else:
-                mlp = joblib.load(model_file)
-                predic_func=mlp.predict
+                try:
+                    mlp = joblib.load(model_file)
+                    predic_func=mlp.predict
+                except Exception as e:
+                    return "Could not extract prediction function from model: " + str(e)
         elif url!=None:
             def predict(X):
                 return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
@@ -97,15 +109,18 @@ class ShapKernelGlobal(Resource):
         plt.switch_backend('agg')
         shap.summary_plot(shap_values,features=dataframe, feature_names=feature_names,class_names=output_names,show=False)
 
-        #saving
-        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
-        plt.savefig(upload_folder+filename+".png",bbox_inches="tight")
-
         #formatting json output
-        shap_values = [x.tolist() for x in shap_values]
-        ret=json.loads(json.dumps(shap_values))
+        #shap_values = [x.tolist() for x in shap_values]
+        #ret=json.loads(json.dumps(shap_values))
+
+        ##saving
+        img_buf = BytesIO()
+        plt.savefig(img_buf)
+        im = Image.open(img_buf)
+        b64Image=PIL_to_base64(im)
         
-        response={"plot_png":getcall+".png","explanation":ret}
+        #Insert code for image uploading and getting url
+        response={"type":"image","explanation":b64Image}
 
         return response
 
@@ -120,7 +135,7 @@ class ShapKernelGlobal(Resource):
         "url": "External URL of the prediction function. Ignored if a model file was previously uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
-                "output_index": "(Optional) Integer representing the index of the class to be explained. Ignore for regression models. Defaults to class 1." 
+                "target_class": "(Optional) Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file."
                 },
         "output_description":{
                 "beeswarm_plot": "The beeswarm plot is designed to display an information-dense summary of how the top features in a dataset impact the model's output. Each instance the given explanation is represented by a single dot" 

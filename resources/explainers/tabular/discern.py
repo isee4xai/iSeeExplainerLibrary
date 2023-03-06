@@ -1,15 +1,16 @@
-from flask_restful import Resource, reqparse
+from flask_restful import Resource
 import json
 import pandas as pd
 import numpy as np
 from getmodelfiles import get_model_files
-from saveinfo import save_file_info
 import joblib
 import h5py
 from html2image import Html2Image
 from flask import request
 from discern import discern_tabular
 import tensorflow as tf
+from utils import ontologyConstants
+from utils.dataframe_processing import normalize_dict
 
 class DisCERN(Resource):
 
@@ -18,49 +19,60 @@ class DisCERN(Resource):
         self.upload_folder = upload_folder
 
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument("id", required=True)
-        parser.add_argument("instance", required=True)
-        parser.add_argument("params")
-
-        #parsing args
-        args = parser.parse_args()
-        _id = args.get("id")
-        params=args.get("params")
-        instance = json.loads(args.get("instance"))
-        params=args.get("params")
-        params_json={}
-        if(params!=None):
-            params_json = json.loads(params)
+        params = request.json
+        if params is None:
+            return "The json body is missing."
         
-        #Getting model info, data, and file from local repository
+        #Check params
+        if("id" not in params):
+            return "The model id was not specified in the params."
+        if("type" not in params):
+            return "The instance type was not specified in the params."
+        if("instance" not in params):
+            return "The instance was not specified in the params."
+
+        _id =params["id"]
+        if("type"  in params):
+            inst_type=params["type"]
+        instance=params["instance"]
+        params_json={}
+        if "params" in params:
+            params_json=params["params"]
+        
+        #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        ## loading data
-        dataframe = joblib.load(data_file)
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) 
+        else:
+            raise Exception("The training data file was not provided.")
 
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]
-        outcome_name=model_info["attributes"]["target_names"][0]
-        feature_names=list(model_info["attributes"]["features"].keys())
+        features=model_info["attributes"]["features"]
+        target_name=model_info["attributes"]["target_names"][0]
+        outcome_name=target_name
+        feature_names=list(features.keys())
         feature_names.remove(outcome_name)
         categorical_features=[]
         for feature in feature_names:
-            if isinstance(model_info["attributes"]["features"][feature],list):
+            if features[feature]["data_type"]=="categorical":
                 categorical_features.append(dataframe.columns.get_loc(feature))
       
         ## loading model
-        if backend=="TF1" or backend=="TF2":
-            model=h5py.File(model_file, 'w')
-            model = tf.keras.models.load_model(model)
-        elif backend=="sklearn":
-            model = joblib.load(model_file)
-        # elif backend=="PYT":
-        #     mlp = torch.load(model_file)
-        #     predic_func=mlp.predict
+        model=None
+        if model_file!=None:
+            if backend in ontologyConstants.TENSORFLOW_URIS:
+                model=h5py.File(model_file, 'w')
+                model = tf.keras.models.load_model(model)
+            elif backend in ontologyConstants.SKLEARN_URIS:
+                model = joblib.load(model_file)
+            else:
+                return "This method currently supports Tensoflow and scikit-learn classification models only."
         else:
-            raise Exception("Currently supports Tensoflow and scikit-learn classification models.")
+            raise Exception("The model file was not uploaded.")
         
 
         #getting params from request
@@ -76,39 +88,42 @@ class DisCERN(Resource):
 
         ## init discern
         discern_obj = discern_tabular.DisCERNTabular(model, feature_attribution_method)    
-        dataframe_features = dataframe.drop(dataframe.columns[-1],axis=1).values
-        dataframe_labels = dataframe.iloc[:,-1].values
+        dataframe_features = dataframe.drop([target_name], axis=1, inplace=False).values
+        dataframe_labels = dataframe.loc[:,target_name].values
         target_values = dataframe[outcome_name].unique().tolist()
         discern_obj.init_data(dataframe_features, dataframe_labels, feature_names, target_values, **{'cat_feature_indices':categorical_features, 'immutable_feature_indices':imm_features})
 
-        test_label = None 
-        if backend=="TF1" or backend=="TF2":
-            test_label = model.predict(np.array([instance])).argmax(axis=-1)[0]
-        elif backend=="sklearn":
-            test_label = model.predict([instance])[0]
-        
-        cf, cf_label, s, p = discern_obj.find_cf(instance, test_label, desired_class)
 
-        result_df = pd.DataFrame(np.array([instance, cf]), columns=feature_names)
+        #normalize instance
+        norm_instance=np.array(list(normalize_dict(instance,model_info).values()))
+
+        test_label = None 
+        if backend in ontologyConstants.TENSORFLOW_URIS:
+            test_label = model.predict(np.expand_dims(norm_instance,axis=0)).argmax(axis=-1)[0]
+        elif backend in ontologyConstants.SKLEARN_URIS:
+            test_label = model.predict(np.expand_dims(norm_instance,axis=0))[0]
+        
+        cf, cf_label, s, p = discern_obj.find_cf(norm_instance, test_label, desired_class)
+
+        result_df = pd.DataFrame(np.array([norm_instance, cf]), columns=feature_names)
 
         #saving
-        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         str_html= result_df.to_html()+'<br>'
-        
-        file = open(upload_folder+filename+".html", "w")
-        file.write(str_html)
-        file.close()
 
-        hti = Html2Image()
-        hti.output_path= upload_folder
-        if "png_height" in params_json and "png_width" in params_json:
-            size=(int(params_json["png_width"]),int(params_json["png_height"]))
-            hti.screenshot(html_str=str_html, save_as=filename+".png",size=size)
-        else:
-            hti.screenshot(html_str=str_html, save_as=filename+".png")
+        #file = open(upload_folder+filename+".html", "w")
+        #file.write(str_html)
+        #file.close()
+
+        #hti = Html2Image()
+        #hti.output_path= upload_folder
+        #if "png_height" in params_json and "png_width" in params_json:
+        #    size=(int(params_json["png_width"]),int(params_json["png_height"]))
+        #    hti.screenshot(html_str=str_html, save_as=filename+".png",size=size)
+        #else:
+        #    hti.screenshot(html_str=str_html, save_as=filename+".png")
        
         
-        response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":result_df.to_json()}
+        response={"type":"html","explanation":str_html}
         return response
 
     def get(self):
