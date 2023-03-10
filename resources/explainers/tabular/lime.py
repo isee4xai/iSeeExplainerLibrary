@@ -88,11 +88,6 @@ class Lime(Resource):
         dataframe.drop([target_name], axis=1, inplace=True)
 
         kwargsData = dict(mode=model_task, feature_names=feature_names, categorical_features=categorical_features,categorical_names=categorical_names, class_names=class_names)
-        print(model_task)
-        print(feature_names)
-        print(categorical_features)
-        print(categorical_features)
-        print(class_names)
 
         ## getting predict function
         predic_func=None
@@ -139,7 +134,7 @@ class Lime(Resource):
         explainer = lime.lime_tabular.LimeTabularExplainer(dataframe.to_numpy(),
                                                           **{k: v for k, v in kwargsData.items() if v is not None})
         explanation = explainer.explain_instance(norm_instance, predic_func, **{k: v for k, v in kwargsData2.items() if v is not None}) 
-        print(norm_instance)
+
         
         #formatting json explanation
         #ret = explanation.as_map()
@@ -163,9 +158,9 @@ class Lime(Resource):
             hti.screenshot(html_str=explanation.as_html(), save_as="temp.png")
 
         im=Image.open("temp.png")
-        print(im.size)
-
         b64Image=PIL_to_base64(im)
+        os.remove("temp.png")
+
         response={"type":"image","explanation":b64Image}
         return response
 
