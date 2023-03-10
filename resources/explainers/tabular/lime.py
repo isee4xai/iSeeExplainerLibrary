@@ -1,4 +1,4 @@
-from flask_restful import Resource,reqparse
+from flask_restful import Resource
 from flask import request
 import tensorflow as tf
 import torch
@@ -7,10 +7,14 @@ import joblib
 import h5py
 import json
 import lime.lime_tabular
-from html2image import Html2Image
-from saveinfo import save_file_info
+import os
+from PIL import Image
 from getmodelfiles import get_model_files
 import requests
+from utils import ontologyConstants
+from utils.dataframe_processing import normalize_dict
+from utils.base64 import PIL_to_base64
+from html2image import Html2Image
 
 class Lime(Resource):
 
@@ -19,22 +23,30 @@ class Lime(Resource):
         self.upload_folder = upload_folder    
 
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('id',required=True)
-        parser.add_argument('instance',required=True)
-        parser.add_argument('url')
-        parser.add_argument('params')
-        args = parser.parse_args()
+        params = request.json
+        if params is None:
+            return "The json body is missing."
         
-        _id = args.get("id")
-        url = args.get("url")
-        instance = json.loads(args.get("instance"))
-        params=args.get("params")
+        #Check params
+        if("id" not in params):
+            return "The model id was not specified in the params."
+        if("type" not in params):
+            return "The instance type was not specified in the params."
+        if("instance" not in params):
+            return "The instance was not specified in the params."
+
+        _id =params["id"]
+        if("type"  in params):
+            inst_type=params["type"]
+        instance=params["instance"]
+        url=None
+        if "url" in params:
+            url=params["url"]
         params_json={}
-        if(params !=None):
-            params_json = json.loads(params)
+        if "params" in params:
+            params_json=params["params"]
         
-        #Getting model info, data, and file from local repository
+        #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
         ## loading data
@@ -45,46 +57,65 @@ class Lime(Resource):
 
         ##getting params from info
         model_info=json.load(model_info_file)
-        backend = model_info["backend"]  
-        mode=model_info["model_task"]
+        backend = model_info["backend"] 
+        
+        #Checking model task
+        model_task = model_info["model_task"]  
+        if model_task in ontologyConstants.CLASSIFICATION_URIS:
+            model_task="classification"
+        elif model_task in ontologyConstants.REGRESSION_URIS:
+            model_task="regression"
+        else:
+            return "Model task not supported: " + model_task
+
+        features=model_info["attributes"]["features"]
+        target_name=model_info["attributes"]["target_names"][0]
+        feature_names=list(features.keys())
+        feature_names.remove(target_name)
         try:
-            class_names=model_info["attributes"]["target_values"][0]
+            class_names=features[target_name]["values_raw"]
         except:
             class_names=None
-        target_name=model_info["attributes"]["target_names"][0]
-        feature_names=list(model_info["attributes"]["features"].keys())
-        feature_names.remove(target_name)
 
         categorical_features=[]
         categorical_names={}
         for feature in feature_names:
-            if isinstance(model_info["attributes"]["features"][feature],list):
+            if features[feature]["data_type"]=="categorical":
                 i=dataframe.columns.get_loc(feature)
                 categorical_features.append(i)
-                categorical_names.update({i:[ str(x) for x in model_info["attributes"]["features"][feature]]})
+                categorical_names.update({i:[ str(x) for x in features[feature]["values_raw"]]})
 
-        kwargsData = dict(mode=mode, feature_names=feature_names, categorical_features=categorical_features,categorical_names=categorical_names, class_names=class_names)
+        dataframe.drop([target_name], axis=1, inplace=True)
 
+        kwargsData = dict(mode=model_task, feature_names=feature_names, categorical_features=categorical_features,categorical_names=categorical_names, class_names=class_names)
+        print(model_task)
+        print(feature_names)
+        print(categorical_features)
+        print(categorical_features)
+        print(class_names)
 
         ## getting predict function
         predic_func=None
         if model_file!=None:
-            if backend=="TF1" or backend=="TF2":
+            if backend in ontologyConstants.TENSORFLOW_URIS:
                 model=h5py.File(model_file, 'w')
                 mlp = tf.keras.models.load_model(model)
                 predic_func=mlp
-            elif backend=="sklearn":
+            elif backend in ontologyConstants.SKLEARN_URIS:
                 mlp = joblib.load(model_file)
                 try:
                     predic_func=mlp.predict_proba
                 except:
                     predic_func=mlp.predict
-            elif backend=="PYT":
+            elif backend in ontologyConstants.PYTORCH_URIS:
                 mlp = torch.load(model_file)
                 predic_func=mlp.predict
             else:
-                mlp = joblib.load(model_file)
-                predic_func=mlp.predict
+                try:
+                    mlp = joblib.load(model_file)
+                    predic_func=mlp.predict
+                except Exception as e:
+                    return "Could not extract prediction function from model: " + str(e)
         elif url!=None:
             def predict(X):
                 return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
@@ -92,11 +123,9 @@ class Lime(Resource):
         else:
             raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
 
-  
-        
         #getting params from request
 
-        kwargsData2 = dict(labels=(1,), top_labels=None, num_features=None)
+        kwargsData2 = dict(labels=None, top_labels=1, num_features=None)
         if "output_classes" in params_json: #labels
             kwargsData2["labels"] = json.loads(params_json["output_classes"]) if isinstance(params_json["output_classes"],str) else params_json["output_classes"]  
         if "top_classes" in params_json:
@@ -104,34 +133,42 @@ class Lime(Resource):
         if "num_features" in params_json:
             kwargsData2["num_features"] = int(params_json["num_features"])
 
-        explainer = lime.lime_tabular.LimeTabularExplainer(dataframe.drop([target_name], axis=1, inplace=False).to_numpy(),
-                                                            **{k: v for k, v in kwargsData.items() if v is not None})
-        explanation = explainer.explain_instance(np.array(instance, dtype='f'), predic_func, **{k: v for k, v in kwargsData2.items() if v is not None}) 
+        #normalize instance
+        norm_instance=np.array(list(normalize_dict(instance,model_info).values()))
+
+        explainer = lime.lime_tabular.LimeTabularExplainer(dataframe.to_numpy(),
+                                                          **{k: v for k, v in kwargsData.items() if v is not None})
+        explanation = explainer.explain_instance(norm_instance, predic_func, **{k: v for k, v in kwargsData2.items() if v is not None}) 
+        print(norm_instance)
         
         #formatting json explanation
-        ret = explanation.as_map()
-        ret = {str(k):[(int(i),float(j)) for (i,j) in v] for k,v in ret.items()}
-        if kwargsData["class_names"]!=None:
-            ret = {kwargsData["class_names"][int(k)]:v for k,v in ret.items()}
-        if kwargsData["feature_names"]!=None:
-            ret = {k:[(kwargsData["feature_names"][i],j) for (i,j) in v] for k,v in ret.items()}
-        ret=json.loads(json.dumps(ret))
+        #ret = explanation.as_map()
+        #ret = {str(k):[(int(i),float(j)) for (i,j) in v] for k,v in ret.items()}
+        #if kwargsData["class_names"]!=None:
+        #    ret = {kwargsData["class_names"][int(k)]:v for k,v in ret.items()}
+        #if kwargsData["feature_names"]!=None:
+        #    ret = {k:[(kwargsData["feature_names"][i],j) for (i,j) in v] for k,v in ret.items()}
+        #ret=json.loads(json.dumps(ret))
 
         ##saving
 
-        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         hti = Html2Image()
-        hti.output_path= upload_folder
+        hti.output_path= os.getcwd()
+        print(hti.output_path)
         #size=(1000, 400)
         if "png_height" in params_json and "png_width" in params_json:
             size=(int(params_json["png_width"]),int(params_json["png_height"]))
-            hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png", size=size)   
+            hti.screenshot(html_str=explanation.as_html(), save_as="temp.png", size=size)   
         else:
-            hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png")
-        explanation.save_to_file(upload_folder+filename+".html")
-        
-        response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":ret}
+            hti.screenshot(html_str=explanation.as_html(), save_as="temp.png")
+
+        im=Image.open("temp.png")
+        print(im.size)
+
+        b64Image=PIL_to_base64(im)
+        response={"type":"image","explanation":b64Image}
         return response
+
 
     def get(self):
         return {
