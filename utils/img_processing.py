@@ -54,3 +54,60 @@ def normalize_img(instance,model_info):
             return "Cannot reshape image of shape " + str(instance.shape) + " into shape " + str(tuple(model_info["attributes"]["features"]["image"]["shape"]))
     instance=instance.reshape((1,)+instance.shape)
     return instance
+
+
+def denormalise_image_batch(instances, model_info):
+    if("min" in model_info["attributes"]["features"]["image"] and "max" in model_info["attributes"]["features"]["image"] and
+        "min_raw" in model_info["attributes"]["features"]["image"] and "max_raw" in model_info["attributes"]["features"]["image"]):
+        nmin=model_info["attributes"]["features"]["image"]["min"]
+        nmax=model_info["attributes"]["features"]["image"]["max"]
+        min_raw=model_info["attributes"]["features"]["image"]["min_raw"]
+        max_raw=model_info["attributes"]["features"]["image"]["max_raw"]
+        try:
+            instances=(((instances-nmin)/(nmax-nmin))*(max_raw-min_raw)+min_raw).astype(np.uint8)
+        except Exception as e:
+            raise
+    elif("mean_raw" in model_info["attributes"]["features"]["image"] and "std_raw" in model_info["attributes"]["features"]["image"]):
+        mean=np.array(model_info["attributes"]["features"]["image"]["mean_raw"])
+        std=np.array(model_info["attributes"]["features"]["image"]["std_raw"])
+        try:
+            instances=((instances*std)+mean).astype(np.uint8)
+        except Exception as e:
+            raise
+
+    if instances.shape!=(instances.shape[0], )+tuple(model_info["attributes"]["features"]["image"]["shape_raw"]):
+        print(instances.shape)
+        print((instances.shape[0], )+tuple(model_info["attributes"]["features"]["image"]["shape_raw"]))
+        try:
+            instances=instances.reshape((instances.shape[0], )+tuple(model_info["attributes"]["features"]["image"]["shape_raw"]))
+        except Exception as e:
+            print(e)
+            return "Cannot reshape image of shape " + str(instances.shape) + " into shape " + str((instances.shape[0], )+tuple(model_info["attributes"]["features"]["image"]["shape"]))
+    return instances
+
+
+def normalise_image_batch(instances,model_info):
+    if("min" in model_info["attributes"]["features"]["image"] and "max" in model_info["attributes"]["features"]["image"] and
+        "min_raw" in model_info["attributes"]["features"]["image"] and "max_raw" in model_info["attributes"]["features"]["image"]):
+        nmin=model_info["attributes"]["features"]["image"]["min"]
+        nmax=model_info["attributes"]["features"]["image"]["max"]
+        min_raw=model_info["attributes"]["features"]["image"]["min_raw"]
+        max_raw=model_info["attributes"]["features"]["image"]["max_raw"]
+        try:
+            instances=((instances-min_raw) / (max_raw - min_raw)) * (nmax - nmin) + nmin
+        except Exception as e:
+            raise
+    elif("mean_raw" in model_info["attributes"]["features"]["image"] and "std_raw" in model_info["attributes"]["features"]["image"]):
+        mean=np.array(model_info["attributes"]["features"]["image"]["mean_raw"])
+        std=np.array(model_info["attributes"]["features"]["image"]["std_raw"])
+        try:
+            instances=((instances-mean)/std).astype(np.uint8)
+        except Exception as e:
+            raise
+    if instances.shape!= (instances.shape[0],)+tuple(model_info["attributes"]["features"]["image"]["shape"]):
+        try:
+            instances = instances.reshape((instances.shape[0],)+tuple(model_info["attributes"]["features"]["image"]["shape"]))
+        except Exception as e:
+            print(e)
+            return "Cannot reshape image of shape " + str(instances.shape) + " into shape " + str((instances.shape[0], )+tuple(model_info["attributes"]["features"]["image"]["shape"]))
+    return instances

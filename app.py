@@ -29,9 +29,11 @@ from resources.explainers.images.anchors import AnchorsImage
 from resources.explainers.images.counterfactuals import CounterfactualsImage
 from resources.explainers.images.gradcam import GradCam
 from resources.explainers.images.integratedGradients import IntegratedGradientsImage
+from resources.explainers.images.nn import NearestNeighboursImage
 from resources.explainers.text.lime import LimeText
 #from resources.explainers.text.nlp_clf_explainer import NLPClassifierExpl
 from resources.explainers.timeseries.cbrFox import CBRFox
+from resources.explainers.misc.performance import AIModelPerformance
 
 
 MODEL_FOLDER="Models"
@@ -112,9 +114,12 @@ api.add_resource(AnchorsImage, '/Images/Anchors',resource_class_kwargs=path_dict
 api.add_resource(CounterfactualsImage, '/Images/Counterfactuals',resource_class_kwargs=path_dict)
 api.add_resource(GradCam, '/Images/GradCam',resource_class_kwargs=path_dict)
 api.add_resource(IntegratedGradientsImage, '/Images/IntegratedGradients',resource_class_kwargs=path_dict)
+api.add_resource(NearestNeighboursImage, '/Images/NearestNeighbours',resource_class_kwargs=path_dict)
 api.add_resource(LimeText, '/Text/LIME',resource_class_kwargs=path_dict)
 #api.add_resource(NLPClassifierExpl, "/Text/NLPClassifier", resource_class_kwargs=path_dict)
 api.add_resource(CBRFox, "/Timeseries/CBRFox", resource_class_kwargs=path_dict)
+api.add_resource(AIModelPerformance, "/Misc/AIModePerformance", resource_class_kwargs=path_dict)
+
 
 @api.representation('image/png')
 def output_file_png(data, code, headers):

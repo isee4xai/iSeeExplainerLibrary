@@ -38,9 +38,12 @@ class DisCERN(Resource):
         params_json={}
         if "params" in params:
             params_json=params["params"]
-        
+
+        return self.explain(_id, instance, params_json)
+    
+    def explain(self, model_id, instance, params_json):
         #getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+        model_file, model_info_file, data_file = get_model_files(model_id, self.model_folder)
 
         #loading data
         if data_file!=None:
@@ -107,25 +110,11 @@ class DisCERN(Resource):
 
         result_df = pd.DataFrame(np.array([norm_instance, cf]), columns=feature_names)
 
-        #saving
         str_html= result_df.to_html()+'<br>'
-
-        #file = open(upload_folder+filename+".html", "w")
-        #file.write(str_html)
-        #file.close()
-
-        #hti = Html2Image()
-        #hti.output_path= upload_folder
-        #if "png_height" in params_json and "png_width" in params_json:
-        #    size=(int(params_json["png_width"]),int(params_json["png_height"]))
-        #    hti.screenshot(html_str=str_html, save_as=filename+".png",size=size)
-        #else:
-        #    hti.screenshot(html_str=str_html, save_as=filename+".png")
-       
         
         response={"type":"html","explanation":str_html}
         return response
-
+    
     def get(self):
         return {
         "_method_description": "Discovering Counterfactual Explanations using Relevance Features from Neighbourhoods (DisCERN) generates counterfactuals for scikit-learn-based models. Requires 3 arguments: " 
@@ -149,5 +138,4 @@ class DisCERN(Resource):
                 "requiresAttributes":[]
             }
         }
-
 
