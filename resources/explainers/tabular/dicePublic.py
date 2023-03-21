@@ -10,7 +10,7 @@ import numpy as np
 from getmodelfiles import get_model_files
 from flask import request
 from utils import ontologyConstants
-from utils.dataframe_processing import normalize_dict
+from utils.dataframe_processing import normalize_dict,denormalize_dataframe
 
 class DicePublic(Resource):
 
@@ -130,13 +130,14 @@ class DicePublic(Resource):
         str_html=''
         i=1
         for cf in e1.cf_examples_list:
+            cf.final_cfs_df=denormalize_dataframe(cf.final_cfs_df,model_info)
             if cf.final_cfs_df is None:
                 cfs = "<h3>No counterfactuals were found for this instance. Perhaps try with different features.</h3>"    
            
             else:
                 cfs=cf.final_cfs_df.to_html()
 
-            str_html =  str_html + '<h2>Instance ' + str(i) + '</h2>' + cf.test_instance_df.to_html() + '<h2>Counterfactuals</h2>'+ cfs + '<br><br><hr><br>'
+            str_html =  str_html + '<h2>Instance ' + str(i) + '</h2>' + denormalize_dataframe(cf.test_instance_df,model_info).to_html() + '<h2>Counterfactuals</h2>'+ cfs + '<br><br><hr><br>'
             i=i+1
 
         #file = open(upload_folder+filename+".html", "w")
