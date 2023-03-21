@@ -24,14 +24,13 @@ class AIModelPerformance(Resource):
         if "params" in params:
             params_json=params["params"]
 
-        return self.explain(_id, params_json)
+        return self.explain(params_json)
 
-    def explain(self, model_id, params_json):
+    def explain(self, params_json):
         selected_metrics = [f.lower() for f in params_json["selected_metrics"]] if "selected_metrics" in params_json else None
         
-        # get case structure from model_id, or send it as part of the request, testing with RADIOGRAPH
-        f = open("/Users/anjanawijekoon/projects/isee/iSeeExplainerLibrary-aw/Models/RADIOGRAPH/RADIOGRAPH_case.json")
-        case_structure = json.load(f)
+        # get case structure from the request
+        case_structure = params_json["usecase"]
         #get assessment details from the first case
         assessments = case_structure[0]["http://www.w3id.org/iSeeOnto/explanationexperience#hasDescription"]["http://www.w3id.org/iSeeOnto/explanationexperience#hasAIModel"]["http://www.w3id.org/iSeeOnto/evaluation#annotatedBy"]
 

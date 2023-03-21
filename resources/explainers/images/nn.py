@@ -14,7 +14,7 @@ import csv
 import matplotlib.pyplot as plt
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
-from utils.base64 import base64_to_vector, PIL_to_base64, vector_to_base64
+from utils.base64 import base64_to_vector, PIL_to_base64
 from utils.img_processing import normalize_img, normalise_image_batch, denormalise_image_batch
 from sklearn.metrics.pairwise import euclidean_distances
 

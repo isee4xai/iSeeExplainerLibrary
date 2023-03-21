@@ -53,4 +53,4 @@ elif os.path.isdir(data_folder):
     except Exception as e:  
         print("Could not convert vector Image to base64. ", e)
 
-nn.explain("RADIOGRAPH", base_instance, {})
+nn.explain("model-id", base_instance, {})
