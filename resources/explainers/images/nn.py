@@ -58,7 +58,7 @@ class NearestNeighboursImage(Resource):
                             train_data.append(s_array)
                     except Exception as e: #end of rows
                         train_data = np.asarray(train_data, dtype=float)
-                        train_data = normalise_image_batch(train_data, model_info)
+                        train_data = train_data.reshape((train_data.shape[0],)+tuple(model_info["attributes"]["features"]["image"]["shape"]))
                         train_encodings = encoder(train_data)
                         return train_data, train_encodings                     
                     
@@ -90,7 +90,7 @@ class NearestNeighboursImage(Resource):
     
     def explain(self, model_id, instance, params_json):
         no_neighbours = params_json["no_neighbours"] if "no_neighbours" in params_json else 3
-       
+
         #Getting model info, data, and file from local repository
         model_file, model_info_file, _ = get_model_files(model_id,self.model_folder)
 
@@ -139,10 +139,9 @@ class NearestNeighboursImage(Resource):
         instance_label_raw = output_names[instance_label]
         train_data, train_encodings = self.nn_data(instance_label_raw, instance_label, model_info, last_layer_func)
         nn_indices = self.knn(no_neighbours, train_encodings, last_layer_func(instance))
+        print(nn_indices)
         nn_instances = [train_data[n] for n in nn_indices]
-    
         nn_instances = denormalise_image_batch(nn_instances, model_info)
-        
         size=(12, 12)
         if "png_height" in params_json and "png_width" in params_json:
             try:

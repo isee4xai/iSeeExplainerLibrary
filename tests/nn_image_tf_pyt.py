@@ -1,13 +1,16 @@
 from resources.explainers.images.nn import NearestNeighboursImage
 import os
 import numpy as np
-from utils.base64 import bw_vector_to_base64
+import json
+from utils.base64 import vector_to_base64
+from utils.img_processing import denormalize_img
 
-data_folder = '/Users/anjanawijekoon/projects/isee/ExplainerLibraries-aw/Models/RADIOGRAPH/RADIOGRAPH.csv'
-
-nn = NearestNeighboursImage("/Users/anjanawijekoon/projects/isee/ExplainerLibraries-aw/Models/", 
+data_folder = "/Users/anjanawijekoon/projects/isee/iSeeExplainerLibrary-aw/Models/RADIOGRAPH/RADIOGRAPH.csv"
+model_info_path="/Users/anjanawijekoon/projects/isee/iSeeExplainerLibrary-aw/Models/RADIOGRAPH/RADIOGRAPH.json"
+nn = NearestNeighboursImage("/Users/anjanawijekoon/projects/isee/iSeeExplainerLibrary-aw/Models/", 
                        "",
                        data_folder)
+
 
 if os.path.isfile(data_folder):
     # csv file, first column is column names, 1st column maybe index 
@@ -23,10 +26,16 @@ if os.path.isfile(data_folder):
         s_array = s_instance.split(',')
         s_array = [float(s) for s in s_array][:-2]
         instance = np.array(s_array)
-        #converting to vector
+        model_info=None
+        with open(model_info_path, 'r') as info_file:
+            model_info=json.load(info_file)
         try:
-            instance = bw_vector_to_base64(instance)
+            instance=denormalize_img(instance,model_info)
+        except Exception as e:  
+            print("Could not denormalize image. ", e)
+        try:
+            instance = vector_to_base64(instance)
         except Exception as e:  
             print("Could not convert vector Image to base64. ", e)
-        
-print(nn.explain("RADIOGRAPH", instance, {}))
+      
+nn.explain("RADIOGRAPH", instance, {})

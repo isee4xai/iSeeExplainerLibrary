@@ -10,13 +10,6 @@ def vector_to_base64(image):
     img_str = base64.b64encode(buffered.getvalue())
     return img_str.decode("utf-8")
 
-def bw_vector_to_base64(image):
-    image=Image.fromarray(np.squeeze(image)).convert('L')
-    buffered = BytesIO()
-    image.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue())
-    return img_str.decode("utf-8")
-
 def base64_to_vector(b64_str):
     img=b64_str.encode("utf-8")
     image_bytes=base64.b64decode(img)
