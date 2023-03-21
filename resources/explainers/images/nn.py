@@ -36,9 +36,9 @@ class NearestNeighboursImage(Resource):
             if len(_folders)!=1:
                 raise Exception("No data found.")
             _folder_path = os.path.join(self.data_folder, _folders[0])
-            _files = [os.path.join(self._folder_path, f) for f in os.listdir(_folder_path)]
+            _files = [os.path.join(_folder_path, f) for f in os.listdir(_folder_path)]
             train_data = [np.array(Image.open(f)) for f in _files]
-            train_data = normalise_image_batch(train_data)
+            train_data = normalise_image_batch(train_data, model_info)
             train_encodings = encoder(train_data)
             return train_data, train_encodings
         

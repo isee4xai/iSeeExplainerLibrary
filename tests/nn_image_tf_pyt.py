@@ -4,12 +4,11 @@ import numpy as np
 import json
 from utils.base64 import vector_to_base64
 from utils.img_processing import denormalize_img
+from PIL import Image
 
-data_folder = "/Users/anjanawijekoon/projects/isee/iSeeExplainerLibrary-aw/Models/RADIOGRAPH/RADIOGRAPH.csv"
-model_info_path="/Users/anjanawijekoon/projects/isee/iSeeExplainerLibrary-aw/Models/RADIOGRAPH/RADIOGRAPH.json"
-nn = NearestNeighboursImage("/Users/anjanawijekoon/projects/isee/iSeeExplainerLibrary-aw/Models/", 
-                       "",
-                       data_folder)
+data_folder = "data-folder"
+model_info_path="model-info-json-path"
+nn = NearestNeighboursImage("path", "path", data_folder)
 
 
 if os.path.isfile(data_folder):
@@ -38,4 +37,20 @@ if os.path.isfile(data_folder):
         except Exception as e:  
             print("Could not convert vector Image to base64. ", e)
       
-nn.explain("RADIOGRAPH", instance, {})
+elif os.path.isdir(data_folder):
+    _folders = [f for f in os.listdir(data_folder) if f != '.DS_Store']
+    if len(_folders)==0:
+        raise Exception("No data found.")
+    temp = np.random.randint(len(_folders))
+    print(temp)
+    _folder_path = os.path.join(data_folder, _folders[temp])
+    _files = [os.path.join(_folder_path, f) for f in os.listdir(_folder_path)]
+    temp = np.random.randint(len(_files))
+    print(temp)
+    instance = np.array(Image.open(_files[temp]))
+    try:
+        base_instance = vector_to_base64(instance)
+    except Exception as e:  
+        print("Could not convert vector Image to base64. ", e)
+
+nn.explain("RADIOGRAPH", base_instance, {})
