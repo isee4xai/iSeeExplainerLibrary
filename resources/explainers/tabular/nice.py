@@ -12,8 +12,7 @@ from PIL import Image
 from io import BytesIO
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
-from utils.base64 import PIL_to_base64
-from utils.dataframe_processing import normalize_dict
+from utils.dataframe_processing import normalize_dict,denormalize_dataframe
 import requests
 
 from flask import request
@@ -140,7 +139,9 @@ class Nice(Resource):
                   index = ["Original Instance","Counterfactual"], 
                   columns = feature_names + [target_name])
 
-        df[target_name]=df[target_name].map(lambda x: output_names[int(x)])
+        df_norm=denormalize_dataframe(df,model_info)
+
+        #df[target_name]=df[target_name].map(lambda x: output_names[int(x)])
 
         #saving
         #upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
@@ -156,7 +157,7 @@ class Nice(Resource):
         #    hti.screenshot(html_str=df.to_html(), save_as=filename+".png")
         
 
-        response={"type":"html","explanation":df.to_html()}
+        response={"type":"html","explanation":df_norm.to_html()}
         return response
 
     def get(self):

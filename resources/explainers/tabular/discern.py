@@ -10,7 +10,7 @@ from flask import request
 from discern import discern_tabular
 import tensorflow as tf
 from utils import ontologyConstants
-from utils.dataframe_processing import normalize_dict
+from utils.dataframe_processing import normalize_dict, denormalize_dataframe
 
 class DisCERN(Resource):
 
@@ -108,9 +108,28 @@ class DisCERN(Resource):
         
         cf, cf_label, s, p = discern_obj.find_cf(norm_instance, test_label, desired_class)
 
-        result_df = pd.DataFrame(np.array([norm_instance, cf]), columns=feature_names)
+        norm_instance=np.append(norm_instance,test_label)
+        cf=np.append(cf,cf_label)
+        feature_names.append(outcome_name)
 
-        str_html= result_df.to_html()+'<br>'
+        result_df = pd.DataFrame(np.array([norm_instance, cf]), columns=feature_names)
+        result_df_norm=denormalize_dataframe(result_df,model_info)
+
+        #saving
+        str_html= result_df_norm.to_html()+'<br>'
+
+        #file = open(upload_folder+filename+".html", "w")
+        #file.write(str_html)
+        #file.close()
+
+        #hti = Html2Image()
+        #hti.output_path= upload_folder
+        #if "png_height" in params_json and "png_width" in params_json:
+        #    size=(int(params_json["png_width"]),int(params_json["png_height"]))
+        #    hti.screenshot(html_str=str_html, save_as=filename+".png",size=size)
+        #else:
+        #    hti.screenshot(html_str=str_html, save_as=filename+".png")
+       
         
         response={"type":"html","explanation":str_html}
         return response
