@@ -112,7 +112,7 @@ class Anchors(Resource):
         explainer.fit(dataframe.to_numpy(), disc_perc=(25, 50, 75))
         
         explanation = explainer.explain(norm_instance, **{k: v for k, v in kwargsData2.items()})
-        
+        print(explanation.anchor)
         if explanation.anchor:
             ret = dict(anchor=(' AND '.join(explanation.anchor)),precision=explanation.precision, coverage=explanation.coverage)
         else:

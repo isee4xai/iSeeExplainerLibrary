@@ -10,7 +10,7 @@ from flask import request
 from discern import discern_tabular
 import tensorflow as tf
 from utils import ontologyConstants
-from utils.dataframe_processing import normalize_dict
+from utils.dataframe_processing import normalize_dict, denormalize_dataframe
 
 class DisCERN(Resource):
 
@@ -105,10 +105,15 @@ class DisCERN(Resource):
         
         cf, cf_label, s, p = discern_obj.find_cf(norm_instance, test_label, desired_class)
 
+        norm_instance=np.append(norm_instance,test_label)
+        cf=np.append(cf,cf_label)
+        feature_names.append(outcome_name)
+
         result_df = pd.DataFrame(np.array([norm_instance, cf]), columns=feature_names)
+        result_df_norm=denormalize_dataframe(result_df,model_info)
 
         #saving
-        str_html= result_df.to_html()+'<br>'
+        str_html= result_df_norm.to_html()+'<br>'
 
         #file = open(upload_folder+filename+".html", "w")
         #file.write(str_html)

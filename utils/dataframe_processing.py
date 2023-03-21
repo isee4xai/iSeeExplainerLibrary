@@ -25,7 +25,7 @@ def denormalize_dataframe(df,model_info):
         elif feature_dict["data_type"]=="categorical":
             if("values" in feature_dict and "values_raw" in feature_dict):
                 try:
-                    denorm_df[feature]=feature_dict["values_raw"][int(denorm_df[feature].values[0])]
+                    denorm_df[feature]=denorm_df[feature].apply(lambda x:feature_dict["values_raw"][int(x)])
                 except:
                     raise
             elif("value" in feature_dict and "ohe_feature" in feature_dict):
