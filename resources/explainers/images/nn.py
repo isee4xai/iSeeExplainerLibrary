@@ -139,7 +139,6 @@ class NearestNeighboursImage(Resource):
         instance_label_raw = output_names[instance_label]
         train_data, train_encodings = self.nn_data(instance_label_raw, instance_label, model_info, last_layer_func)
         nn_indices = self.knn(no_neighbours, train_encodings, last_layer_func(instance))
-        print(nn_indices)
         nn_instances = [train_data[n] for n in nn_indices]
         nn_instances = denormalise_image_batch(nn_instances, model_info)
         size=(12, 12)

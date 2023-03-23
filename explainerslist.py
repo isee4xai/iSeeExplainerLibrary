@@ -7,6 +7,7 @@ class Explainers(Resource):
                  '/Images/GradCam',
                  '/Images/IntegratedGradients',
                  '/Images/LIME',
+                 '/Images/NearestNeighbours',
                  '/Tabular/ALE',
                  '/Tabular/Anchors',
                  '/Tabular/DeepSHAPGlobal',
@@ -24,4 +25,5 @@ class Explainers(Resource):
                  '/Tabular/TreeSHAPLocal',
                  '/Text/LIME',
                  '/Text/NLPClassifier',
-                 '/Timeseries/CBRFox']
+                 '/Timeseries/CBRFox',
+                 '/Misc/AIModePerformance']

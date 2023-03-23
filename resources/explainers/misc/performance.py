@@ -19,7 +19,6 @@ class AIModelPerformance(Resource):
         if("id" not in params):
             return "The model id was not specified in the params."
 
-        _id =params["id"]
         params_json={}
         if "params" in params:
             params_json=params["params"]
