@@ -20,31 +20,30 @@ from sklearn.metrics.pairwise import euclidean_distances
 
 class NearestNeighboursImage(Resource):
 
-    def __init__(self,model_folder,upload_folder,data_folder):
+    def __init__(self,model_folder,upload_folder):
         self.model_folder = model_folder
         self.upload_folder = upload_folder
-        self.data_folder = data_folder
         
-    def nn_data(self, label_raw, label, model_info, encoder):
+    def nn_data(self, label_raw, label, model_info, encoder, data_file):
         train_data = []
-        if not os.path.exists(self.data_folder):
+        if not os.path.exists(data_file):
             raise Exception("No data found.")
         
-        if os.path.isdir(self.data_folder):
+        if os.path.isdir(data_file):
             # classification image dataset in zipped folder
-            _folders = [_f for _f in os.listdir(self.data_folder) if _f == label_raw]
+            _folders = [_f for _f in os.listdir(data_file) if _f == label_raw]
             if len(_folders)!=1:
                 raise Exception("No data found.")
-            _folder_path = os.path.join(self.data_folder, _folders[0])
+            _folder_path = os.path.join(data_file, _folders[0])
             _files = [os.path.join(_folder_path, f) for f in os.listdir(_folder_path)]
             train_data = [np.array(Image.open(f)) for f in _files]
             train_data = normalise_image_batch(train_data, model_info)
             train_encodings = encoder(train_data)
             return train_data, train_encodings
         
-        if os.path.isfile(self.data_folder):
+        if os.path.isfile(data_file):
             # csv file, first column is column names, 1st column maybe index 
-            with open(self.data_folder, 'r') as f:
+            with open(data_file, 'r') as f:
                 header = next(f).split(' ')
                 header = [elem.strip() for elem in header]
 
@@ -92,7 +91,7 @@ class NearestNeighboursImage(Resource):
         no_neighbours = params_json["no_neighbours"] if "no_neighbours" in params_json else 3
 
         #Getting model info, data, and file from local repository
-        model_file, model_info_file, _ = get_model_files(model_id,self.model_folder)
+        model_file, model_info_file, data_file = get_model_files(model_id,self.model_folder)
 
         ## params from info
         model_info=json.load(model_info_file)
@@ -137,7 +136,7 @@ class NearestNeighboursImage(Resource):
                 return  "Could not normalize instance: " + str(e)
         instance_label = int(predic_func(instance)[0].numpy().argmax())
         instance_label_raw = output_names[instance_label]
-        train_data, train_encodings = self.nn_data(instance_label_raw, instance_label, model_info, last_layer_func)
+        train_data, train_encodings = self.nn_data(instance_label_raw, instance_label, model_info, last_layer_func, data_file)
         nn_indices = self.knn(no_neighbours, train_encodings, last_layer_func(instance))
         nn_instances = [train_data[n] for n in nn_indices]
         nn_instances = denormalise_image_batch(nn_instances, model_info)
@@ -166,7 +165,7 @@ class NearestNeighboursImage(Resource):
 
     def get(self):
         return {
-        "_method_description": "",
+        "_method_description": "Finds the nearest neighbours to a data instances based on minimum euclidean distance",
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "Image to be explained in BASE64 format",
         "params": { 
