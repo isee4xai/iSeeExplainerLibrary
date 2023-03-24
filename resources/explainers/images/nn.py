@@ -152,21 +152,23 @@ class NearestNeighboursImage(Resource):
         instance_label_raw = output_names[instance_label]
         train_data, train_encodings = self.nn_data(instance_label_raw, instance_label, model_info, last_layer_func, data_file)
         nn_indices = self.knn(no_neighbours, train_encodings, last_layer_func(instance))
-        nn_instances = np.array([train_data[n] for n in nn_indices])
+        nn_instances = np.array([train_data[n] for n in nn_indices[1:]])
         nn_instances = denormalise_image_batch(nn_instances, model_info)
-        size=(12, 12)
+        size=(12, 4)
         if "png_height" in params_json and "png_width" in params_json:
             try:
                 size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
             except:
                 print("Could not convert dimensions for .PNG output file. Using default dimensions.")
 
-        fig, axes = plt.subplots(1,nn_instances.shape[0]+1, figsize = size)
+        fig, axes = plt.subplots(nrows=1, ncols=4, figsize=size, gridspec_kw={'width_ratios':[3,3,3,3]})
+
         axes[0].imshow(Image.fromarray(instance_raw))
+        axes[0].set_title("Original Image")
         nn_instances = np.squeeze(nn_instances, axis=3) if nn_instances.shape[3] == 1 else nn_instances
         for i in range(nn_instances.shape[0]):
             axes[i+1].imshow(Image.fromarray(nn_instances[i]))
-        fig.savefig("tests/test.png")
+            axes[i+1].set_title("Nearest Neighbour "+str(i+1))
         
         #saving
         img_buf = BytesIO()
