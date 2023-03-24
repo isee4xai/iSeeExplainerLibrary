@@ -26,40 +26,54 @@ class NearestNeighboursImage(Resource):
         
     def nn_data(self, label_raw, label, model_info, encoder, data_file):
         train_data = []
-        if not os.path.exists(data_file):
-            raise Exception("No data found.")
         
-        if os.path.isdir(data_file):
-            # classification image dataset in zipped folder
-            _folders = [_f for _f in os.listdir(data_file) if _f == label_raw]
-            if len(_folders)!=1:
-                raise Exception("No data found.")
-            _folder_path = os.path.join(data_file, _folders[0])
-            _files = [os.path.join(_folder_path, f) for f in os.listdir(_folder_path)]
-            train_data = [np.array(Image.open(f)) for f in _files]
-            train_data = normalise_image_batch(train_data, model_info)
-            train_encodings = encoder(train_data)
-            return train_data, train_encodings
+        # if os.path.isdir(data_file):
+        #     # classification image dataset in zipped folder
+        #     _folders = [_f for _f in os.listdir(data_file) if _f == label_raw]
+        #     if len(_folders)!=1:
+        #         raise Exception("No data found.")
+        #     _folder_path = os.path.join(data_file, _folders[0])
+        #     _files = [os.path.join(_folder_path, f) for f in os.listdir(_folder_path)]
+        #     train_data = [np.array(Image.open(f)) for f in _files]
+        #     train_data = normalise_image_batch(train_data, model_info)
+        #     train_encodings = encoder(train_data)
+        #     return train_data, train_encodings
         
-        if os.path.isfile(data_file):
-            # csv file, first column is column names, 1st column maybe index 
-            with open(data_file, 'r') as f:
-                header = next(f).split(' ')
-                header = [elem.strip() for elem in header]
+        # if os.path.isfile(data_file):
+        #     # csv file, first column is column names, 1st column maybe index 
+        #     with open(data_file, 'r') as f:
+        #         header = next(f).split(' ')
+        #         header = [elem.strip() for elem in header]
 
-                while True:
-                    try:
-                        s_instance = next(f)
-                        s_instance = s_instance.replace('\n', '')
-                        s_array = s_instance.split(',')
-                        if label == float(s_array[-1]):
-                            s_array = [float(s) for s in s_array][:-2]
-                            train_data.append(s_array)
-                    except Exception as e: #end of rows
-                        train_data = np.asarray(train_data, dtype=float)
-                        train_data = train_data.reshape((train_data.shape[0],)+tuple(model_info["attributes"]["features"]["image"]["shape"]))
-                        train_encodings = encoder(train_data)
-                        return train_data, train_encodings                     
+        #         while True:
+        #             try:
+        #                 s_instance = next(f)
+        #                 s_instance = s_instance.replace('\n', '')
+        #                 s_array = s_instance.split(',')
+        #                 if label == float(s_array[-1]):
+        #                     s_array = [float(s) for s in s_array][:-2]
+        #                     train_data.append(s_array)
+        #             except Exception as e: #end of rows
+        #                 train_data = np.asarray(train_data, dtype=float)
+        #                 train_data = train_data.reshape((train_data.shape[0],)+tuple(model_info["attributes"]["features"]["image"]["shape"]))
+        #                 train_encodings = encoder(train_data)
+        #                 return train_data, train_encodings        
+        header = next(data_file).split(',')
+        header = [elem.strip() for elem in header]
+
+        while True:
+            try:
+                s_instance = next(data_file)
+                s_instance = s_instance.replace('\n', '')
+                s_array = s_instance.split(',')
+                if label == float(s_array[-1]):
+                    s_array = [float(s) for s in s_array][:-2]
+                    train_data.append(s_array)
+            except Exception as e: #end of rows
+                train_data = np.asarray(train_data, dtype=float)
+                train_data = train_data.reshape((train_data.shape[0],)+tuple(model_info["attributes"]["features"]["image"]["shape"]))
+                train_encodings = encoder(train_data)
+                return train_data, train_encodings                 
                     
     def knn(self, sample_size, data, query):
         ecd = euclidean_distances(query, data)[0]
