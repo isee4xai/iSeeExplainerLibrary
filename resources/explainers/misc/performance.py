@@ -46,12 +46,12 @@ class AIModelPerformance(Resource):
             selected_evals = [[k,v] for k,v in evals if k.lower() in selected_metrics]
             if len(selected_evals) > 0:
                 result_df = pd.DataFrame(np.array(selected_evals), columns=["Assessment Metric", "Value"])
-                str_html= result_df.to_html()+'<br>'
+                str_html= result_df.to_html(index=False)+'<br>'
                 response={"type":"html", "explanation":str_html}
                 return response
             
         result_df = pd.DataFrame(np.array(evals), columns=["Assessment Metric", "Value"])
-        str_html= result_df.to_html()+'<br>'
+        str_html= result_df.to_html(index=False)+'<br>'
         response={"type":"html", "explanation":str_html}
         return response
 
