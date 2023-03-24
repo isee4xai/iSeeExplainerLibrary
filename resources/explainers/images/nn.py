@@ -170,6 +170,9 @@ class NearestNeighboursImage(Resource):
             axes[i+1].imshow(Image.fromarray(nn_instances[i]))
             axes[i+1].set_title("Nearest Neighbour "+str(i+1))
         
+        for ax in fig.axes:
+            ax.axis('off')
+    
         #saving
         img_buf = BytesIO()
         fig.savefig(img_buf)
