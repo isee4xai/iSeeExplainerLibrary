@@ -18,18 +18,20 @@ class AIModelPerformance(Resource):
         #Check params
         if("id" not in params):
             return "The model id was not specified in the params."
+        if("usecase" not in params):
+            return "The usecase was not specified in the params."
 
         params_json={}
         if "params" in params:
             params_json=params["params"]
 
-        return self.explain(params_json)
+        return self.explain(params["usecase"], params_json)
 
-    def explain(self, params_json):
+    def explain(self, usecase, params_json):
         selected_metrics = [f.lower() for f in params_json["selected_metrics"]] if "selected_metrics" in params_json else None
         
         # get case structure from the request
-        case_structure = params_json["usecase"]
+        case_structure = usecase
         #get assessment details from the first case
         assessments = case_structure[0]["http://www.w3id.org/iSeeOnto/explanationexperience#hasDescription"]["http://www.w3id.org/iSeeOnto/explanationexperience#hasAIModel"]["http://www.w3id.org/iSeeOnto/evaluation#annotatedBy"]
 
@@ -44,12 +46,12 @@ class AIModelPerformance(Resource):
             selected_evals = [[k,v] for k,v in evals if k.lower() in selected_metrics]
             if len(selected_evals) > 0:
                 result_df = pd.DataFrame(np.array(selected_evals), columns=["Assessment Metric", "Value"])
-                str_html= result_df.to_html()+'<br>'
+                str_html= result_df.to_html(index=False)+'<br>'
                 response={"type":"html", "explanation":str_html}
                 return response
             
         result_df = pd.DataFrame(np.array(evals), columns=["Assessment Metric", "Value"])
-        str_html= result_df.to_html()+'<br>'
+        str_html= result_df.to_html(index=False)+'<br>'
         response={"type":"html", "explanation":str_html}
         return response
 

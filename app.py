@@ -118,7 +118,7 @@ api.add_resource(NearestNeighboursImage, '/Images/NearestNeighbours',resource_cl
 api.add_resource(LimeText, '/Text/LIME',resource_class_kwargs=path_dict)
 api.add_resource(NLPClassifierExpl, "/Text/NLPClassifier", resource_class_kwargs=path_dict)
 api.add_resource(CBRFox, "/Timeseries/CBRFox", resource_class_kwargs=path_dict)
-api.add_resource(AIModelPerformance, "/Misc/AIModePerformance", resource_class_kwargs=path_dict)
+api.add_resource(AIModelPerformance, "/Misc/AIModelPerformance", resource_class_kwargs=path_dict)
 
 
 @api.representation('image/png')

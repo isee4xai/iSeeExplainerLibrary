@@ -26,4 +26,4 @@ class Explainers(Resource):
                  '/Text/LIME',
                  '/Text/NLPClassifier',
                  '/Timeseries/CBRFox',
-                 '/Misc/AIModePerformance']
+                 '/Misc/AIModelPerformance']
