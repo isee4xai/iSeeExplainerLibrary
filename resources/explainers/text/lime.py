@@ -1,4 +1,4 @@
-from flask_restful import Resource
+from flask_restful import Resource,reqparse
 from flask import request
 import tensorflow as tf
 import torch
@@ -7,12 +7,9 @@ import joblib
 import h5py
 import json
 import lime.lime_text
-import os
 from html2image import Html2Image
+from saveinfo import save_file_info
 from getmodelfiles import get_model_files
-from utils import ontologyConstants
-from utils.base64 import PIL_to_base64
-from PIL import Image
 import requests
 
 class LimeText(Resource):
@@ -22,74 +19,60 @@ class LimeText(Resource):
         self.upload_folder = upload_folder
 
     def post(self):
-        params = request.json
-        if params is None:
-            return "The json body is missing."
+        parser = reqparse.RequestParser()
+        parser.add_argument("id", required=True)
+        parser.add_argument('instance',required=True)
+        parser.add_argument("url")
+        parser.add_argument('params')
+        args = parser.parse_args()
         
-        #Check params
-        if("id" not in params):
-            return "The model id was not specified in the params."
-        if("type" not in params):
-            return "The instance type was not specified in the params."
-        if("instance" not in params):
-            return "The instance was not specified in the params."
-
-        _id =params["id"]
-        if("type"  in params):
-            inst_type=params["type"]
-        instance=params["instance"]
-        url=None
-        if "url" in params:
-            url=params["url"]
+        _id = args.get("id")
+        url = args.get("url")
+        instance = args.get("instance")
+        params=args.get("params")
         params_json={}
-        if "params" in params:
-            params_json=params["params"]
+        if(params !=None):
+            params_json = json.loads(params)
+
         
-        #getting model info, data, and file from local repository
+        
+        #Getting model info, data, and file from local repository
         model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
 
-        ##getting params from info
+        ## params from info
         model_info=json.load(model_info_file)
-        backend = model_info["backend"] 
-
-        label=model_info["attributes"]["target_names"][0]
-        
+        backend = model_info["backend"]  ##error handling?
         try:
-            output_names=model_info["attributes"]["features"][label]["values_raw"]
+            output_names=model_info["attributes"]["target_values"][0]
         except:
             output_names=None
 
+        predic_func=None
         if model_file!=None:
-            if backend in ontologyConstants.TENSORFLOW_URIS:
+            if backend=="TF1" or backend=="TF2":
                 model=h5py.File(model_file, 'w')
                 mlp = tf.keras.models.load_model(model)
                 predic_func=mlp
-            elif backend in ontologyConstants.SKLEARN_URIS:
+            elif backend=="sklearn":
                 mlp = joblib.load(model_file)
-                try:
-                    predic_func=mlp.predict_proba
-                except:
-                    predic_func=mlp.predict
-            elif backend in ontologyConstants.PYTORCH_URIS:
+                predic_func=mlp.predict_proba
+            elif backend=="PYT":
                 mlp = torch.load(model_file)
                 predic_func=mlp.predict
             else:
-                try:
-                    mlp = joblib.load(model_file)
-                    predic_func=mlp.predict
-                except Exception as e:
-                    return "Could not extract prediction function from model: " + str(e)
+                mlp = joblib.load(model_file)
+                predic_func=mlp.predict
         elif url!=None:
             def predict(X):
                 return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
             predic_func=predict
         else:
-            raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
+            raise Exception("Either an ID for a locally stored model or an URL for the prediction function of the model must be provided.")
         
      
         # Create explainer
         explainer = lime.lime_text.LimeTextExplainer(class_names=output_names)
-        kwargsData2 = dict(labels=None, top_labels=1, num_features=None)
+        kwargsData2 = dict(labels=(1,), top_labels=None, num_features=None)
         if "output_classes" in params_json:
             kwargsData2["labels"] = json.loads(params_json["output_classes"]) if isinstance(params_json["output_classes"],str) else params_json["output_classes"]  #labels
         if "top_classes" in params_json:
@@ -99,30 +82,26 @@ class LimeText(Resource):
 
         explanation = explainer.explain_instance(instance, predic_func, **{k: v for k, v in kwargsData2.items() if v is not None}) 
         
-        ##formatting json explanation
-        #ret = explanation.as_map()
-        #ret = {str(k):[(int(i),float(j)) for (i,j) in v] for k,v in ret.items()}
-        #if output_names!=None:
-        #    ret = {output_names[int(k)]:v for k,v in ret.items()}
-        #ret=json.loads(json.dumps(ret))
+        #formatting json explanation
+        ret = explanation.as_map()
+        ret = {str(k):[(int(i),float(j)) for (i,j) in v] for k,v in ret.items()}
+        if output_names!=None:
+            ret = {output_names[int(k)]:v for k,v in ret.items()}
+        ret=json.loads(json.dumps(ret))
 
-        #saving
+        ##saving
+        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
         hti = Html2Image()
-        hti.output_path= os.getcwd()
-        print(hti.output_path)
+        hti.output_path= upload_folder
         #size=(1000, 400)
-        css="body {background: white;}"
         if "png_height" in params_json and "png_width" in params_json:
             size=(int(params_json["png_width"]),int(params_json["png_height"]))
-            hti.screenshot(html_str=explanation.as_html(), css_str=css, save_as="temp.png", size=size)   
+            hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png",size=size)   
         else:
-            hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png")
-
-        im=Image.open("temp.png")
-        b64Image=PIL_to_base64(im)
-        os.remove("temp.png")
-
-        response={"type":"image","explanation":b64Image}
+            hti.screenshot(html_str=explanation.as_html(), save_as=filename+".png")
+        explanation.save_to_file(upload_folder+filename+".html")
+        
+        response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":ret}
         return response
 
     def get(self):
@@ -144,7 +123,7 @@ class LimeText(Resource):
                 },
         "output_description":{
                 "lime_plot": "An image contaning a plot with the most influyent words for the given instance. For regression models, the plot displays both positive and negative contributions of each word to the predicted outcome."
-                "The same applies to classification models, but there can be a plot for each possible class. The text instance with highlighted words is included in the explanation."
+                "The same applies to classification models, but there can be a plot for each possible class. The text instance with highlighted words is also included."
                },
         "meta":{
                 "supportsAPI":True,
