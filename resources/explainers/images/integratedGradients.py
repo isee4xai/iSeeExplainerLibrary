@@ -100,7 +100,7 @@ class IntegratedGradientsImage(Resource):
             if "target_class" in params_json:
                     target_class = params_json["target_class"]
 
-        size=(12, 4)
+        size=(12, 6)
         if "png_height" in params_json and "png_width" in params_json:
             try:
                 size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
@@ -122,12 +122,16 @@ class IntegratedGradientsImage(Resource):
         attrs = explanation.attributions[0]
         attr = attrs[0]
 
-        fig, (a0,a1,a2,a3,a4) = plt.subplots(nrows=1, ncols=5, figsize=size,gridspec_kw={'width_ratios':[3,3,3,3,1]})
+        # fig, (a0,a1,a2,a3,a4) = plt.subplots(nrows=1, ncols=5, figsize=size,gridspec_kw={'width_ratios':[3,3,3,3,1]})
 
-        a0.imshow(im)
-        a0.set_title("Original Image")
+        # a0.imshow(im)
+        # a0.set_title("Original Image")
 
         if(plot_type=="attributions"):
+            fig, (a0,a1,a2, a3, a4) = plt.subplots(nrows=1, ncols=5, figsize=size,gridspec_kw={'width_ratios':[3,3,3,3,1]})
+
+            a0.imshow(im)
+            a0.set_title("Original Image")
 
             cmap_bound = np.abs(attrs).max()
 
@@ -156,7 +160,10 @@ class IntegratedGradientsImage(Resource):
             fig.tight_layout()
 
         elif(plot_type=="heatmap"):
+            fig, (a0,a1,a2) = plt.subplots(nrows=1, ncols=3, figsize=size,gridspec_kw={'width_ratios':[3,3,1]})
 
+            a0.imshow(im)
+            a0.set_title("Original Image")
             # attributions
             attr_all=np.abs(attr.squeeze())
             heatmap=((attr_all-np.min(attr_all)) / (np.max(attr_all) - np.min(attr_all))).astype("float32")
@@ -176,42 +183,11 @@ class IntegratedGradientsImage(Resource):
             img=Image.fromarray(superimposed_img)
             im1 = a1.imshow(img)
 
-
-            # positive attributions
-            attr_pos=attr.squeeze().clip(min=0)
-            heatmap=((attr_pos-np.min(attr_pos)) / (np.max(attr_pos) - np.min(attr_pos))).astype("float32")
-            heatmap = np.uint8(255 * heatmap)
-            jet = cm.get_cmap("jet")
-            jet_colors = jet(np.arange(256))[:, :3]
-            jet_heatmap = jet_colors[heatmap]
-            jet_heatmap=np.uint8(255 * jet_heatmap)
-            if len(im.shape)==2:
-                im=im.reshape(im.shape+(1,))
-            superimposed_img = (jet_heatmap * 0.4 + im).astype("uint8")
-            img=Image.fromarray(superimposed_img)
-            im2 = a2.imshow(img)
-
-            # negative attributions
-            attr_neg=np.abs(attr.squeeze().clip(max=0))
-            heatmap=((attr_neg-np.min(attr_neg)) / (np.max(attr_neg) - np.min(attr_neg))).astype("float32")
-            heatmap = np.uint8(255 * heatmap)
-            jet = cm.get_cmap("jet")
-            jet_colors = jet(np.arange(256))[:, :3]
-            jet_heatmap = jet_colors[heatmap]
-            jet_heatmap=np.uint8(255 * jet_heatmap)
-            if len(im.shape)==2:
-                im=im.reshape(im.shape+(1,))
-            superimposed_img = (jet_heatmap * 0.4 + im).astype("uint8")
-            img=Image.fromarray(superimposed_img)
-            im3 = a3.imshow(img)
-
             if(is_class):
                 a1.set_title('Attributions for Class: ' + output_names[target_class])
             else:
                a1.set_title("Attributions for Pred: " + str(np.squeeze(prediction).round(4)))
-            a2.set_title('Positive attributions');
-            a3.set_title('Negative attributions');
-
+            
             for ax in fig.axes:
                 ax.axis('off')
    
@@ -246,7 +222,7 @@ class IntegratedGradientsImage(Resource):
                 "png_height": "(optional) height (in pixels) of the png image containing the explanation."
                 },
         "output_description":{
-                "attribution_plot":"Subplot with four columns. The first column shows the original image and its prediction. The second column shows the values of the attributions for the target class. The third column shows the positive valued attributions. The fourth column shows the negative valued attributions."
+                "attribution_plot":"Subplot with two columns. The first column shows the original image and its prediction. The second column shows the values of the attributions for the target class."
             },
 
         "meta":{
