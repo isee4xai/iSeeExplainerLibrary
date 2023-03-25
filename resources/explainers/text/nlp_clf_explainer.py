@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 
 
-from flask_restful import Resource
-from flask import request
+from flask_restful import Resource,reqparse
 import json
-import joblib
 from getmodelfiles import get_model_files
-from NLPClassifierExplainer.NLPClassificationExplainer import NLPClassificationExplainer
+from NLPClassifierExplainer.NLPClassifierModel import NLPClassifier
 from string import Template
-from utils import ontologyConstants
-from utils.base64 import PIL_to_base64
+
+
 
 def _generate_html(explanation):
     # ------------------ header section ---------------------
@@ -146,8 +144,6 @@ def _generate_html(explanation):
 
 
 
-
-
 class NLPClassifierExpl(Resource):
 
     def __init__(self,model_folder,upload_folder):
@@ -155,85 +151,41 @@ class NLPClassifierExpl(Resource):
         self.upload_folder = upload_folder
 
     def post(self):
-        params = request.json
-        if params is None:
-            return "The json body is missing."
+        parser = reqparse.RequestParser()
+        parser.add_argument("id", required=True)
+        parser.add_argument('instance',required=True)
+        parser.add_argument('params')
+        args = parser.parse_args()
         
-        #Check params
-        if("id" not in params):
-            return "The model id was not specified in the params."
-        if("type" not in params):
-            return "The instance type was not specified in the params."
-        if("instance" not in params):
-            return "The instance was not specified in the params."
-
-        _id =params["id"]
-        if("type"  in params):
-            inst_type=params["type"]
-        instance=str(params["instance"])
+        _id = args.get("id")
+        instance = args.get("instance")
+        params=args.get("params")
         params_json={}
-        if "params" in params:
-            params_json=params["params"]
-        
-        #getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+        if(params is not None):
+            params_json = json.loads(params)
 
-        ##getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"] 
-        target_names=model_info["attributes"]["target_names"]
-        feature_names=list(model_info["attributes"]["features"].keys())
-        for target in target_names:
-            feature_names.remove(target)
 
-        #loading data
-        if data_file!=None:
-            tmp = joblib.load(data_file) ##error handling?
-            source= tmp[feature_names[0]].values # tmp is a dataframe, turn it into a list of str
-        else:
-            source = None
+        #Getting model info, data, and file from local repository
+        model_file, _, _ = get_model_files(_id,self.model_folder)
 
-        #load model
-        if model_file!=None:
-            if backend in ontologyConstants.SKLEARN_URIS:
-                model = joblib.load(model_file)
-        else:
-            return "The model file was not provided."
+        NLP_model = NLPClassifier()
+        NLP_model.load_model(model_file)
+        explanation = NLP_model.explain(instance)
 
-        explainer = NLPClassificationExplainer(model=model)
-        explanation =explainer.explain(instance, source=source)
-        
-        output_format="html"
-        if "output_format" in params_json:
-            output_format = str(params_json["output_format"])
-
-        response=None
-        if output_format=="html":
-            # HTML explanation
+        if params_json.get ('format', None) == 'html':
             html = _generate_html(explanation)
-            html=html.replace("\n","<br>")
-            response={"type":"html","explanation":html}
-        elif output_format=="png":
-            # Image explanation
-            word_cloud = explainer.generate_word_cloud(explanation)
-            im=word_cloud.to_image()
-            b64str=PIL_to_base64(im)
-            response={"type":"image","explanation":b64str}
-        else:
-            # JSON explanation
-            response={"type":"dict","explanation":explanation}
+            return html
 
-        return response
+        return explanation
 
     def get(self):
         return {
         "_method_description": "An explainer for NLP classification models. ",
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "A string with the text to be explained.",
-        "params":
-        {
-            "output_format": "(Optional) string defining the output format of the explanation. Can be set to either 'html' (default value), 'json', or 'png' (for a wordcloud representation)."
-        },
+        "params":{
+                    "format": "string defining the output format of the explanation. Can be set to either 'json' (default value) so a JSON-formatted text is generated, or 'html' for an HTML output."   
+              },
         "meta":{
                 "supportsAPI":False,
                 "needsData": False,
