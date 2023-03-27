@@ -162,7 +162,6 @@ class NearestNeighboursImage(Resource):
                 print("Could not convert dimensions for .PNG output file. Using default dimensions.")
 
         fig, axes = plt.subplots(nrows=1, ncols=4, figsize=size, gridspec_kw={'width_ratios':[3,3,3,3]})
-        fig.tight_layout()
         axes[0].imshow(Image.fromarray(instance_raw))
         axes[0].set_title("Original Image")
         nn_instances = np.squeeze(nn_instances, axis=3) if nn_instances.shape[3] == 1 else nn_instances
@@ -175,7 +174,7 @@ class NearestNeighboursImage(Resource):
     
         #saving
         img_buf = BytesIO()
-        fig.savefig(img_buf)
+        fig.savefig(img_buf,bbox_inches='tight')
         im = Image.open(img_buf)
         b64Image=PIL_to_base64(im)
 
