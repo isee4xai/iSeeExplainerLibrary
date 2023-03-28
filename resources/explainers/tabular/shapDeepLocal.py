@@ -115,7 +115,6 @@ class ShapDeepLocal(Resource):
         plt.savefig(img_buf,bbox_inches="tight")
         im = Image.open(img_buf)
         b64Image=PIL_to_base64(im)
-        plt.close()
         
         #Insert code for image uploading and getting url
         response={"type":"image","explanation":b64Image}
