@@ -54,6 +54,7 @@ class ShapDeepLocal(Resource):
 
         #getting params from request
         index=0
+        plot_type=None
         if "target_class" in params_json:
             target_class=str(params_json["target_class"])
             try:
