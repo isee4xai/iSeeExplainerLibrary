@@ -7,6 +7,7 @@ from getmodelfiles import get_model_files
 from flask import request
 from utils import ontologyConstants
 from utils.dataframe_processing import denormalize_dataframe
+from utils.dataframe_processing import normalize_dict
 
 class DicePrivate(Resource):
 
@@ -47,7 +48,10 @@ class DicePrivate(Resource):
         feat=features.copy()
         for k,v in feat.items():
             if(v["data_type"]=="numerical"):
-                feat.update({k:[v["min"],v["max"]]})
+                if("min" in v and "max" in v):
+                    feat.update({k:[v["min"],v["max"]]})
+                else:
+                    return "This method needs the minimum and maximum values of each feature. Please include this information in the configuration file."
             elif(v["data_type"]=="categorical"):
                 feat.update({k:[str(x) for x in v["values_raw"]]})
         feat.pop(outcome_name)
@@ -151,6 +155,7 @@ class DicePrivate(Resource):
         "meta":{
                 "supportsAPI":False,
                 "needsData": False,
+                "needsMin&Max":True,
                 "requiresAttributes":[{"features":"Dictionary with feature names as keys and arrays containing the ranges of continuous features, or strings with the categories for categorical features."}]
             }
         }
