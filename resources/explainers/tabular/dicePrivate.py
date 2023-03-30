@@ -3,6 +3,7 @@ import tensorflow as tf
 import h5py
 import json
 import dice_ml
+import pandas as pd
 from getmodelfiles import get_model_files
 from flask import request
 from utils import ontologyConstants
@@ -74,7 +75,7 @@ class DicePrivate(Resource):
         else:
             return "The model file was not uploaded."
 
-        kwargsData = dict(features=features, outcome_name=outcome_name)
+        kwargsData = dict(features=feat, outcome_name=outcome_name)
 
         desired_class=0
         if(len(features[outcome_name]["values_raw"])==2): #binary classification
@@ -101,7 +102,7 @@ class DicePrivate(Resource):
 
        
         # Generate counterfactuals
-        e1 = exp.generate_counterfactuals(norm_instance, **{k: v for k, v in kwargsData2.items() if v is not None})
+        e1 = exp.generate_counterfactuals(pd.DataFrame(norm_instance,index=[0]), **{k: v for k, v in kwargsData2.items() if v is not None})
 
         #saving
         str_html=''
