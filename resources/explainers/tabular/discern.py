@@ -105,9 +105,12 @@ class DisCERN(Resource):
             test_label = model.predict(np.expand_dims(norm_instance,axis=0)).argmax(axis=-1)[0]
         elif backend in ontologyConstants.SKLEARN_URIS:
             test_label = model.predict(np.expand_dims(norm_instance,axis=0))[0]
-        
-        cf, cf_label, s, p = discern_obj.find_cf(norm_instance, test_label, desired_class)
-
+        try:
+            cf, cf_label, s, p = discern_obj.find_cf(norm_instance, test_label, desired_class)
+        except Exception as e:
+            print(e)
+            return {"type":"text", "explanation":"Counterfactual not found."}
+            
         norm_instance=np.append(norm_instance,test_label)
         cf=np.append(cf,cf_label)
         feature_names.append(outcome_name)
