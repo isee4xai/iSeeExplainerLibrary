@@ -77,7 +77,7 @@ class IntegratedGradientsImage(Resource):
         except Exception as e:
                 return  "Could not normalize instance: " + str(e)
         ## params from request
-        n_steps = 50
+        n_steps = 10
         if "n_steps" in params_json:
             n_steps = params_json["n_steps"]
 
@@ -216,7 +216,7 @@ class IntegratedGradientsImage(Resource):
         "params": { 
                 "target_class": "(optional) Integer denoting the desired class for the computation of the attributions. Ignore for regression models. Defaults to the predicted class of the instance.",
                 "method": "(optional) Method for the integral approximation. The methods available are: 'riemann_left', 'riemann_right', 'riemann_middle', 'riemann_trapezoid', 'gausslegendre'. Defaults to 'gausslegendre'.",
-                "n_steps": "(optional) Number of step in the path integral approximation from the baseline to the input instance. Defaults to 5.",
+                "n_steps": "(optional) Number of step in the path integral approximation from the baseline to the input instance. Defaults to 10.",
                 "internal_batch_size": "(optional) Batch size for the internal batching. Defaults to 100.",
                 "png_width":  "(optional) width (in pixels) of the png image containing the explanation.",
                 "png_height": "(optional) height (in pixels) of the png image containing the explanation."
