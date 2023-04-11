@@ -1,4 +1,4 @@
-from flask_restful import Resource,reqparse
+from flask_restful import Resource
 import pandas as pd
 import tensorflow as tf
 import torch
@@ -6,13 +6,17 @@ import numpy as np
 import joblib
 import h5py
 import json
+import requests
 from alibi.explainers import ALE
 import matplotlib.pyplot as plt
 import seaborn as sns
 from flask import request
-from saveinfo import save_file_info
 from getmodelfiles import get_model_files
-import requests
+from io import BytesIO
+from PIL import Image
+from utils import ontologyConstants
+from utils.base64 import PIL_to_base64
+
 
 class IREX(Resource):
     
@@ -21,18 +25,21 @@ class IREX(Resource):
         self.upload_folder = upload_folder
 
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument("id",required=True)
-        parser.add_argument("url")
-        parser.add_argument('params')
-        args = parser.parse_args()
+        params = request.json
+        if params is None:
+            return "The json body is missing."
         
-        _id = args.get("id")
-        url = args.get("url")
-        params=args.get("params")
+        #Check params
+        if("id" not in params):
+            return "The model id was not specified in the params."
+
+        _id =params["id"]
+        url=None
+        if "url" in params:
+            url=params["url"]
         params_json={}
-        if(params !=None):
-            params_json = json.loads(params)
+        if "params" in params:
+            params_json=params["params"]
         
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
@@ -42,10 +49,9 @@ class IREX(Resource):
         ##getting params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
-        model_task=model_info["model_task"] ##error handling?
         target_name=model_info["attributes"]["target_names"][0]
         try:
-            output_names=model_info["attributes"]["target_values"][0]
+            output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         except:
             output_names=None
         feature_names=list(model_info["attributes"]["features"].keys())
@@ -58,25 +64,29 @@ class IREX(Resource):
             dataframe.drop([target_name], axis=1, inplace=True)
         else:
             raise Exception("The training data file was not provided.")
+        
         ## getting predict function
         predic_func=None
         if model_file!=None:
-            if backend=="TF1" or backend=="TF2":
+            if backend in ontologyConstants.TENSORFLOW_URIS:
                 model=h5py.File(model_file, 'w')
                 mlp = tf.keras.models.load_model(model)
                 predic_func=mlp
-            elif backend=="sklearn":
+            elif backend in ontologyConstants.SKLEARN_URIS:
                 mlp = joblib.load(model_file)
                 try:
                     predic_func=mlp.predict_proba
                 except:
                     predic_func=mlp.predict
-            elif backend=="PYT":
+            elif backend in ontologyConstants.PYTORCH_URIS:
                 mlp = torch.load(model_file)
                 predic_func=mlp.predict
             else:
-                mlp = joblib.load(model_file)
-                predic_func=mlp.predict
+                try:
+                    mlp = joblib.load(model_file)
+                    predic_func=mlp.predict
+                except Exception as e:
+                    return "Could not extract prediction function from model: " + str(e)
         elif url!=None:
             def predict(X):
                 return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
@@ -90,7 +100,7 @@ class IREX(Resource):
         if "expected_answers" in params_json:  
             expected=json.loads(params_json["expected_answers"]) if isinstance(params_json["expected_answers"],str) else params_json["expected_answers"]
         else:
-            raise Exception("This method requires the expected answers.")
+            return "This method requires the expected answers parameter."
         if "threshold" in params_json:
             threshold = float(params_json["threshold"])
         if "classes_to_show" in params_json:
@@ -137,11 +147,12 @@ class IREX(Resource):
         sns.heatmap(ale_df.transpose(), cmap="Blues",yticklabels=True, xticklabels=True,mask=mask.to_numpy())
 
         #saving
-        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
-        plt.savefig(upload_folder+filename+".png",bbox_inches='tight')
+        img_buf = BytesIO()
+        plt.savefig(img_buf,bbox_inches="tight")
+        im = Image.open(img_buf)
+        b64Image=PIL_to_base64(im)
 
-        proba_exp_lr["meta"]["name"]="IREX-ALE"
-        response = {"plot_png":getcall+'.png',"explanation":json.loads(proba_exp_lr.to_json())}
+        response = {"type":"image","explanation":b64Image}#"explanation":json.loads(proba_exp_lr.to_json())}
         return response
 
     def get(self):
@@ -155,7 +166,7 @@ class IREX(Resource):
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
-                "expected_answers":"Array containing the expected answers to the questions of a questionnaire that are supposed to contribute to the target class by experts.",
+                "expected_answers":"Array containing the expected answers (according to experts) to the questions of a questionnaire that supossedly contribute to the target class.",
                 "threshold": "(Optional) A float between 0 and 1 for the threshold that will be used to determine anomalous variables. If a feature seems to be contradictory but its absolute ALE value is below this threshold, it will not be considered anomalous. Defaults to 0.01.",
                 "classes_to_show": "(Optional) Array of ints representing the indices of the classes to be explained. Defaults to all classes."
                 },
@@ -165,7 +176,7 @@ class IREX(Resource):
         "meta":{
                 "supportsAPI":False,
                 "needsData": True,
-                "requiresAttributes":[]
+                "requiresAttributes":[{"expected_answers":"Array containing the expected answers to the questions of a questionnaire that are supposed to contribute to the target class by experts."}]
             }
         }
     
