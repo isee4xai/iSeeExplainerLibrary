@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+from turtle import Shape, shapesize
 import markdown
 import markdown.extensions.fenced_code
 from flask import Flask, send_from_directory, make_response, request
@@ -24,6 +25,9 @@ from resources.explainers.tabular.importance import Importance
 from resources.explainers.tabular.discern import DisCERN
 from resources.explainers.tabular.irex import IREX
 from resources.explainers.tabular.nice import Nice
+from resources.explainers.tabular.shapSummary import ShapSummary
+from resources.explainers.tabular.shapDependence import ShapDependence
+from resources.explainers.tabular.shapInteraction import ShapInteraction
 from resources.explainers.images.lime import LimeImage
 from resources.explainers.images.anchors import AnchorsImage
 from resources.explainers.images.counterfactuals import CounterfactualsImage
@@ -109,6 +113,9 @@ api.add_resource(Importance, '/Tabular/Importance',resource_class_kwargs=path_di
 api.add_resource(DisCERN, '/Tabular/DisCERN',resource_class_kwargs=path_dict)
 api.add_resource(IREX, '/Tabular/IREX',resource_class_kwargs=path_dict)
 api.add_resource(Nice, '/Tabular/NICE',resource_class_kwargs=path_dict)
+api.add_resource(ShapSummary, '/Tabular/SHAPSummary',resource_class_kwargs=path_dict)
+api.add_resource(ShapDependence, '/Tabular/SHAPDependence',resource_class_kwargs=path_dict)
+api.add_resource(ShapInteraction, '/Tabular/SHAPInteraction',resource_class_kwargs=path_dict)
 api.add_resource(LimeImage, '/Images/LIME',resource_class_kwargs=path_dict)
 api.add_resource(AnchorsImage, '/Images/Anchors',resource_class_kwargs=path_dict)
 api.add_resource(CounterfactualsImage, '/Images/Counterfactuals',resource_class_kwargs=path_dict)
