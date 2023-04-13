@@ -21,9 +21,9 @@ class Explainers(Resource):
                  '/Tabular/KernelSHAPLocal',
                  '/Tabular/LIME',
                  '/Tabular/NICE',
-                 '/Tabular/SHAPDependence'
-                 '/Tabular/SHAPInteraction'
-                 '/Tabular/SHAPSummary'
+                 '/Tabular/SHAPDependence',
+                 '/Tabular/SHAPInteraction',
+                 '/Tabular/SHAPSummary',
                  '/Tabular/TreeSHAPGlobal',
                  '/Tabular/TreeSHAPLocal',
                  '/Text/LIME',
