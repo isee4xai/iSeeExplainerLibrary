@@ -1,14 +1,13 @@
 import sys
 import os
 import json
-from turtle import Shape, shapesize
 import markdown
 import markdown.extensions.fenced_code
-from flask import Flask, send_from_directory, make_response, request
+from flask import Flask, send_from_directory, make_response
 from flask_restful import Api
 from flask_cors import CORS
-from viewer import ViewExplanation
 from explainerslist import Explainers
+from utils.nlp_explainer_comp import NLPExplainerComparison
 
 from resources.explainers.tabular.dicePublic import DicePublic 
 from resources.explainers.tabular.dicePrivate import DicePrivate
@@ -97,7 +96,7 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 cors = CORS(app)
 api = Api(app)
 api.add_resource(Explainers,'/Explainers')
-#api.add_resource(ViewExplanation, '/ViewExplanation/<string:filename>')
+api.add_resource(NLPExplainerComparison,'/NLPExplainerComparison')
 api.add_resource(DicePublic, '/Tabular/DicePublic',resource_class_kwargs=path_dict)
 api.add_resource(DicePrivate, '/Tabular/DicePrivate',resource_class_kwargs=path_dict)
 api.add_resource(Lime, '/Tabular/LIME',resource_class_kwargs=path_dict)
