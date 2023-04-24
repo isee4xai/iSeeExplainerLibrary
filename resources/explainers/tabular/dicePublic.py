@@ -54,7 +54,7 @@ class DicePublic(Resource):
         features=model_info["attributes"]["features"]
         target_names=model_info["attributes"]["target_names"]
         outcome_name=target_names[0]
-        feature_names=list(features.keys())
+        feature_names=list(dataframe.columns)
         for target in target_names:
             feature_names.remove(target)
         cont_features=[]
