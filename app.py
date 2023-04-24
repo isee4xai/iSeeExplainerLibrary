@@ -27,6 +27,10 @@ from resources.explainers.tabular.nice import Nice
 from resources.explainers.tabular.shapSummary import ShapSummary
 from resources.explainers.tabular.shapDependence import ShapDependence
 from resources.explainers.tabular.shapInteraction import ShapInteraction
+from resources.explainers.tabular.confusionMatrix import ConfusionMatrix
+from resources.explainers.tabular.liftCurve import LiftCurve
+from resources.explainers.tabular.rocAuc import ROCAUC
+from resources.explainers.tabular.prAuc import PRAUC     
 from resources.explainers.images.lime import LimeImage
 from resources.explainers.images.anchors import AnchorsImage
 from resources.explainers.images.counterfactuals import CounterfactualsImage
@@ -115,6 +119,10 @@ api.add_resource(Nice, '/Tabular/NICE',resource_class_kwargs=path_dict)
 api.add_resource(ShapSummary, '/Tabular/SHAPSummary',resource_class_kwargs=path_dict)
 api.add_resource(ShapDependence, '/Tabular/SHAPDependence',resource_class_kwargs=path_dict)
 api.add_resource(ShapInteraction, '/Tabular/SHAPInteraction',resource_class_kwargs=path_dict)
+api.add_resource(ConfusionMatrix, '/Tabular/ConfusionMatrix',resource_class_kwargs=path_dict)
+api.add_resource(LiftCurve, '/Tabular/LiftCurve',resource_class_kwargs=path_dict)
+api.add_resource(ROCAUC, '/Tabular/ROC-AUC',resource_class_kwargs=path_dict)
+api.add_resource(PRAUC, '/Tabular/PR-AUC',resource_class_kwargs=path_dict)
 api.add_resource(LimeImage, '/Images/LIME',resource_class_kwargs=path_dict)
 api.add_resource(AnchorsImage, '/Images/Anchors',resource_class_kwargs=path_dict)
 api.add_resource(CounterfactualsImage, '/Images/Counterfactuals',resource_class_kwargs=path_dict)
