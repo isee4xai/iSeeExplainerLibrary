@@ -150,7 +150,7 @@ class Lime(Resource):
         hti = Html2Image()
         hti.output_path= os.getcwd()
         print(hti.output_path)
-        #size=(1000, 400)
+        size=(1000, 400)
         if "png_height" in params_json and "png_width" in params_json:
             size=(int(params_json["png_width"]),int(params_json["png_height"]))
             hti.screenshot(html_str=explanation.as_html(), save_as="temp.png", size=size)   
