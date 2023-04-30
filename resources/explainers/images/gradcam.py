@@ -259,17 +259,41 @@ class GradCam(Resource):
         "instance": "Matrix representing the image to be explained.",
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
-                "target_layer":"(MANDATORY) name of target layer to be provided as a string. This is the layer that you want to compute the visualization for."\
-                                " Usually this will be the last convolutional layer in the model. It is also possible to specify internal components of this layer by passing the"\
-                                " target_layer_index parameter in params. To get the target layer, this method executes 'model.<target_layer>[<target_layer_index>]'"\
-                                " Some common examples of these parameters for well-known models:"\
-                                " Resnet18 and 50: model.layer4 -> 'target_layer':'layer4'"\
-                                " VGG, densenet161: model.features[-1] -> 'target_layer':'features', 'target_layer_index':-1"\
-                                " mnasnet1_0: model.layers[-1] -> 'target_layer':'layers', 'target_layer_index':-1",
-                "target_layer_index": "(Optional) index of the target layer to be accessed. Provide it when you want to focus on a specific component of the target layer."
-                                      "If not provided, the whole layer specified as target when uploading the model will be used.",
-                "target_class": "(Optional) Integer representing the index of the target class to generate the explanation. If not provided, defaults to the class with the highest predicted probability.",
-                "aug_smooth": "(Optional) Boolean indicating whether to apply augmentation smoothing (defaults to True). This has the effect of better centering the CAM around the objects. However, it increases the run time by x6."
+                "target_layer":{
+                    "description":  "Name of target layer to be provided as a string. This is the layer that you want to compute the visualization for."\
+                                    " Usually this will be the last convolutional layer in the model. It is also possible to specify internal components of this layer by passing the"\
+                                    " target_layer_index parameter in params. To get the target layer, this method executes 'model.<target_layer>[<target_layer_index>]'"\
+                                    " Some common examples of these parameters for well-known models:"\
+                                    " Resnet18 and 50: model.layer4 -> 'target_layer':'layer4'"\
+                                    " VGG, densenet161: model.features[-1] -> 'target_layer':'features', 'target_layer_index':-1"\
+                                    " mnasnet1_0: model.layers[-1] -> 'target_layer':'layers', 'target_layer_index':-1",
+                    "type":"string",
+                    "default": None,
+                    "range":None,
+                    "required":True
+                    },
+                "target_layer_index":{
+                    "description":  "Index of the target layer to be accessed. Provide it when you want to focus on a specific component of the target layer."\
+                                    " If not provided, the whole layer specified as target when uploading the model will be used.",
+                    "type":"int",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
+                "target_class":{
+                    "description": "Integer representing the index of the target class to generate the explanation. If not provided, defaults to the class with the highest predicted probability.",
+                    "type":"int",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
+                "aug_smooth": {
+                    "description": "Boolean indicating whether to apply augmentation smoothing (defaults to True). This has the effect of better centering the CAM around the objects. However, it increases the run time by a factor of x6.",
+                    "type":"boolean",
+                    "default": True,
+                    "range":[True,False],
+                    "required":False
+                    }
                 },
         "output_description":{
                 "saliency_map":"Displays an image that highlights the region that contributes the most to the target class."

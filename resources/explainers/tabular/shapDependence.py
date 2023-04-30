@@ -99,8 +99,20 @@ class ShapDependence(Resource):
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
         "params": { 
-                "feature": "(Optional) Name of the feature to be displayed. Defaults to the feature with the highest average SHAP value.",
-                "interaction_feature": "Name of the interaction feature used for coloring the instances. Defaults to the feature with the highest interaction value with 'feature'."
+                "feature": {
+                    "description":"Name of the feature to be displayed. Defaults to the feature with the highest average SHAP value.",
+                    "type":"string",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
+                "interaction_feature":{
+                    "description":"Name of the interaction feature used for coloring the instances. Defaults to the feature with the highest interaction value with the feature specified in the previous parameter.",
+                    "type":"string",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    } 
                 },
         "output_description":{
                 "dependence_plot": "The dependence plot the realationship between the values of a feature and the SHAP values. These values are colored according to the values of the interaction feature, displayed in the bar to the right."

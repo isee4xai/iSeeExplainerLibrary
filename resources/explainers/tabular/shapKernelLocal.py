@@ -156,15 +156,27 @@ class ShapKernelLocal(Resource):
     def get(self):
         return {
         "_method_description": "This method displays the contribution of each attribute for an individual prediction based on Shapley values. This method accepts 4 arguments: " 
-                           "the 'id', the 'instance', the 'url' (optional),  and the 'params' dictionary (optional) with the configuration parameters of the method. "
+                           "the 'id', the 'instance', the 'url',  and the 'params' JSON with the configuration parameters of the method. "
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "Array with the feature values of an instance without including the target class.",
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
-                "target_class": "(Optional) Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file.",
-                "plot_type": "(Optional) String with the name of the plot to be generated. The supported plots are 'waterfall','decision', 'force' and 'bar'. Defaults to 'waterfall'."
+                "target_class": {
+                    "description":"Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file.",
+                    "type":"string",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
+                "plot_type": {
+                    "description":"String with the name of the plot to be generated.",
+                    "type":"string",
+                    "default": "waterfall",
+                    "range":['waterfall','decision','force','bar'],
+                    "required":False
+                    }
                 },
 
         "output_description":{

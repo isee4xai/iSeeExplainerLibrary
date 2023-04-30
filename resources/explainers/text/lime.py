@@ -109,8 +109,7 @@ class LimeText(Resource):
         #saving
         hti = Html2Image()
         hti.output_path= os.getcwd()
-        print(hti.output_path)
-        #size=(1000, 400)
+        size=(6.4, 4.8)
         css="body {background: white;}"
         if "png_height" in params_json and "png_width" in params_json:
             size=(int(params_json["png_width"]),int(params_json["png_height"]))
@@ -136,11 +135,41 @@ class LimeText(Resource):
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
-                "output_classes" : "(Optional) Array of ints representing the classes to be explained.",
-                "top_classes": "(Optional) Int representing the number of classes with the highest prediction probablity to be explained.",
-                "num_features": "(Optional) Int representing the maximum number of features to be included in the explanation.",
-                "png_height": "(optional) height (in pixels) of the png image containing the explanation.",
-                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
+                "output_classes" : {
+                    "description":  "Array of integers representing the classes to be explained.",
+                    "type":"array",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
+                "top_classes":{
+                        "description": "Integer representing the number of classes with the highest prediction probability to be explained. Overrides 'output_classes' if provided.",
+                        "type":"int",
+                        "default": 1,
+                        "range":None,
+                        "required":False
+                    },
+                "num_features": {
+                        "description": "Integer representing the maximum number of features to be included in the explanation.",
+                        "type":"int",
+                        "default": 10,
+                        "range":None,
+                        "required":False
+                    },
+                "png_width":{
+                    "description": "Width (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 640,
+                    "range":None,
+                    "required":False
+                    },
+                "png_height": {
+                    "description": "Height (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 480,
+                    "range":None,
+                    "required":False
+                    }
                 },
         "output_description":{
                 "lime_plot": "An image contaning a plot with the most influyent words for the given instance. For regression models, the plot displays both positive and negative contributions of each word to the predicted outcome."

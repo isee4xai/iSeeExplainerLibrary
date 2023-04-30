@@ -132,8 +132,20 @@ class ShapDeepLocal(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "Array with the feature values of an instance without including the target class.",
         "params": { 
-                "target_class": "(Optional) Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file.",
-                "plot_type": "(Optional) String with the name of the plot to be generated. The supported plots are 'waterfall','decision' and 'bar'. Defaults to 'waterfall'."
+                "target_class": {
+                    "description":"Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file.",
+                    "type":"string",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
+                "plot_type": {
+                    "description":"String with the name of the plot to be generated. The supported plots are 'waterfall','decision' and 'bar'. Defaults to 'waterfall'.",
+                    "type":"string",
+                    "default": "waterfall",
+                    "range":["waterfall","decision","bar"],
+                    "required":False
+                    }
                 },
         "output_description":{
                 "waterfall_plot": "Waterfall plots are designed to display explanations for individual predictions, so they expect a single row of an Explanation object as input. "

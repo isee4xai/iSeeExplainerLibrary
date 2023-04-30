@@ -143,13 +143,35 @@ class DicePrivate(Resource):
         "instance": "Array representing a row with the feature values of an instance without including the target class.",
         "params": { 
 
-                "desired_class": "(Optional) Integer representing the index of the desired counterfactual class. Defaults to class 0. You may also use the string 'opposite' for binary classification",
-                "features_to_vary": "(optional) Either a string 'all' or a list of strings representing the feature names to vary. Defaults to all features.",
-                "num_cfs": "(optional) number of counterfactuals to be generated for each instance.",
-                "method": "(optional) The method used for counterfactual generation. The supported methods for private data are: 'random' (random sampling) and 'genetic' (genetic algorithms). Defaults to 'random'.",
-                "png_height": "(optional) height (in pixels) of the png image containing the explanation.",
-                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
-},
+                "desired_class": {
+                    "description": "Integer representing the index of the desired counterfactual class. Defaults to class 0 for multiclass problems and to opposite class for binary class problems. You may also use the string 'opposite' for binary classification",
+                    "type":"int",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
+                "features_to_vary": {
+                    "description": "List of strings representing the feature names to vary. Defaults to all features.",
+                    "type":"array",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
+                "num_cfs": {
+                    "description": "Number of counterfactuals to be generated for each instance.",
+                    "type":"int",
+                    "default": 3,
+                    "range":None,
+                    "required":False
+                    },
+                "method": {
+                    "description": "The method used for counterfactual generation. The supported methods for private data are: 'random' (random sampling) and 'genetic' (genetic algorithms). Defaults to 'random'.",
+                    "type":"string",
+                    "default": "random",
+                    "range":["random","genetic"],
+                    "required":False
+                    }
+        },
         "output_description":{
                 "html_table": "An html page containing a table with the original instance compared against a table with the generated couterfactuals."
                },
@@ -157,6 +179,6 @@ class DicePrivate(Resource):
                 "supportsAPI":False,
                 "needsData": False,
                 "needsMin&Max":True,
-                "requiresAttributes":[{"features":"Dictionary with feature names as keys and arrays containing the ranges of continuous features, or strings with the categories for categorical features."}]
+                "requiresAttributes":[]
             }
         }

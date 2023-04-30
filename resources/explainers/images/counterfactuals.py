@@ -110,7 +110,7 @@ class CounterfactualsImage(Resource):
         if "target_class" in params_json:
              kwargsData["target_class"] = params_json["target_class"]
 
-        size=(6, 6)
+        size=(6.4, 4.8)
         if "png_height" in params_json and "png_width" in params_json:
             try:
                 size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
@@ -133,7 +133,7 @@ class CounterfactualsImage(Resource):
 
         #saving
         img_buf = BytesIO()
-        fig.savefig(img_buf)
+        fig.savefig(img_buf, bbox_inches='tight')
         im = Image.open(img_buf)
         b64Image=PIL_to_base64(im)
 
@@ -152,11 +152,34 @@ class CounterfactualsImage(Resource):
         "instance": "Matrix representing the image to be explained.",
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
-                "target_class": "(optional) A string containing 'other' or 'same', or an integer denoting the desired class for the counterfactual instance. Defaults to 'other'.",
-                "target_proba": "(optional) Float from 0 to 1 representing the target probability for the counterfactual generated. Defaults to 1.",
-                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
-                "png_height": "(optional) height (in pixels) of the png image containing the explanation."
-                
+                "target_class": {
+                    "description": "An integer denoting the desired class for the counterfactual instance. Defaults to 'other', a different class from the original.",
+                    "type":"int",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
+                "target_proba": {
+                    "description": "Float from 0 to 1 representing the target probability for the counterfactual generated. Defaults to 1.0.",
+                    "type":"float",
+                    "default": 1.0,
+                    "range":[0,1],
+                    "required":False
+                    },
+                "png_width":{
+                    "description": "Width (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 640,
+                    "range":None,
+                    "required":False
+                    },
+                "png_height": {
+                    "description": "Height (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 480,
+                    "range":None,
+                    "required":False
+                    }
                 },
         "output_description":{
                 "counterfactual_image":"Displays an image that is as similar as possible to the original but that the model predicts to be from a different class."

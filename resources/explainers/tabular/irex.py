@@ -166,9 +166,28 @@ class IREX(Resource):
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
-                "expected_answers":"Array containing the expected answers (according to experts) to the questions of a questionnaire that supossedly contribute to the target class.",
-                "threshold": "(Optional) A float between 0 and 1 for the threshold that will be used to determine anomalous variables. If a feature seems to be contradictory but its absolute ALE value is below this threshold, it will not be considered anomalous. Defaults to 0.01.",
-                "classes_to_show": "(Optional) Array of ints representing the indices of the classes to be explained. Defaults to all classes."
+                "expected_answers":{
+                    "description": "Array containing the expected answers (according to experts) to the questions of a questionnaire that supossedly contribute to the target class.",
+                    "type":"array",
+                    "default": None,
+                    "range":None,
+                    "required":True
+                    },
+                
+                "threshold": {
+                    "description": "A float between 0 and 1 for the threshold that will be used to determine anomalous variables. If a feature seems to be contradictory but its absolute ALE value is below this threshold, it will not be considered anomalous. Defaults to 0.01.",
+                    "type":"float",
+                    "default": 0.01,
+                    "range":[0,1],
+                    "required":False
+                    },
+                "classes_to_show": {
+                    "description":"Array of ints representing the indices of the features to be explained. Defaults to all features.",
+                    "type":"array",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    }
                 },
         "output_description":{
                 "heatmap": "A heatmap displaying the relevance of the features according to ALE, where anomalous features (behavior differring from expected values) are highlighted in red."

@@ -146,9 +146,27 @@ class DisCERN(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "Array of feature values of the instance to be explained.",
         "params": {
-                "desired_class": "Integer representing the index of the desired counterfactual class, or 'opposite' in the case of binary classification. Defaults to 'opposite'.",
-                "feature_attribution_method": "Feature attribution method used for obtaining feature weights; currently supports LIME, SHAP and Integrated Gradients. Defaults to LIME.",
-                "immutable_features": "Array of feature indices that are immutable. The counterfactual will not recommend to change these features. Default is an empty array",
+                "desired_class": {
+                    "description": "Integer representing the index of the desired counterfactual class, or 'opposite' in the case of binary classification. Defaults to 'opposite'.",
+                    "type":"int",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
+                "feature_attribution_method":{
+                    "description": "Feature attribution method used for obtaining feature weights; currently supports LIME, SHAP and Integrated Gradients. Defaults to LIME.",
+                    "type":"string",
+                    "default": "LIME",
+                    "range":["LIME","SHAP","IntG"],
+                    "required":False
+                    },
+                "immutable_features": {
+                    "description": "Array of feature indices that are immutable. The counterfactual will not recommend to change these features. Default is an empty array",
+                    "type":"array",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
                 },
 
         "output_description":{

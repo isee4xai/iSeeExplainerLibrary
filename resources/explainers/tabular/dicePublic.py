@@ -86,11 +86,10 @@ class DicePublic(Resource):
         
 
         ## params from request
-        kwargsData = dict(continuous_features=cont_features, outcome_name=outcome_name)
+        kwargsData = dict(outcome_name=outcome_name)
         if "permitted_range" in params_json:
            kwargsData["permitted_range"] = json.loads(params_json["permitted_range"]) if isinstance(params_json["permitted_range"],str) else params_json["permitted_range"]
-        if "continuous_features_precision" in params_json:
-           kwargsData["continuous_features_precision"] = json.loads(params_json["continuous_features_precision"]) if isinstance(params_json["continuous_features_precision"],str) else params_json["continuous_features_precision"]
+        
 
         desired_class=0
         if(len(features[outcome_name]["values_raw"])==2): #binary classification
@@ -164,14 +163,41 @@ class DicePublic(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "Array representing a row with the feature values of an instance without including the target class.",
         "params": { 
-                "desired_class": "(optional) Integer representing the index of the desired counterfactual class. Defaults to class 0.  You may also use the string 'opposite' for binary classification",
-                "method": "(optional) The method used for counterfactual generation. The supported methods are: 'random' (random sampling), 'genetic' (genetic algorithms), 'kdtrees'.  Defaults to 'random'.",
-                "features_to_vary": "(optional) Either a string 'all' or a list of strings representing the feature names to vary. Defaults to all features.",
-                "num_cfs": "(optional) number of counterfactuals to be generated for each instance.",
-                "permitted_range": "(optional) JSON object with feature names as keys and permitted range in array as values.",
-                "continuous_features_precision": "(optional) JSON object with feature names as keys and precisions as values.",
-                "png_height": "(optional) height (in pixels) of the png image containing the explanation.",
-                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
+                "desired_class": {
+                    "description": "Integer representing the index of the desired counterfactual class. Defaults to class 0 for multiclass problems and to opposite class for binary class problems. You may also use the string 'opposite' for binary classification",
+                    "type":"int",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
+                "features_to_vary": {
+                    "description": "List of strings representing the feature names to vary. Defaults to all features.",
+                    "type":"array",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
+                "num_cfs": {
+                    "description": "Number of counterfactuals to be generated for each instance.",
+                    "type":"int",
+                    "default": 3,
+                    "range":None,
+                    "required":False
+                    },
+                "method": {
+                    "description": "The method used for counterfactual generation. The supported methods for private data are: 'random' (random sampling) and 'genetic' (genetic algorithms). Defaults to 'random'.",
+                    "type":"string",
+                    "default": "random",
+                    "range":["random","genetic","kdtrees"],
+                    "required":False
+                    },
+                "permitted_range":{
+                    "description": "Dictionary with feature names as keys and permitted range in array as values.",
+                    "type":"dict",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
                 },
         "output_description":{
                 "html_table": "An html page containing a table with the original instance compared against a table with the generated couterfactuals."

@@ -50,8 +50,6 @@ class Nice(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-
-
         #getting params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]
@@ -171,8 +169,20 @@ class Nice(Resource):
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
-                "desired_class": "(optional) Integer representing the index of the desired counterfactual class. Defaults to string 'other', which will look for any different class.",
-                "optimization_criteria": "(optional) The counterfactual criteria to optimize. It can be 'sparsity','proximity', or 'plausibility'. Defaults to 'sparsity.'"
+                "desired_class": {
+                    "description": "Integer representing the index of the desired counterfactual class. Defaults to string 'other', which will look for any different class.",
+                    "type":"int",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    },
+                "optimization_criteria":{
+                    "description": "The counterfactual criteria to optimize.",
+                    "type":"string",
+                    "default": "sparsity",
+                    "range":["sparsity","proximity","plausibility"],
+                    "required":False
+                    } 
                 },
         "output_description":{
                 "html_table": "An html page containing a table with the original instance compared against the generated counterfactual."

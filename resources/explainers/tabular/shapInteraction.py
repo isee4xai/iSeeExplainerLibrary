@@ -93,7 +93,13 @@ class ShapInteraction(Resource):
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
         "params": { 
-                "feature": "(Optional) Name of the feature which will be used to calculate the SHAP interaction values. Defaults to the feature with the highest average SHAP value.",
+                "feature": {
+                    "description":"Name of the feature which will be used to calculate the SHAP interaction values. Defaults to the feature with the highest average SHAP value.",
+                    "type":"string",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    }
                 },
         "output_description":{
                 "bar_plot": "The bar plot shows the SHAP interaction values with the other features for the selected feature."

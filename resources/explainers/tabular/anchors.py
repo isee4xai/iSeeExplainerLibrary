@@ -133,7 +133,13 @@ class Anchors(Resource):
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
 
         "params": { 
-                "threshold": "(Optional) The minimum level of precision required for the anchors. Default is 0.95"
+                "threshold": {
+                    "description": "The minimum level of precision required for the anchors. Default is 0.95",
+                    "type":"float",
+                    "default": 0.95,
+                    "range":[0,1],
+                    "required":False
+                    }
                 },
         "output_description":{
                 "anchor_json": "A JSON object with the boolean rule (anchor) that was found, and values for its precision and coverage (scope in which that rules applies to similar instances)."

@@ -93,7 +93,7 @@ class ShapTreeGlobal(Resource):
 
         ##saving
         img_buf = BytesIO()
-        plt.savefig(img_buf)
+        plt.savefig(img_buf,bbox_inches='tight')
         im = Image.open(img_buf)
         b64Image=PIL_to_base64(im)
         
@@ -110,7 +110,13 @@ class ShapTreeGlobal(Resource):
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
         "params": { 
-                "target_class": "(Optional) Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file.",
+                "target_class": {
+                    "description":"Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file.",
+                    "type":"string",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    }
                 },
         "output_description":{
                 "beeswarm_plot": "The beeswarm plot is designed to display an information-dense summary of how the top features in a dataset impact the model's output. Each instance the given explanation is represented by a single dot" 
