@@ -112,7 +112,13 @@ class ShapDeepGlobal(Resource):
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
         "params": { 
-                "target_class": "(Optional) Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file.",
+                "target_class": {
+                    "description":"Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file.",
+                    "type":"string",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    }
                 },
 
         "output_description":{

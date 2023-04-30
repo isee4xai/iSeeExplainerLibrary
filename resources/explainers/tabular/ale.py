@@ -109,7 +109,7 @@ class Ale(Resource):
         
         #saving
         img_buf = BytesIO()
-        fig.savefig(img_buf)
+        fig.savefig(img_buf,bbox_inches="tight")
         im = Image.open(img_buf)
         b64Image=PIL_to_base64(im)
 
@@ -127,7 +127,14 @@ class Ale(Resource):
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
-                "features_to_show": "(Optional) Array of ints representing the indices of the features to be explained. Defaults to all features."
+                "features_to_show": {
+                    "description":"Array of ints representing the indices of the features to be explained. Defaults to all features.",
+                    "type":"array",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    }
+
                 },
         "output_description":{
                 "ale_plot": "A plot for each of the specified features where the y-axis represents the global feature effect on the outcome value according to the computed ALE values."

@@ -101,9 +101,13 @@ class Importance(Resource):
                            " These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
         "params": { 
-                "variables": "(Optional) Array of strings with the names of the features for which the importance will be calculated. Defaults to all features.",
-                "png_height": "(optional) height (in pixels) of the png image containing the explanation.",
-                "png_width":   "(optional) width (in pixels) of the png image containing the explanation.",
+                "variables": {
+                    "description": "Array of strings with the names of the features for which the importance will be calculated. Defaults to all features.",
+                    "type":"array",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    }
                 },
         "output_description":{
                 "bar_plot": "A bar plot representing the increase in the prediction error (importance) for the features with the highest values."

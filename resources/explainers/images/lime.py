@@ -96,13 +96,13 @@ class LimeImage(Resource):
         if len(model_info["attributes"]["features"]["image"]["shape_raw"])==2 or model_info["attributes"]["features"]["image"]["shape_raw"][-1]==1:
            return "LIME only supports RGB images."
 
-        kwargsData = dict(top_labels=3,segmentation_fn=None)
+        kwargsData = dict(top_labels=1,segmentation_fn=None)
         if "top_classes" in params_json:
             kwargsData["top_labels"] = int(params_json["top_classes"])   #top labels
         if "segmentation_fn" in params_json:
             kwargsData["segmentation_fn"] = SegmentationAlgorithm(params_json["segmentation_fn"])
 
-        size=(12, 12)
+        size=(6.4, 4.8)
         if "png_height" in params_json and "png_width" in params_json:
             try:
                 size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
@@ -147,11 +147,34 @@ class LimeImage(Resource):
         "instance": "Matrix representing the image to be explained.",
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
-                "top_classes": "(Optional) Int representing the number of classes with the highest prediction probablity to be explained.",
-                "segmentation_fn": "(Optional) A string with a segmentation algorithm to be used from the following:'quickshift', 'slic', or 'felzenszwalb'",
-                "png_width":  "(optional) width (in pixels) of the png image containing the explanation.",
-                "png_height": "(optional) height (in pixels) of the png image containing the explanation."
-
+                "top_classes":{
+                        "description": "Integer representing the number of classes with the highest prediction probability to be explained. Overrides 'output_classes' if provided.",
+                        "type":"int",
+                        "default": 1,
+                        "range":None,
+                        "required":False
+                    },
+                "segmentation_fn": {
+                    "description":"A string with an image segmentation algorithm from the following:'quickshift', 'slic', or 'felzenszwalb'.",
+                    "type":"string",
+                    "default": "quickshift",
+                    "range":['quickshift','slic','felzenszwalb'],
+                    "required":False
+                    },
+                "png_width":{
+                    "description": "Width (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 640,
+                    "range":None,
+                    "required":False
+                    },
+                "png_height": {
+                    "description": "Height (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 480,
+                    "range":None,
+                    "required":False
+                    }
                 },
         "output_description":{
                 "lime_image":"Displays the group of pixels that contribute positively (in green) and negatively (in red) to the prediction of the image class. More than one class may be displayed."

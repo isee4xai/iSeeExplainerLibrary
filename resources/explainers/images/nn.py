@@ -154,7 +154,7 @@ class NearestNeighboursImage(Resource):
         nn_indices = self.knn(no_neighbours, train_encodings, last_layer_func(instance))
         nn_instances = np.array([train_data[n] for n in nn_indices[1:]])
         nn_instances = denormalise_image_batch(nn_instances, model_info)
-        size=(12, 6)
+        size=(6.4, 4.8)
         if "png_height" in params_json and "png_width" in params_json:
             try:
                 size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
@@ -187,7 +187,27 @@ class NearestNeighboursImage(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "Image to be explained in BASE64 format",
         "params": { 
-                "no_neighbours": "(Optional) number of neighbours returned as an interger; default is 3",
+                "no_neighbours":{
+                    "description": "number of neighbours returned as an integer; default is 3.",
+                    "type":"int",
+                    "default": 3,
+                    "range":None,
+                    "required":False
+                    },
+                "png_width":{
+                    "description": "Width (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 640,
+                    "range":None,
+                    "required":False
+                    },
+                "png_height": {
+                    "description": "Height (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 480,
+                    "range":None,
+                    "required":False
+                    }
                 },
         "output_description":{
                 "0":"This explanation presents nearest neighbours to the query; nearest neighbours are examples that are similar to the query with similar AI system outcomes."

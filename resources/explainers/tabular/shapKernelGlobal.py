@@ -115,7 +115,7 @@ class ShapKernelGlobal(Resource):
 
         ##saving
         img_buf = BytesIO()
-        plt.savefig(img_buf)
+        plt.savefig(img_buf,bbox_inches="tight")
         im = Image.open(img_buf)
         b64Image=PIL_to_base64(im)
         
@@ -135,7 +135,13 @@ class ShapKernelGlobal(Resource):
         "url": "External URL of the prediction function. Ignored if a model file was previously uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
-                "target_class": "(Optional) Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file."
+                "target_class": {
+                    "description":"Name of the target class to be explained. Ignore for regression models. Defaults to the first class target class defined in the configuration file.",
+                    "type":"string",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    }
                 },
         "output_description":{
                 "beeswarm_plot": "The beeswarm plot is designed to display an information-dense summary of how the top features in a dataset impact the model's output. Each instance the given explanation is represented by a single dot" 

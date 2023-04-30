@@ -209,14 +209,32 @@ class CBRFox(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "2-D Array representing a single segment with data for multiple rows containing the feature values of particular time-points.",
         "params": { 
-                "smoothness_factor" : "(Optional) Float ranging from 0 to 1 for the smoothness factor that will be applied for metric computation. Defaults to 0.3.",
-                "punished_sum_factor": "(Optional) Float ranging from 0 to 1 for the punished sum factor that will be applied for metric computation. Defaults to 0.5.",
-                "reference_method": "(Optional) The method to be used for the selection of the general cases. It may be 'average','min','max' and 'median'. Defaults to 'average'."
+                "smoothness_factor" :{
+                    "description":"Float ranging from 0 to 1 for the smoothness factor that will be applied for metric computation. Defaults to 0.03.",
+                    "type":"float",
+                    "default":0.03,
+                    "range":[0,1],
+                    "required":False
+                    },
+                "punished_sum_factor":{
+                    "description":"Float ranging from 0 to 1 for the punished sum factor that will be applied for metric computation. Defaults to 0.5.",
+                    "type":"float",
+                    "default":0.5,
+                    "range":[0,1],
+                    "required":False
+                    }, 
+                "reference_method": {
+                    "description":"The method to be used for the selection of the general cases. It may be 'average','min','max' and 'median'. Defaults to 'average'.",
+                    "type":"string",
+                    "default":"average",
+                    "range":["average","min","max","median"],
+                    "required":False
+                    }
                 },
         "meta":{
                 "supportsAPI":False,
                 "needsData": True,
-                "requiresAttributes":[{"target_columns":"Array containing the indexes of the target columns of the dataset."}]
+                "requiresAttributes":[]
             }
 
         }

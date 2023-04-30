@@ -100,7 +100,7 @@ class IntegratedGradientsImage(Resource):
             if "target_class" in params_json:
                     target_class = params_json["target_class"]
 
-        size=(12, 6)
+        size=(6.4, 4.8)
         if "png_height" in params_json and "png_width" in params_json:
             try:
                 size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
@@ -214,12 +214,48 @@ class IntegratedGradientsImage(Resource):
         "instance": "Matrix representing the image to be explained.",
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
-                "target_class": "(optional) Integer denoting the desired class for the computation of the attributions. Ignore for regression models. Defaults to the predicted class of the instance.",
-                "method": "(optional) Method for the integral approximation. The methods available are: 'riemann_left', 'riemann_right', 'riemann_middle', 'riemann_trapezoid', 'gausslegendre'. Defaults to 'gausslegendre'.",
-                "n_steps": "(optional) Number of step in the path integral approximation from the baseline to the input instance. Defaults to 10.",
-                "internal_batch_size": "(optional) Batch size for the internal batching. Defaults to 100.",
-                "png_width":  "(optional) width (in pixels) of the png image containing the explanation.",
-                "png_height": "(optional) height (in pixels) of the png image containing the explanation."
+                "target_class":{
+                    "description": "Integer denoting the desired class for the computation of the attributions. Ignore for regression models. Defaults to the predicted class of the instance.",
+                    "type":"int",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    }, 
+                "method": {
+                    "description":"Method for the integral approximation. The methods available are: 'riemann_left', 'riemann_right', 'riemann_middle', 'riemann_trapezoid', 'gausslegendre'. Defaults to 'gausslegendre'.",
+                    "type":"string",
+                    "default": "gausslegendre",
+                    "range":['gausslegendre','riemann_left','riemann_right','riemann_middle','riemann_trapezoid',],
+                    "required":False
+                    },
+                "n_steps": {
+                    "description":  "Number of step in the path integral approximation from the baseline to the input instance. Defaults to 10.",
+                    "type":"int",
+                    "default": 10,
+                    "range":None,
+                    "required":False
+                    },
+                "internal_batch_size": {
+                    "description":  "Batch size for the internal batching. Defaults to 100.",
+                    "type":"int",
+                    "default": 100,
+                    "range":None,
+                    "required":False
+                    },
+                "png_width":{
+                    "description": "Width (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 640,
+                    "range":None,
+                    "required":False
+                    },
+                "png_height": {
+                    "description": "Height (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 480,
+                    "range":None,
+                    "required":False
+                    }
                 },
         "output_description":{
                 "attribution_plot":"Subplot with two columns. The first column shows the original image and its prediction. The second column shows the values of the attributions for the target class."

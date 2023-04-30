@@ -232,7 +232,13 @@ class NLPClassifierExpl(Resource):
         "instance": "A string with the text to be explained.",
         "params":
         {
-            "output_format": "(Optional) string defining the output format of the explanation. Can be set to either 'html' (default value), 'json', or 'png' (for a wordcloud representation)."
+            "output_format": {
+                    "description":"String defining the output format of the explanation. Can be set to either 'html' (default value), 'json', or 'png' (for a wordcloud representation).",
+                    "type":"string",
+                    "default": "html",
+                    "range":['html','json','png'],
+                    "required":False
+                    }
         },
         "meta":{
                 "supportsAPI":False,
