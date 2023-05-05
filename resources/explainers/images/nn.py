@@ -67,7 +67,7 @@ class NearestNeighboursImage(Resource):
                 s_instance = s_instance.replace('\n', '')
                 s_array = s_instance.split(',')
                 if label == float(s_array[-1]):
-                    s_array = [float(s) for s in s_array][:-2]
+                    s_array = [float(s) for s in s_array][:-1]
                     train_data.append(s_array)
             except Exception as e: #end of rows
                 train_data = np.asarray(train_data, dtype=float)
