@@ -109,10 +109,10 @@ class LimeText(Resource):
         #saving
         hti = Html2Image()
         hti.output_path= os.getcwd()
-        size=(6.4, 4.8)
+        size=(10, 4)
         css="body {background: white;}"
         if "png_height" in params_json and "png_width" in params_json:
-            size=(int(params_json["png_width"]),int(params_json["png_height"]))
+            size=(int(params_json["png_width"])/100,int(params_json["png_height"])/100)
             hti.screenshot(html_str=explanation.as_html(), css_str=css, save_as="temp.png", size=size)   
         else:
             hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png")
@@ -159,14 +159,14 @@ class LimeText(Resource):
                 "png_width":{
                     "description": "Width (in pixels) of the png image containing the explanation.",
                     "type":"int",
-                    "default": 640,
+                    "default": 1000,
                     "range":None,
                     "required":False
                     },
                 "png_height": {
                     "description": "Height (in pixels) of the png image containing the explanation.",
                     "type":"int",
-                    "default": 480,
+                    "default": 400,
                     "range":None,
                     "required":False
                     }

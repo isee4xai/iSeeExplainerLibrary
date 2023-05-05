@@ -1,7 +1,7 @@
 from flask_restful import Resource
 import joblib
 import json
-from explainerdashboard import ClassifierExplainer, RegressionExplainer
+from explainerdashboard import ClassifierExplainer
 from explainerdashboard.dashboard_components.classifier_components import PrAucComponent
 from flask import request
 from getmodelfiles import get_model_files
@@ -47,7 +47,10 @@ class PRAUC(Resource):
         model_info=json.load(model_info_file)
         backend = model_info["backend"]
         target_name=model_info["attributes"]["target_names"][0]
+        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         model_task = model_info["model_task"]  
+
+
 
         #loading model (.pkl file)
         if model_file!=None:
@@ -62,12 +65,7 @@ class PRAUC(Resource):
         else:
             return "Model file was not uploaded."
 
-        if model_task in ontologyConstants.CLASSIFICATION_URIS:
-            explainer = ClassifierExplainer(model, dataframe.drop([target_name], axis=1, inplace=False), dataframe[target_name])
-        elif model_task in ontologyConstants.REGRESSION_URIS:
-            explainer = RegressionExplainer(model, dataframe.drop([target_name], axis=1, inplace=False), dataframe[target_name])
-        else:
-            return "AI task not supported. This expliners only supports scikit-learn-based classifiers or regressors."
+
 
         #getting params from request
         cutoff=0.5
@@ -76,8 +74,21 @@ class PRAUC(Resource):
                 cutoff=float(params_json["cutoff"])
             except Exception as e:
                 return "Could not convert to cuttoff to float: " + str(e)
+        label=None
+        if "label" in params_json:
+            try:
+                label=str(params_json["label"])
+            except Exception as e:
+                return "Could not convert to label to string: " + str(e)
 
-        exp=PrAucComponent(explainer,cutoff=cutoff)
+        
+        if model_task in ontologyConstants.CLASSIFICATION_URIS:
+            explainer = ClassifierExplainer(model, dataframe.drop([target_name], axis=1, inplace=False), dataframe[target_name],labels=output_names)
+        else:
+            return "AI task not supported. This explainer only supports scikit-learn-based classifiers."
+        if label is None:
+            label=output_names[explainer.pos_label]
+        exp=PrAucComponent(explainer,title ="PR AUC Plot for Class " + str(label),pos_label=label,cutoff=cutoff)
         exp_html=exp.to_html().replace('\n', ' ').replace("\"","'")
 
         response={"type":"html","explanation":exp_html}
@@ -96,7 +107,14 @@ class PRAUC(Resource):
                     "default": 0.5,
                     "range":[0,1],
                     "required":False
-                    } 
+                    },
+                "label":{
+                    "description": "String with the name of the label that will be considered the positive class. Defaults to class at index 1 in configuration file.",
+                    "type":"string",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    }
                 },
         "output_description":{
                 "prauc_curve": "Shows the tradeoff between precision and recall for different thresholds. A high area under the curve represents both high recall and high precision, where high precision relates to a low false positive rate, and high recall relates to a low false negative rate"

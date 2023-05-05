@@ -100,7 +100,7 @@ class IntegratedGradientsImage(Resource):
             if "target_class" in params_json:
                     target_class = params_json["target_class"]
 
-        size=(6.4, 4.8)
+        size=(12, 6)
         if "png_height" in params_json and "png_width" in params_json:
             try:
                 size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
@@ -245,14 +245,14 @@ class IntegratedGradientsImage(Resource):
                 "png_width":{
                     "description": "Width (in pixels) of the png image containing the explanation.",
                     "type":"int",
-                    "default": 640,
+                    "default": 1200,
                     "range":None,
                     "required":False
                     },
                 "png_height": {
                     "description": "Height (in pixels) of the png image containing the explanation.",
                     "type":"int",
-                    "default": 480,
+                    "default": 600,
                     "range":None,
                     "required":False
                     }

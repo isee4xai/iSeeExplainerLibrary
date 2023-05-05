@@ -2,13 +2,13 @@ from flask_restful import Resource
 import joblib
 import json
 from explainerdashboard import ClassifierExplainer
-from explainerdashboard.dashboard_components.classifier_components import RocAucComponent
+from explainerdashboard.dashboard_components.classifier_components import PrecisionComponent
 from flask import request
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
 
 
-class ROCAUC(Resource):
+class PrecisionGraph(Resource):
 
     def __init__(self,model_folder,upload_folder):
         self.model_folder = model_folder
@@ -28,29 +28,21 @@ class ROCAUC(Resource):
         if "params" in params:
             params_json=params["params"]
 
-        return self.explain(_id,params_json)
-
-
-    def explain(self,_id,params_json):
-        
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+
+        model_info=json.load(model_info_file)
+        backend = model_info["backend"]
+        model_task = model_info["model_task"]
+
+        if model_task not in ontologyConstants.CLASSIFICATION_URIS:
+            return "AI task not supported. This explainer only supports scikit-learn-based classifiers."
 
         #loading data
         if data_file!=None:
             dataframe = joblib.load(data_file) ##error handling?
         else:
             raise Exception("The training data file was not provided.")
-
-
-        #getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"]
-        target_name=model_info["attributes"]["target_names"][0]
-        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
-        model_task = model_info["model_task"]  
-
-
 
         #loading model (.pkl file)
         if model_file!=None:
@@ -65,9 +57,16 @@ class ROCAUC(Resource):
         else:
             return "Model file was not uploaded."
 
+        return self.explain(model,model_info,dataframe,params_json)
 
 
-        #getting params from request
+    def explain(self,model,model_info,data,params_json):
+        
+        #getting params from model info
+        target_name=model_info["attributes"]["target_names"][0]
+        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+
+        #getting params from json
         cutoff=0.5
         if "cutoff" in params_json:
             try:
@@ -81,14 +80,8 @@ class ROCAUC(Resource):
             except Exception as e:
                 return "Could not convert to label to string: " + str(e)
 
-        
-        if model_task in ontologyConstants.CLASSIFICATION_URIS:
-            explainer = ClassifierExplainer(model, dataframe.drop([target_name], axis=1, inplace=False), dataframe[target_name],labels=output_names)
-        else:
-            return "AI task not supported. This explainer only supports scikit-learn-based classifiers."
-        if label is None:
-            label=output_names[explainer.pos_label]
-        exp=RocAucComponent(explainer,title ="ROC AUC Plot for Class " + str(label),pos_label=label,cutoff=cutoff)
+        explainer = ClassifierExplainer(model, data.drop([target_name], axis=1, inplace=False), data[target_name],labels=output_names)
+        exp=PrecisionComponent(explainer,pos_label=label,cutoff=cutoff,multiclass=True)
         exp_html=exp.to_html().replace('\n', ' ').replace("\"","'")
 
         response={"type":"html","explanation":exp_html}
@@ -97,7 +90,7 @@ class ROCAUC(Resource):
 
     def get(self):
         return {
-        "_method_description": "Displays the ROC AUC (Area under the ROC curve) of the model using the training dataset. Only supports scikit-learn-based models. This method accepts 2 arguments: " 
+        "_method_description": "Displays a precision graph of the model using the training dataset. Only supports scikit-learn-based models. This method accepts 2 arguments: " 
                            "the model 'id' and the 'params' object.",
         "id": "Identifier of the ML model that was stored locally.",
         "params": { 
@@ -117,7 +110,7 @@ class ROCAUC(Resource):
                     }
                 },
         "output_description":{
-                "rocauc_curve": "shows the performance measurement for the classification problem at various threshold settings. ROC is a probability curve and AUC represents the degree or measure of separability. It tells how much the model is capable of distinguishing between classes"
+                "precision_plot": "Shows the percentange and count of instances that actually belong to the positive class against the probability predicted by the model."
          },
         "meta":{
                 "supportsAPI":False,

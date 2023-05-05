@@ -150,9 +150,9 @@ class Lime(Resource):
         hti = Html2Image()
         hti.output_path= os.getcwd()
         print(hti.output_path)
-        size=(640, 480)
+        size=(10, 4)
         if "png_height" in params_json and "png_width" in params_json:
-            size=(int(params_json["png_width"]),int(params_json["png_height"]))
+            size=(int(params_json["png_width"])/100,int(params_json["png_height"])/100)
             hti.screenshot(html_str=explanation.as_html(), save_as="temp.png", size=size)   
         else:
             hti.screenshot(html_str=explanation.as_html(), save_as="temp.png")
@@ -200,14 +200,14 @@ class Lime(Resource):
                         "png_width":{
                         "description": "Width (in pixels) of the png image containing the explanation.",
                         "type":"int",
-                        "default": 640,
+                        "default": 1000,
                         "range":None,
                         "required":False
                     },
                     "png_height": {
                         "description": "Height (in pixels) of the png image containing the explanation.",
                         "type":"int",
-                        "default": 480,
+                        "default": 400,
                         "range":None,
                         "required":False
                     }

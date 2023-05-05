@@ -1,7 +1,7 @@
 from flask_restful import Resource
 import joblib
 import json
-from explainerdashboard import ClassifierExplainer, RegressionExplainer
+from explainerdashboard import ClassifierExplainer
 from explainerdashboard.dashboard_components.classifier_components import LiftCurveComponent
 from flask import request
 from getmodelfiles import get_model_files
@@ -47,6 +47,7 @@ class LiftCurve(Resource):
         model_info=json.load(model_info_file)
         backend = model_info["backend"]
         target_name=model_info["attributes"]["target_names"][0]
+        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         model_task = model_info["model_task"]  
 
         #loading model (.pkl file)
@@ -63,11 +64,9 @@ class LiftCurve(Resource):
             return "Model file was not uploaded."
 
         if model_task in ontologyConstants.CLASSIFICATION_URIS:
-            explainer = ClassifierExplainer(model, dataframe.drop([target_name], axis=1, inplace=False), dataframe[target_name])
-        elif model_task in ontologyConstants.REGRESSION_URIS:
-            explainer = RegressionExplainer(model, dataframe.drop([target_name], axis=1, inplace=False), dataframe[target_name])
+            explainer = ClassifierExplainer(model, dataframe.drop([target_name], axis=1, inplace=False), dataframe[target_name],labels=output_names)
         else:
-            return "AI task not supported. This expliners only supports scikit-learn-based classifiers or regressors."
+            return "AI task not supported. This explainer only supports scikit-learn-based classifiers."
 
         #getting params from request
         cutoff=0.5
@@ -76,8 +75,21 @@ class LiftCurve(Resource):
                 cutoff=float(params_json["cutoff"])
             except Exception as e:
                 return "Could not convert to cuttoff to float: " + str(e)
+        label=None
+        if "label" in params_json:
+            try:
+                label=str(params_json["label"])
+            except Exception as e:
+                return "Could not convert to label to string: " + str(e)
 
-        exp=LiftCurveComponent(explainer,cutoff=cutoff)
+        
+        if model_task in ontologyConstants.CLASSIFICATION_URIS:
+            explainer = ClassifierExplainer(model, dataframe.drop([target_name], axis=1, inplace=False), dataframe[target_name],labels=output_names)
+        else:
+            return "AI task not supported. This explainer only supports scikit-learn-based classifiers."
+        if label is None:
+            label=output_names[explainer.pos_label]
+        exp=LiftCurveComponent(explainer,title ="Lift Curve for Class " + str(label),pos_label=label,cutoff=cutoff)
         exp_html=exp.to_html().replace('\n', ' ').replace("\"","'")
 
         response={"type":"html","explanation":exp_html}
@@ -96,7 +108,14 @@ class LiftCurve(Resource):
                     "default": 0.5,
                     "range":[0,1],
                     "required":False
-                    } 
+                    },
+                "label":{
+                    "description": "String with the name of the label that will be considered the positive class. Defaults to class at index 1 in configuration file.",
+                    "type":"string",
+                    "default": None,
+                    "range":None,
+                    "required":False
+                    }
                 },
         "output_description":{
                 "lift_curve": "shows the relation between the number of instances which were predicted positive and those that are indeed positive."
