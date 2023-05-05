@@ -22,3 +22,14 @@ jobs:
           file: Dockerfile
           tags: isee4xai/explainers:dev
           
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Deploy on dev platform 
+    steps:
+      - uses: distributhor/workflow-webhook@v2
+        env:
+          webhook_url: ${{ secrets.WEBHOOK_URL_DEV }}
+          webhook_secret: ${{ secrets.WEBHOOK_TOKEN_DEV }}
+          data: '{"DOCKER_SERVICE":"explainers"}'
+          webhook_type: 'json-extended'
