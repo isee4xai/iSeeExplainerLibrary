@@ -102,7 +102,7 @@ class LimeImage(Resource):
         if "segmentation_fn" in params_json:
             kwargsData["segmentation_fn"] = SegmentationAlgorithm(params_json["segmentation_fn"])
 
-        size=(6.4, 4.8)
+        size=(12, 12)
         if "png_height" in params_json and "png_width" in params_json:
             try:
                 size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
@@ -164,14 +164,14 @@ class LimeImage(Resource):
                 "png_width":{
                     "description": "Width (in pixels) of the png image containing the explanation.",
                     "type":"int",
-                    "default": 640,
+                    "default": 1200,
                     "range":None,
                     "required":False
                     },
                 "png_height": {
                     "description": "Height (in pixels) of the png image containing the explanation.",
                     "type":"int",
-                    "default": 480,
+                    "default": 1200,
                     "range":None,
                     "required":False
                     }

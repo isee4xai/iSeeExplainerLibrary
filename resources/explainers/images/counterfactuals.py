@@ -16,13 +16,6 @@ from utils import ontologyConstants
 from utils.base64 import base64_to_vector,PIL_to_base64
 from utils.img_processing import normalize_img
 
-BACKENDS=["TF1",
-	"TF2",
-	"TF",
-    "TensorFlow1",
-    "TensorFlow2",
-    "tensorflow1",
-    "tensorflow2"]
 
 class CounterfactualsImage(Resource):
 
@@ -110,7 +103,7 @@ class CounterfactualsImage(Resource):
         if "target_class" in params_json:
              kwargsData["target_class"] = params_json["target_class"]
 
-        size=(6.4, 4.8)
+        size=(6, 6)
         if "png_height" in params_json and "png_width" in params_json:
             try:
                 size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
@@ -169,14 +162,14 @@ class CounterfactualsImage(Resource):
                 "png_width":{
                     "description": "Width (in pixels) of the png image containing the explanation.",
                     "type":"int",
-                    "default": 640,
+                    "default": 600,
                     "range":None,
                     "required":False
                     },
                 "png_height": {
                     "description": "Height (in pixels) of the png image containing the explanation.",
                     "type":"int",
-                    "default": 480,
+                    "default": 600,
                     "range":None,
                     "required":False
                     }

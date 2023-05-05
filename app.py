@@ -31,6 +31,11 @@ from resources.explainers.tabular.confusionMatrix import ConfusionMatrix
 from resources.explainers.tabular.liftCurve import LiftCurve
 from resources.explainers.tabular.rocAuc import ROCAUC
 from resources.explainers.tabular.prAuc import PRAUC     
+from resources.explainers.tabular.precisionGraph import PrecisionGraph
+from resources.explainers.tabular.cumulativePrecision import CumulativePrecision
+from resources.explainers.tabular.summaryMetrics import SummaryMetrics
+from resources.explainers.tabular.regressionPredictedVsActual import RegressionPredictedVsActual
+from resources.explainers.tabular.regressionResiduals import RegressionResiduals
 from resources.explainers.images.lime import LimeImage
 from resources.explainers.images.anchors import AnchorsImage
 from resources.explainers.images.counterfactuals import CounterfactualsImage
@@ -123,6 +128,11 @@ api.add_resource(ConfusionMatrix, '/Tabular/ConfusionMatrix',resource_class_kwar
 api.add_resource(LiftCurve, '/Tabular/LiftCurve',resource_class_kwargs=path_dict)
 api.add_resource(ROCAUC, '/Tabular/ROC-AUC',resource_class_kwargs=path_dict)
 api.add_resource(PRAUC, '/Tabular/PR-AUC',resource_class_kwargs=path_dict)
+api.add_resource(PrecisionGraph, '/Tabular/PrecisionGraph',resource_class_kwargs=path_dict)
+api.add_resource(CumulativePrecision, '/Tabular/CumulativePrecision',resource_class_kwargs=path_dict)
+api.add_resource(SummaryMetrics, '/Tabular/SummaryMetrics',resource_class_kwargs=path_dict)
+api.add_resource(RegressionPredictedVsActual, '/Tabular/RegressionPredictedVsActual',resource_class_kwargs=path_dict)
+api.add_resource(RegressionResiduals, '/Tabular/RegressionResiduals',resource_class_kwargs=path_dict)
 api.add_resource(LimeImage, '/Images/LIME',resource_class_kwargs=path_dict)
 api.add_resource(AnchorsImage, '/Images/Anchors',resource_class_kwargs=path_dict)
 api.add_resource(CounterfactualsImage, '/Images/Counterfactuals',resource_class_kwargs=path_dict)

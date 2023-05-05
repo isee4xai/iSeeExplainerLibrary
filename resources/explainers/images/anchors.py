@@ -104,7 +104,7 @@ class AnchorsImage(Resource):
         if "threshold" in params_json:
             threshold= float(params_json["threshold"])
 
-        size=(6.4, 4.8)
+        size=(4, 4)
         if "png_height" in params_json and "png_width" in params_json:
             try:
                 size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
@@ -159,14 +159,14 @@ class AnchorsImage(Resource):
                 "png_width":{
                     "description": "Width (in pixels) of the png image containing the explanation.",
                     "type":"int",
-                    "default": 640,
+                    "default": 400,
                     "range":None,
                     "required":False
                     },
                 "png_height": {
                     "description": "Height (in pixels) of the png image containing the explanation.",
                     "type":"int",
-                    "default": 480,
+                    "default": 400,
                     "range":None,
                     "required":False
                     }
