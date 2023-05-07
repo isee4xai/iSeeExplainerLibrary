@@ -8,11 +8,10 @@ import json
 import numpy as np
 import requests
 from nice import NICE
-from PIL import Image
 from io import BytesIO
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
-from utils.dataframe_processing import normalize_dict,denormalize_dataframe
+from utils.dataframe_processing import normalize_dataframe,denormalize_dataframe
 import requests
 
 from flask import request
@@ -57,16 +56,19 @@ class Nice(Resource):
         features=model_info["attributes"]["features"]
         output_names=features[target_name]["values_raw"]
         feature_names=list(features.keys())
-        feature_names.remove(target_name)
+
 
         #loading data
         if data_file!=None:
             dataframe = joblib.load(data_file) 
+            dataframe=dataframe[feature_names]
         else:
             raise Exception("The training data file was not provided.")
 
         X=dataframe.drop([target_name], axis=1, inplace=False).values
         y=dataframe.loc[:,target_name].values
+
+        feature_names.remove(target_name)
 
         categorical_features=[]
         for feature in feature_names:
@@ -104,9 +106,15 @@ class Nice(Resource):
             raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
 
         #normalize instance
-        norm_instance=np.array(list(normalize_dict(instance,model_info).values()))
 
-        instance_pred=np.array(predic_func(np.expand_dims(norm_instance,axis=0)))[0]
+        df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
+        if target_name in df_inst.columns:
+            df_inst.drop([target_name], axis=1, inplace=True)
+        df_inst=df_inst[feature_names]
+
+        norm_instance=normalize_dataframe(df_inst,model_info).to_numpy()
+
+        instance_pred=np.array(predic_func(norm_instance)[0])
         print(instance_pred)
 
         ## params from the request
@@ -124,7 +132,7 @@ class Nice(Resource):
 
         # Generate counterfactuals
         NICE_res = NICE(predic_func,X,categorical_features,y_train=y,optimization=optimization_criteria)
-        CF = NICE_res.explain(np.expand_dims(norm_instance,axis=0),target_class=desired_class)[0]
+        CF = NICE_res.explain(norm_instance,target_class=desired_class)[0]
 
         print(norm_instance.shape)
         instance_row=np.array(np.append(norm_instance,np.argmax(instance_pred)))
