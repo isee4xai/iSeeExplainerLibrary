@@ -10,7 +10,7 @@ import numpy as np
 from getmodelfiles import get_model_files
 from flask import request
 from utils import ontologyConstants
-from utils.dataframe_processing import normalize_dict,denormalize_dataframe
+from utils.dataframe_processing import normalize_dataframe,denormalize_dataframe
 
 class DicePublic(Resource):
 
@@ -42,26 +42,41 @@ class DicePublic(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) 
-        else:
-            raise Exception("The training data file was not provided.")
-
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
         features=model_info["attributes"]["features"]
         target_names=model_info["attributes"]["target_names"]
         outcome_name=target_names[0]
-        feature_names=list(dataframe.columns)
+        feature_names=list(features.keys())
+
+
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) 
+            dataframe=dataframe[feature_names]
+        else:
+            raise Exception("The training data file was not provided.")
+
         for target in target_names:
             feature_names.remove(target)
+
+
+        #normalize instance
+        df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
+        for target_name in target_names:    
+            if target_name in df_inst.columns:
+                df_inst.drop([target_name], axis=1, inplace=True)
+        df_inst=df_inst[feature_names]
+        norm_instance=normalize_dataframe(df_inst,model_info)
+        
         cont_features=[]
         for feature in feature_names:
             if features[feature]["data_type"]=="numerical":
                 cont_features.append(feature)
-
+            else:
+                dataframe[feature]=dataframe[feature].astype("int")
+                norm_instance[feature]=norm_instance[feature].astype("int")
 
         ## loading model
         model=None
@@ -86,7 +101,7 @@ class DicePublic(Resource):
         
 
         ## params from request
-        kwargsData = dict(outcome_name=outcome_name)
+        kwargsData = dict(continuous_features=cont_features,outcome_name=outcome_name)
         if "permitted_range" in params_json:
            kwargsData["permitted_range"] = json.loads(params_json["permitted_range"]) if isinstance(params_json["permitted_range"],str) else params_json["permitted_range"]
         
@@ -104,7 +119,7 @@ class DicePublic(Resource):
 
         # Create data
         d = dice_ml.Data(dataframe=dataframe, **{k: v for k, v in kwargsData.items() if v is not None})
-  
+
         # Create model
         m = dice_ml.Model(model=model, backend=back)
 
@@ -114,16 +129,13 @@ class DicePublic(Resource):
            method = params_json["method"]
         exp = dice_ml.Dice(d, m, method=method)
 
-        #normalize instance
-        norm_instance=np.array(list(normalize_dict(instance,model_info).values()))
 
-        instance_df = pd.DataFrame(np.expand_dims(norm_instance,axis=0), columns=feature_names)
        
         # Generate counterfactuals
         if backend in ontologyConstants.SKLEARN_URIS:
-            e1 = exp.generate_counterfactuals(query_instances=instance_df, **{k: v for k, v in kwargsData2.items() if v is not None})
+            e1 = exp.generate_counterfactuals(query_instances=norm_instance, **{k: v for k, v in kwargsData2.items() if v is not None})
         else:
-            e1 = exp.generate_counterfactuals(instance_df, **{k: v for k, v in kwargsData2.items() if v is not None})
+            e1 = exp.generate_counterfactuals(norm_instance, **{k: v for k, v in kwargsData2.items() if v is not None})
         
         #saving
         str_html=''

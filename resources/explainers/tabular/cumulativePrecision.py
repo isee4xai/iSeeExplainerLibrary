@@ -65,6 +65,10 @@ class CumulativePrecision(Resource):
         #getting params from model info
         target_name=model_info["attributes"]["target_names"][0]
         output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+        features=model_info["attributes"]["features"]
+        feature_names=list(features.keys())
+        data=data[feature_names]
+        feature_names.remove(target_name)
 
         #getting params from json
         label=None

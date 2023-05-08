@@ -1,16 +1,22 @@
-from flask_restful import Resource,reqparse
+from flask_restful import Resource
 from flask import request
 import tensorflow as tf
 import torch
 import numpy as np
+import pandas as pd
 import joblib
 import h5py
 import json
 from scipy import signal
 import matplotlib.pyplot as plt
+from io import BytesIO
+from PIL import Image
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from saveinfo import save_file_info
 from getmodelfiles import get_model_files
+from utils import ontologyConstants
+from utils.dataframe_processing import split_sequences, denormalize_dataframe
+from utils.base64 import PIL_to_base64
 import requests
 
 
@@ -22,65 +28,93 @@ class CBRFox(Resource):
         self.upload_folder = upload_folder    
 
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('id',required=True)
-        parser.add_argument('instance',required=True)
-        parser.add_argument('params')
-        args = parser.parse_args()
+        params = request.json
+        if params is None:
+            return "The json body is missing."
         
-        _id = args.get("id")
-        instance = json.loads(args.get("instance"))
-        params=args.get("params")
+        #Check params
+        if("id" not in params):
+            return "The model id was not specified in the params."
+        if("type" not in params):
+            return "The instance type was not specified in the params."
+        if("instance" not in params):
+            return "The instance was not specified in the params."
+
+        _id =params["id"]
+        if("type"  in params):
+            inst_type=params["type"]
+        instance=params["instance"]
+        url=None
+        if "url" in params:
+            url=params["url"]
         params_json={}
-        if(params !=None):
-            params_json = json.loads(params)
+        if "params" in params:
+            params_json=params["params"]
+        
         
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        ## loading data
+        ##getting params from info
+        model_info=json.load(model_info_file)
+        backend = model_info["backend"] 
+        target_names=model_info["attributes"]["target_names"]
+        features=model_info["attributes"]["features"]
+        feature_names=list(features.keys())
+        k=model_info["attributes"]["window_size"]
+
+        time_feature=None
+        for feature, info_feature in features.items():
+            if(info_feature["data_type"]=="time"):
+                time_feature=feature
+                break       
+
+        #denormalizing instance
+        df_instance=pd.DataFrame(instance,columns=feature_names).drop([time_feature], axis=1, errors='ignore')
+        denorm_instance=denormalize_dataframe(df_instance, model_info).to_numpy()
+        feature_names.remove(time_feature)
+        
+        #loading data
         if data_file!=None:
-            numpy_train = joblib.load(data_file) ##error handling?
+            dataframe = pd.read_csv(data_file,header=0)
         else:
             raise Exception("The training data file was not provided.")
 
-        ##getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"]  ##error handling?
-        kwargsData = dict(feature_names=None, categorical_features=None,categorical_names=None, class_names=None)
-        if "target_columns" in model_info:
-            kwargsData["target_columns"] = model_info["target_columns"]
-        else:
-            raise Exception("The target columns must be specified when uploading the model.")
-        if "feature_names" in model_info:
-            kwargsData["feature_names"] = model_info["feature_names"]
-        else:
-            kwargsData["feature_names"]=["Feature_" + str(i) for i in range(numpy_train.shape[-1])]
+        dataframe.drop([time_feature], axis=1,inplace=True)
+        numpy_train=split_sequences(dataframe,k)
 
-
+        target_columns=[feature_names.index(target) for target in target_names]
+        nonOutputColumns=list(set([i for i in range(len(feature_names))]).difference(set(target_columns)))
+       
         ## getting predict function
         predic_func=None
         if model_file!=None:
-            if backend=="TF1" or backend=="TF2":
+            if backend in ontologyConstants.TENSORFLOW_URIS:
                 model=h5py.File(model_file, 'w')
                 mlp = tf.keras.models.load_model(model)
-                predic_func=mlp.predict
-            elif backend=="sklearn":
+                predic_func=mlp
+            elif backend in ontologyConstants.SKLEARN_URIS:
                 mlp = joblib.load(model_file)
                 try:
                     predic_func=mlp.predict_proba
                 except:
                     predic_func=mlp.predict
-            elif backend=="PYT":
+            elif backend in ontologyConstants.PYTORCH_URIS:
                 mlp = torch.load(model_file)
                 predic_func=mlp.predict
             else:
-                mlp = joblib.load(model_file)
-                predic_func=mlp.predict
+                try:
+                    mlp = joblib.load(model_file)
+                    predic_func=mlp.predict
+                except Exception as e:
+                    return "Could not extract prediction function from model: " + str(e)
+        elif url!=None:
+            def predict(X):
+                return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
+            predic_func=predict
         else:
-            raise Exception("A stored model for the prediction function must be provided.")
+            raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
 
-  
         #getting params from request
         smoothnessFactor = .03
         punishedSumFactor = .5
@@ -96,20 +130,16 @@ class CBRFox(Resource):
                 explicationMethodResult=method_list.index(method_str)+1
 
         #explanation generation
-        nonOutputColumns=[i for i in range(numpy_train.shape[-1])]
-        for i in kwargsData["target_columns"]:
-            nonOutputColumns.remove(i)
-    
         windows = np.delete(numpy_train, nonOutputColumns, len(numpy_train.shape)-1)
         targetWindow, windows = windows[-1], windows[:-1]
         windowsLen = len(windows)
         componentsLen = windows.shape[-1]
         windowLen = windows.shape[-2]
 
-        prediction = predic_func(np.array([instance]))
+        prediction = predic_func(np.array([denorm_instance]))
         actualPrediction=prediction[-1]
 
-        titleColumns = [ kwargsData["feature_names"][col] for col in kwargsData["target_columns"]]
+        titleColumns = [ feature_names[col] for col in target_columns]
 
         pearsonCorrelation = np.array(([np.corrcoef(windows[currentWindow,:,currentComponent], targetWindow[:,currentComponent])[0][1]
         for currentWindow in range(len(windows)) for currentComponent in range(componentsLen)])).reshape(-1,componentsLen)
@@ -189,9 +219,14 @@ class CBRFox(Resource):
             plt.yticks(lims[f])
         plt.tight_layout()
 
-        ##saving
-        upload_folder, filename, getcall = save_file_info(request.path,self.upload_folder)
-        plt.savefig(upload_folder+filename+".png",bbox_inches='tight')
+        #saving
+        img_buf = BytesIO()
+        plt.savefig(img_buf,bbox_inches="tight")
+        im = Image.open(img_buf)
+        b64Image=PIL_to_base64(im)
+
+        response={"type":"image","explanation":b64Image}#,"explanation":dict_exp}
+        return response
         
         response={"plot_png":getcall+".png"}
         return response

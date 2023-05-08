@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import tensorflow as tf
+import pandas as pd
 import numpy as np
 import joblib
 import h5py
@@ -12,7 +13,7 @@ from io import BytesIO
 from PIL import Image
 from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
-from utils.dataframe_processing import normalize_dict
+from utils.dataframe_processing import normalize_dataframe
 
 class ShapDeepLocal(Resource):
 
@@ -50,7 +51,7 @@ class ShapDeepLocal(Resource):
         target_name=model_info["attributes"]["target_names"][0]
         output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         feature_names=list(model_info["attributes"]["features"].keys())
-        feature_names.remove(target_name)
+        
 
         #getting params from request
         index=0
@@ -67,10 +68,12 @@ class ShapDeepLocal(Resource):
         #loading data
         if data_file!=None:
             dataframe = joblib.load(data_file) ##error handling?
+            dataframe=dataframe[feature_names]
         else:
             raise Exception("The training data file was not provided.")
 
         dataframe.drop([target_name], axis=1, inplace=True)
+        feature_names.remove(target_name)
 
         #loading model (.h5 file)
         if model_file!=None:
@@ -83,11 +86,15 @@ class ShapDeepLocal(Resource):
             return "Model file was not uploaded."
 
         #normalize instance
-        norm_instance=np.array(list(normalize_dict(instance,model_info).values()))
+        df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
+        if target_name in df_inst.columns:
+            df_inst.drop([target_name], axis=1, inplace=True)
+        df_inst=df_inst[feature_names]
+        norm_instance=normalize_dataframe(df_inst,model_info).to_numpy()[0]
         
         # Create explanation
         explainer = shap.DeepExplainer(model,dataframe.to_numpy())
-        shap_values = explainer.shap_values(np.expand_dims(norm_instance,axis=0))
+        shap_values = explainer.shap_values(norm_instance)
 
         if(len(np.array(shap_values).shape)!=1 and np.array(shap_values).shape[0]!=1):
             explainer.expected_value=explainer.expected_value[index]
@@ -96,15 +103,15 @@ class ShapDeepLocal(Resource):
         #plotting
         plt.switch_backend('agg')
         if plot_type=="bar":
-            shap.plots._bar.bar_legacy(shap_values[0],features=np.array(list(instance.values())),feature_names=feature_names,show=False)
+            shap.plots._bar.bar_legacy(shap_values[0],features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=feature_names,show=False)
         elif plot_type=="decision":
-            shap.decision_plot(explainer.expected_value,shap_values=shap_values[0],features=np.array(list(instance.values())),feature_names=feature_names)
+            shap.decision_plot(explainer.expected_value,shap_values=shap_values[0],features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=feature_names)
         else:
             if plot_type==None:
                 print("No plot type was specified. Defaulting to waterfall plot.")
             elif plot_type!="waterfall":
                 print("No plot with the specified name was found. Defaulting to waterfall plot.")
-            shap.plots._waterfall.waterfall_legacy(explainer.expected_value,shap_values=shap_values[0],features=np.array(list(instance.values())),feature_names=feature_names,show=False)
+            shap.plots._waterfall.waterfall_legacy(explainer.expected_value,shap_values=shap_values[0],features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=feature_names,show=False)
        
         #formatting json output
         #shap_values = [x.tolist() for x in shap_values]

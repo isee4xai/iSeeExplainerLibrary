@@ -48,7 +48,7 @@ class ShapDeepGlobal(Resource):
         target_name=model_info["attributes"]["target_names"][0]
         output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         feature_names=list(model_info["attributes"]["features"].keys())
-        feature_names.remove(target_name)
+        
         
         #getting params from request
         index=0
@@ -62,10 +62,12 @@ class ShapDeepGlobal(Resource):
         #loading data
         if data_file!=None:
             dataframe = joblib.load(data_file) ##error handling?
+            dataframe=dataframe[feature_names]
         else:
             raise Exception("The training data file was not provided.")
 
         dataframe.drop([target_name], axis=1, inplace=True)
+        feature_names.remove(target_name)
 
         #loading model (.h5 file)
         if model_file!=None:

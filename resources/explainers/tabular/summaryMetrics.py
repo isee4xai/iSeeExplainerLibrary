@@ -70,6 +70,8 @@ class SummaryMetrics(Resource):
         except:
             pass
         model_task = model_info["model_task"]
+        feature_names=list(model_info["attributes"]["features"].keys())
+        data=data[feature_names]
 
         #getting params from json
         label=None

@@ -10,7 +10,7 @@ from flask import request
 from discern import discern_tabular
 import tensorflow as tf
 from utils import ontologyConstants
-from utils.dataframe_processing import normalize_dict, denormalize_dataframe
+from utils.dataframe_processing import normalize_dataframe, denormalize_dataframe
 
 class DisCERN(Resource):
 
@@ -45,11 +45,7 @@ class DisCERN(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(model_id, self.model_folder)
 
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) 
-        else:
-            raise Exception("The training data file was not provided.")
+
 
         ## params from info
         model_info=json.load(model_info_file)
@@ -58,6 +54,14 @@ class DisCERN(Resource):
         target_name=model_info["attributes"]["target_names"][0]
         outcome_name=target_name
         feature_names=list(features.keys())
+
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) 
+            dataframe=dataframe[feature_names]
+        else:
+            raise Exception("The training data file was not provided.")
+
         feature_names.remove(outcome_name)
         categorical_features=[]
         for feature in feature_names:
@@ -98,15 +102,19 @@ class DisCERN(Resource):
 
 
         #normalize instance
-        norm_instance=np.array(list(normalize_dict(instance,model_info).values()))
-
+        df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
+        if target_name in df_inst.columns:
+            df_inst.drop([target_name], axis=1, inplace=True)
+        df_inst=df_inst[feature_names]
+        norm_instance=normalize_dataframe(df_inst,model_info).to_numpy()
+        print(norm_instance.shape)
         test_label = None 
         if backend in ontologyConstants.TENSORFLOW_URIS:
-            test_label = model.predict(np.expand_dims(norm_instance,axis=0)).argmax(axis=-1)[0]
+            test_label = model.predict(norm_instance).argmax(axis=-1)[0]
         elif backend in ontologyConstants.SKLEARN_URIS:
-            test_label = model.predict(np.expand_dims(norm_instance,axis=0))[0]
+            test_label = model.predict(norm_instance)[0]
         try:
-            cf, cf_label, s, p = discern_obj.find_cf(norm_instance, test_label, desired_class)
+            cf, cf_label, s, p = discern_obj.find_cf(norm_instance[0], test_label, desired_class)
         except Exception as e:
             print(e)
             return {"type":"text", "explanation":"Counterfactual not found."}
