@@ -44,7 +44,11 @@ class Importance(Resource):
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  
         target_names=model_info["attributes"]["target_names"]
+        features=model_info["attributes"]["features"]
+        feature_names=list(features.keys())
 
+
+        
         #Checking model task
         model_task = model_info["model_task"]  
         if model_task in ontologyConstants.CLASSIFICATION_URIS:
@@ -71,8 +75,12 @@ class Importance(Resource):
         ## loading data
         if data_file!=None:
             dataframe = joblib.load(data_file)
+            dataframe=dataframe[feature_names]
         else:
             raise Exception("The training data file was not provided.")
+
+        for target in target_names:
+            feature_names.remove(target)
 
         ## params from the request
         kwargsData = dict()

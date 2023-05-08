@@ -106,16 +106,14 @@ class Nice(Resource):
             raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
 
         #normalize instance
-
         df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
         if target_name in df_inst.columns:
             df_inst.drop([target_name], axis=1, inplace=True)
         df_inst=df_inst[feature_names]
-
         norm_instance=normalize_dataframe(df_inst,model_info).to_numpy()
 
         instance_pred=np.array(predic_func(norm_instance)[0])
-        print(instance_pred)
+
 
         ## params from the request
         optimization_criteria="sparsity"

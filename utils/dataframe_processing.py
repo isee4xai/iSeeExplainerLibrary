@@ -110,8 +110,6 @@ def normalize_dict(instance,model_info):
                     dictionary=dictionary.rename(columns={feature: feature_dict["ohe_feature"]})                           
     return dictionary
 
-
-
 def split_sequences(sequences, n_steps):
   input = list()
   for i in range(len(sequences)):
@@ -124,4 +122,3 @@ def split_sequences(sequences, n_steps):
     seq = sequences[i:end_ix] #sequences[i:end_ix,:-1], sequences[end_ix:end_ix+1,-1]
     input.append(seq)
   return np.array(input)
- 

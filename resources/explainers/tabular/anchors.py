@@ -2,6 +2,7 @@ from flask_restful import Resource
 from flask import request
 import tensorflow as tf
 import torch
+import pandas as pd
 import numpy as np
 import joblib
 import h5py
@@ -10,7 +11,7 @@ from alibi.explainers import AnchorTabular
 from getmodelfiles import get_model_files
 import requests
 from utils import ontologyConstants
-from utils.dataframe_processing import normalize_dict
+from utils.dataframe_processing import normalize_dataframe
 
 class Anchors(Resource):
 
@@ -52,15 +53,17 @@ class Anchors(Resource):
         target_name=model_info["attributes"]["target_names"][0]
         features=model_info["attributes"]["features"]
         feature_names=list(features.keys())
-        feature_names.remove(target_name)
+        
 
         #loading data
         if data_file!=None:
             dataframe = joblib.load(data_file) ##error handling?
+            dataframe=dataframe[feature_names]
         else:
             raise Exception("The training data file was not provided.")
 
         dataframe.drop([target_name], axis=1, inplace=True)
+        feature_names.remove(target_name)
 
         categorical_names={}
         for feature in feature_names:
@@ -104,7 +107,11 @@ class Anchors(Resource):
             kwargsData2["threshold"] = float(params_json["threshold"])
 
         #normalize instance
-        norm_instance=np.array(list(normalize_dict(instance,model_info).values()))
+        df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
+        if target_name in df_inst.columns:
+            df_inst.drop([target_name], axis=1, inplace=True)
+        df_inst=df_inst[feature_names]
+        norm_instance=normalize_dataframe(df_inst,model_info).to_numpy()
 
         # Create data
         explainer = AnchorTabular(predic_func, **{k: v for k, v in kwargsData.items()})

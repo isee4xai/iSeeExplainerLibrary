@@ -36,11 +36,7 @@ class ROCAUC(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-        else:
-            raise Exception("The training data file was not provided.")
+
 
 
         #getting params from info
@@ -49,8 +45,15 @@ class ROCAUC(Resource):
         target_name=model_info["attributes"]["target_names"][0]
         output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         model_task = model_info["model_task"]  
+        features=model_info["attributes"]["features"]
+        feature_names=list(features.keys())
 
-
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) ##error handling?
+            dataframe=dataframe[feature_names]
+        else:
+            raise Exception("The training data file was not provided.")
 
         #loading model (.pkl file)
         if model_file!=None:

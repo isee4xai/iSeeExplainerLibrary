@@ -1,4 +1,5 @@
 from flask_restful import Resource
+import pandas as pd
 import numpy as np
 import joblib
 import json
@@ -10,7 +11,7 @@ from io import BytesIO
 from PIL import Image
 from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
-from utils.dataframe_processing import normalize_dict
+from utils.dataframe_processing import normalize_dataframe
 
 
 class ShapTreeLocal(Resource):
@@ -79,11 +80,15 @@ class ShapTreeLocal(Resource):
 
         
         #normalize instance
-        norm_instance=np.array(list(normalize_dict(instance,model_info).values()))
+        df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
+        if target_name in df_inst.columns:
+            df_inst.drop([target_name], axis=1, inplace=True)
+        df_inst=df_inst[feature_names]
+        norm_instance=normalize_dataframe(df_inst,model_info).to_numpy()
 
         # Create explanation
         explainer = shap.Explainer(model,**{k: v for k, v in kwargsData.items()})
-        shap_values = explainer.shap_values(np.expand_dims(norm_instance,axis=0))
+        shap_values = explainer.shap_values(norm_instance)
 
         if(len(np.array(shap_values).shape)==3):
             explainer.expected_value=explainer.expected_value[index]
@@ -92,17 +97,17 @@ class ShapTreeLocal(Resource):
         #plotting
         plt.switch_backend('agg')
         if plot_type=="bar":
-            shap.plots._bar.bar_legacy(shap_values[0],features=np.array(list(instance.values())),feature_names=kwargsData["feature_names"],show=False)
+            shap.plots._bar.bar_legacy(shap_values[0],features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"],show=False)
         elif plot_type=="decision":
-            shap.decision_plot(explainer.expected_value,shap_values=shap_values[0],features=np.array(list(instance.values())),feature_names=kwargsData["feature_names"])
+            shap.decision_plot(explainer.expected_value,shap_values=shap_values[0],features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"])
         elif plot_type=="force":
-                shap.plots._force.force(explainer.expected_value,shap_values=shap_values[0],features=np.array(list(instance.values())),feature_names=kwargsData["feature_names"],out_names=target_name,matplotlib=True,show=False)
+                shap.plots._force.force(explainer.expected_value,shap_values=shap_values[0],features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"],out_names=target_name,matplotlib=True,show=False)
         else:
             if plot_type==None:
                 print("No plot type was specified. Defaulting to waterfall plot.")
             elif plot_type!="waterfall":
                 print("No plot with the specified name was found. Defaulting to waterfall plot.")
-            shap.plots._waterfall.waterfall_legacy(explainer.expected_value,shap_values=shap_values[0],features=np.array(list(instance.values())),feature_names=kwargsData["feature_names"],show=False)
+            shap.plots._waterfall.waterfall_legacy(explainer.expected_value,shap_values=shap_values[0],features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"],show=False)
        
         #formatting json output
         #shap_values = [x.tolist() for x in shap_values]
@@ -113,6 +118,7 @@ class ShapTreeLocal(Resource):
         plt.savefig(img_buf,bbox_inches="tight")
         im = Image.open(img_buf)
         b64Image=PIL_to_base64(im)
+        plt.close()
         
         response={"type":"image","explanation":b64Image}
 

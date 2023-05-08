@@ -44,7 +44,6 @@ class IREX(Resource):
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        
 
         ##getting params from info
         model_info=json.load(model_info_file)
@@ -62,6 +61,7 @@ class IREX(Resource):
         if data_file!=None:
             dataframe = joblib.load(data_file) ##error handling?
             dataframe.drop([target_name], axis=1, inplace=True)
+            dataframe=dataframe[feature_names]
         else:
             raise Exception("The training data file was not provided.")
         

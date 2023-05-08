@@ -2,6 +2,7 @@ from flask_restful import Resource
 from flask import request
 import tensorflow as tf
 import torch
+import pandas as pd
 import numpy as np
 import joblib
 import h5py
@@ -12,7 +13,7 @@ from PIL import Image
 from getmodelfiles import get_model_files
 import requests
 from utils import ontologyConstants
-from utils.dataframe_processing import normalize_dict
+from utils.dataframe_processing import normalize_dataframe
 from utils.base64 import PIL_to_base64
 from html2image import Html2Image
 
@@ -49,11 +50,7 @@ class Lime(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        ## loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-        else:
-            raise Exception("The training data file was not provided.")
+
 
         ##getting params from info
         model_info=json.load(model_info_file)
@@ -71,11 +68,19 @@ class Lime(Resource):
         features=model_info["attributes"]["features"]
         target_name=model_info["attributes"]["target_names"][0]
         feature_names=list(features.keys())
-        feature_names.remove(target_name)
         try:
             class_names=features[target_name]["values_raw"]
         except:
             class_names=None
+
+
+         ## loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) ##error handling?
+            dataframe=dataframe[feature_names]
+        else:
+            raise Exception("The training data file was not provided.")
+        feature_names.remove(target_name)
 
         categorical_features=[]
         categorical_names={}
@@ -129,7 +134,11 @@ class Lime(Resource):
             kwargsData2["num_features"] = int(params_json["num_features"])
 
         #normalize instance
-        norm_instance=np.array(list(normalize_dict(instance,model_info).values()))
+        df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
+        if target_name in df_inst.columns:
+            df_inst.drop([target_name], axis=1, inplace=True)
+        df_inst=df_inst[feature_names]
+        norm_instance=normalize_dataframe(df_inst,model_info).to_numpy()[0]
 
         explainer = lime.lime_tabular.LimeTabularExplainer(dataframe.to_numpy(),
                                                           **{k: v for k, v in kwargsData.items() if v is not None})

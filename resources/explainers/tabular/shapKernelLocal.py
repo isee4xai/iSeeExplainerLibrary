@@ -1,6 +1,7 @@
 from flask_restful import Resource
 import tensorflow as tf
 import torch
+import pandas as pd
 import numpy as np
 import joblib
 import h5py
@@ -13,7 +14,7 @@ from io import BytesIO
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
-from utils.dataframe_processing import normalize_dict
+from utils.dataframe_processing import normalize_dataframe
 import requests
 
 class ShapKernelLocal(Resource):
@@ -56,8 +57,7 @@ class ShapKernelLocal(Resource):
         target_name=model_info["attributes"]["target_names"][0]
         output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         feature_names=list(model_info["attributes"]["features"].keys())
-        feature_names.remove(target_name)
-        kwargsData = dict(feature_names=feature_names, output_names=output_names)
+
        
         #getting params from request
         index=0
@@ -75,10 +75,13 @@ class ShapKernelLocal(Resource):
         #loading data
         if data_file!=None:
             dataframe = joblib.load(data_file) ##error handling?
+            dataframe=dataframe[feature_names]
         else:
             raise Exception("The training data file was not provided.")
 
         dataframe.drop([target_name], axis=1, inplace=True)
+        feature_names.remove(target_name)
+        kwargsData = dict(feature_names=feature_names, output_names=output_names)
         
         ## getting predict function
         predic_func=None
@@ -110,7 +113,11 @@ class ShapKernelLocal(Resource):
             raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
 
         #normalize instance
-        norm_instance=np.array(list(normalize_dict(instance,model_info).values()))
+        df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
+        if target_name in df_inst.columns:
+            df_inst.drop([target_name], axis=1, inplace=True)
+        df_inst=df_inst[feature_names]
+        norm_instance=normalize_dataframe(df_inst,model_info).to_numpy()[0]
 
         # Create data
         explainer = shap.KernelExplainer(predic_func, dataframe,**{k: v for k, v in kwargsData.items()})
@@ -123,17 +130,17 @@ class ShapKernelLocal(Resource):
         #plotting
         plt.switch_backend('agg')
         if plot_type=="bar":
-            shap.plots._bar.bar_legacy(shap_values,features=np.array(list(instance.values())),feature_names=kwargsData["feature_names"],show=False)
+            shap.plots._bar.bar_legacy(shap_values,features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"],show=False)
         elif plot_type=="decision":
-            shap.decision_plot(explainer.expected_value,shap_values=shap_values,features=np.array(list(instance.values())),feature_names=kwargsData["feature_names"])
+            shap.decision_plot(explainer.expected_value,shap_values=shap_values,features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"])
         elif plot_type=="force":
-                shap.plots._force.force(explainer.expected_value,shap_values=shap_values,features=np.array(list(instance.values())),feature_names=kwargsData["feature_names"],out_names=target_name,matplotlib=True,show=False)
+                shap.plots._force.force(explainer.expected_value,shap_values=shap_values,features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"],out_names=target_name,matplotlib=True,show=False)
         else:
             if plot_type==None:
                 print("No plot type was specified. Defaulting to waterfall plot.")
             elif plot_type!="waterfall":
                 print("No plot with the specified name was found. Defaulting to waterfall plot.")
-            shap.plots._waterfall.waterfall_legacy(explainer.expected_value,shap_values=shap_values,features=np.array(list(instance.values())),feature_names=kwargsData["feature_names"],show=False)
+            shap.plots._waterfall.waterfall_legacy(explainer.expected_value,shap_values=shap_values,features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"],show=False)
        
         #saving force plot to html (DEPRECATED)
         #additive_exp = shap.force_plot(explainer.expected_value, shap_values,features=np.array(instance),feature_names=kwargsData["feature_names"],out_names=out_names,show=False)
@@ -147,7 +154,8 @@ class ShapKernelLocal(Resource):
         plt.savefig(img_buf,bbox_inches="tight")
         im = Image.open(img_buf)
         b64Image=PIL_to_base64(im)
-        
+        plt.close()
+
         response={"type":"image","explanation":b64Image}
 
         return response

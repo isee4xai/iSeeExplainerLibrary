@@ -42,6 +42,16 @@ class ShapTreeGlobal(Resource):
         target_name=model_info["attributes"]["target_names"][0]
         output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         feature_names=list(model_info["attributes"]["features"].keys())
+
+
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) ##error handling?
+            dataframe=dataframe[feature_names]
+        else:
+            raise Exception("The training data file was not provided.")
+
+        dataframe.drop([target_name], axis=1, inplace=True)
         feature_names.remove(target_name)
         kwargsData = dict(feature_names=feature_names, output_names=output_names)
 
@@ -67,13 +77,7 @@ class ShapTreeGlobal(Resource):
         else:
             return "Model file was not uploaded."
 
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-        else:
-            raise Exception("The training data file was not provided.")
 
-        dataframe.drop([target_name], axis=1, inplace=True)
 
         #creating explanation
         explainer = shap.Explainer(model,**{k: v for k, v in kwargsData.items()})
@@ -96,7 +100,7 @@ class ShapTreeGlobal(Resource):
         plt.savefig(img_buf,bbox_inches='tight')
         im = Image.open(img_buf)
         b64Image=PIL_to_base64(im)
-        
+        plt.close()
         #Insert code for image uploading and getting url
         response={"type":"image","explanation":b64Image}
 
