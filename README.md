@@ -1,5 +1,11 @@
 # ExplainerLibraries
 
+This repository comprises XAI methods (Explainers) used in the iSee Project.
+
+## Want to include your Explainer?
+
+If you want to contribute by including an explainer in the repository, please have a look at the notebooks in the **Explainer Template** folders. Once you have adapted the explainer following the notebook, please reach out to us via Github issues so we can integrate it to the platform. 
+
 ## Using the API with Postman
 
 This quick guide illustrates how to make requests to the ExplanationLibraries server or to a local server, and executing the explanation methods in the API using Postman. 
