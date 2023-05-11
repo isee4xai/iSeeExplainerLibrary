@@ -49,26 +49,22 @@ class Nice(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) 
+        else:
+            raise Exception("The training data file was not provided.")
+
         #getting params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]
         target_name=model_info["attributes"]["target_names"][0]
         features=model_info["attributes"]["features"]
-        output_names=features[target_name]["values_raw"]
-        feature_names=list(features.keys())
-
-
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) 
-            dataframe=dataframe[feature_names]
-        else:
-            raise Exception("The training data file was not provided.")
+        feature_names=list(dataframe.columns)
+        feature_names.remove(target_name)
 
         X=dataframe.drop([target_name], axis=1, inplace=False).values
         y=dataframe.loc[:,target_name].values
-
-        feature_names.remove(target_name)
 
         categorical_features=[]
         for feature in feature_names:

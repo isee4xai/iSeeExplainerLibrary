@@ -44,6 +44,12 @@ class IREX(Resource):
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
+        ## loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) ##error handling?
+            
+        else:
+            raise Exception("The training data file was not provided.")
 
         ##getting params from info
         model_info=json.load(model_info_file)
@@ -53,18 +59,12 @@ class IREX(Resource):
             output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         except:
             output_names=None
-        feature_names=list(model_info["attributes"]["features"].keys())
+        feature_names=list(dataframe.columns)
         feature_names.remove(target_name)
         kwargsData = dict(feature_names=feature_names,target_names=output_names)
 
-        ## loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-            dataframe.drop([target_name], axis=1, inplace=True)
-            dataframe=dataframe[feature_names]
-        else:
-            raise Exception("The training data file was not provided.")
-        
+        dataframe.drop([target_name], axis=1, inplace=True)
+
         ## getting predict function
         predic_func=None
         if model_file!=None:

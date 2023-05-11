@@ -50,7 +50,12 @@ class Lime(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-
+        ## loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) ##error handling?
+        else:
+            raise Exception("The training data file was not provided.")
+        
 
         ##getting params from info
         model_info=json.load(model_info_file)
@@ -67,21 +72,13 @@ class Lime(Resource):
 
         features=model_info["attributes"]["features"]
         target_name=model_info["attributes"]["target_names"][0]
-        feature_names=list(features.keys())
+        feature_names=list(dataframe.columns)
+        feature_names.remove(target_name)
         try:
             class_names=features[target_name]["values_raw"]
         except:
             class_names=None
-
-
-         ## loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-            dataframe=dataframe[feature_names]
-        else:
-            raise Exception("The training data file was not provided.")
-        feature_names.remove(target_name)
-
+        
         categorical_features=[]
         categorical_names={}
         for feature in feature_names:

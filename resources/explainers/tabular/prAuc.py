@@ -36,9 +36,6 @@ class PRAUC(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-
-
-
         #getting params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]

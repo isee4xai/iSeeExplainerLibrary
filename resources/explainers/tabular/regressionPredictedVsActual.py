@@ -62,9 +62,6 @@ class RegressionPredictedVsActual(Resource):
         
         #getting params from model info
         target_name=model_info["attributes"]["target_names"][0]
-        features=model_info["attributes"]["features"]
-        feature_names=list(features.keys())
-        data=data[feature_names]
 
         explainer = RegressionExplainer(model, data.drop([target_name], axis=1, inplace=False), data[target_name],target=target_name)
         exp=PredictedVsActualComponent(explainer)

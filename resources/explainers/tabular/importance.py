@@ -40,14 +40,19 @@ class Importance(Resource):
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
+        ## loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file)
+        else:
+            raise Exception("The training data file was not provided.")
+
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  
         target_names=model_info["attributes"]["target_names"]
-        features=model_info["attributes"]["features"]
-        feature_names=list(features.keys())
-
-
+        feature_names=list(dataframe.columns)
+        for target in target_names:
+            feature_names.remove(target)
         
         #Checking model task
         model_task = model_info["model_task"]  
@@ -72,15 +77,7 @@ class Importance(Resource):
         else:
             return "Model file was not uploaded."
         
-        ## loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file)
-            dataframe=dataframe[feature_names]
-        else:
-            raise Exception("The training data file was not provided.")
 
-        for target in target_names:
-            feature_names.remove(target)
 
         ## params from the request
         kwargsData = dict()

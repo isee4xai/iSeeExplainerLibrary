@@ -37,23 +37,20 @@ class ShapInteraction(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) ##error handling?
+        else:
+            raise Exception("The training data file was not provided.")
 
         #getting params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]
         target_name=model_info["attributes"]["target_names"][0]
         model_task = model_info["model_task"]  
-        features=list(model_info["attributes"]["features"].keys())
-        
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-            dataframe=dataframe[features]
-        else:
-            raise Exception("The training data file was not provided.")
-
+        features=list(dataframe.columns)
         features.remove(target_name)
+
         #loading model (.pkl file)
         if model_file!=None:
             if backend in ontologyConstants.SKLEARN_URIS:
