@@ -55,7 +55,7 @@ class AIModelPerformance(Resource):
         response={"type":"html", "explanation":str_html}
         return response
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Rule based explainer that extracts the performance metrics from case structure representation of the use case.",
         "id": "Identifier of the ML model that was stored locally.",

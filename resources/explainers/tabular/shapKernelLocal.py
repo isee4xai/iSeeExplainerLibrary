@@ -158,7 +158,7 @@ class ShapKernelLocal(Resource):
         return response
 
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "This method displays the contribution of each attribute for an individual prediction based on Shapley values. This method accepts 4 arguments: " 
                            "the 'id', the 'instance', the 'url',  and the 'params' JSON with the configuration parameters of the method. "

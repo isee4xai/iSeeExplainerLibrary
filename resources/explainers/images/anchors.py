@@ -130,7 +130,7 @@ class AnchorsImage(Resource):
         response={"type":"image","explanation":b64Image}#,"explanation":json.loads(explanation.to_json())}
         return response
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Uses anchors to find the groups of pixels that are sufficient for the model to justify the predicted class."
                            "This method accepts 5 arguments: " 

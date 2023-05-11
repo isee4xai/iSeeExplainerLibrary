@@ -122,7 +122,7 @@ class Anchors(Resource):
         return {"type":"dict","explanation":json.loads(json.dumps(ret))}
 
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Anchors provide local explanations in the form of simple boolean rules with a precision score and a "
                             "coverage value which represents the scope in which that rules applies to similar instances. This method accepts 4 arguments: " 

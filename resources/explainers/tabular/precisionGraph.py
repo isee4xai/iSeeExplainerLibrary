@@ -89,7 +89,7 @@ class PrecisionGraph(Resource):
         return response
 
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Displays a precision graph of the model using the training dataset. Only supports scikit-learn-based models. This method accepts 2 arguments: " 
                            "the model 'id' and the 'params' object.",

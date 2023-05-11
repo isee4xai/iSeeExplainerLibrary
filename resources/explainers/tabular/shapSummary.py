@@ -73,7 +73,7 @@ class ShapSummary(Resource):
         return response
 
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Displays de average SHAP values for the top features of the model. Only supports scikit-learn-based models. This method accepts only 1 argument: " 
                            "the model 'id'",

@@ -144,7 +144,7 @@ class DisCERN(Resource):
         response={"type":"html","explanation":str_html}
         return response
     
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Discovering Counterfactual Explanations using Relevance Features from Neighbourhoods (DisCERN) generates counterfactuals for scikit-learn-based models. Requires 3 arguments: " 
                            "the 'id' string, the 'instance' to be explained, and the 'params' object containing the configuration parameters of the explainer."

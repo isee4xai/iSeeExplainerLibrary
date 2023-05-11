@@ -71,7 +71,7 @@ class RegressionPredictedVsActual(Resource):
         return response
 
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Displays a plot of values predicted for the instances against their actual target values.. Only supports scikit-learn-based models. This method accepts only 1 argument: " 
                            "the model 'id'.",

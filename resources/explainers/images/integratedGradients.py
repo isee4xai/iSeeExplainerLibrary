@@ -203,7 +203,7 @@ class IntegratedGradientsImage(Resource):
         response={"type":"image","explanation":b64Image}#,"explanation":json.loads(explanation.to_json())}
         return response
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Defines an attribution value for each pixel in the image provided based on the Integration Gradients method. It only works with Tensorflow/Keras models."
                             "This method accepts 4 arguments: " 

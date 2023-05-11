@@ -136,7 +136,7 @@ class LimeImage(Resource):
         response={"type":"image","explanation":b64Image}#,"explanation":dict_exp}
         return response
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Uses LIME to identify the group of pixels that contribute the most to the predicted class."
                            "This method accepts 5 arguments: " 
