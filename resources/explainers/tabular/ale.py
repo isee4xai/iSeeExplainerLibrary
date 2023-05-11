@@ -163,6 +163,7 @@ class Ale(Resource):
             feature_names.remove(target_name)
 
             base_dict["params"]["features_to_show"]["default"]=feature_names
+            base_dict["params"]["features_to_show"]["range"]=feature_names
 
             return base_dict
            

@@ -92,7 +92,8 @@ class ShapDependence(Resource):
 
 
     def get(self,id=None):
-        return {
+        
+        base_dict={
         "_method_description": "Displays the the relationship between the values of a feature and the SHAP values. Only supports scikit-learn-based models. This method accepts 2 argument: " 
                            "the model 'id', and the 'params' JSON with the configuration parameters of the method. "
                            "These arguments are described below.",
@@ -124,5 +125,31 @@ class ShapDependence(Resource):
             }
   
         }
+
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, data_file = get_model_files(id,self.model_folder)
+            except:
+                return base_dict
+
+
+            dataframe = joblib.load(data_file)
+            model_info=json.load(model_info_file)
+            target_name=model_info["attributes"]["target_names"][0]
+            feature_names=list(dataframe.columns)
+            feature_names.remove(target_name)
+
+            base_dict["params"]["feature"]["default"]="Highest SHAP value"
+            base_dict["params"]["feature"]["range"]=["Highest SHAP value"]+feature_names
+
+            base_dict["params"]["interaction_feature"]["default"]="Highest Interact. value"
+            base_dict["params"]["interaction_feature"]["range"]=["Highest Interact. value"]+feature_names
+
+            return base_dict
+           
+
+        else:
+            return base_dict
     
 
