@@ -36,23 +36,19 @@ class ShapTreeGlobal(Resource):
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) ##error handling?
+        else:
+            raise Exception("The training data file was not provided.")
+
         #getting params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]
         target_name=model_info["attributes"]["target_names"][0]
         output_names=model_info["attributes"]["features"][target_name]["values_raw"]
-        feature_names=list(model_info["attributes"]["features"].keys())
-
-
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-            dataframe=dataframe[feature_names]
-        else:
-            raise Exception("The training data file was not provided.")
-
         dataframe.drop([target_name], axis=1, inplace=True)
-        feature_names.remove(target_name)
+        feature_names=list(dataframe.columns)
         kwargsData = dict(feature_names=feature_names, output_names=output_names)
 
         #getting params from request

@@ -28,13 +28,9 @@ class ShapDeepGlobal(Resource):
         #Check params
         if("id" not in params):
             return "The model id was not specified in the params."
-
         _id =params["id"]
         if("type"  in params):
             inst_type=params["type"]
-        url=None
-        if "url" in params:
-            url=params["url"]
         params_json={}
         if "params" in params:
             params_json=params["params"]
@@ -42,13 +38,19 @@ class ShapDeepGlobal(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) ##error handling?
+        else:
+            raise Exception("The training data file was not provided.")
+
         #getting params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]
         target_name=model_info["attributes"]["target_names"][0]
         output_names=model_info["attributes"]["features"][target_name]["values_raw"]
-        feature_names=list(model_info["attributes"]["features"].keys())
-        
+        dataframe.drop([target_name], axis=1, inplace=True)
+        feature_names=list(dataframe.columns)
         
         #getting params from request
         index=0
@@ -58,16 +60,6 @@ class ShapDeepGlobal(Resource):
                 index=output_names.index(target_class)
             except:
                 pass
-
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-            dataframe=dataframe[feature_names]
-        else:
-            raise Exception("The training data file was not provided.")
-
-        dataframe.drop([target_name], axis=1, inplace=True)
-        feature_names.remove(target_name)
 
         #loading model (.h5 file)
         if model_file!=None:
@@ -128,7 +120,7 @@ class ShapDeepGlobal(Resource):
                                  "on each feature fow. The x position of the dot is determined by the SHAP value of that feature, and dots 'pile up' along each feature row to show density. Color is used to display the original value of a feature. "
                },
         "meta":{
-                "supportsAPI":True,
+                "supportsAPI":False,
                 "needsData": True,
                 "requiresAttributes":[]
             }

@@ -66,9 +66,6 @@ class PrecisionGraph(Resource):
         #getting params from model info
         target_name=model_info["attributes"]["target_names"][0]
         output_names=model_info["attributes"]["features"][target_name]["values_raw"]
-        features=model_info["attributes"]["features"]
-        feature_names=list(features.keys())
-        data=data[feature_names]
 
         #getting params from json
         cutoff=0.5

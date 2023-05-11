@@ -15,7 +15,7 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 from saveinfo import save_file_info
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
-from utils.dataframe_processing import split_sequences, denormalize_dataframe
+from utils.dataframe_processing import split_sequences, normalize_dataframe
 from utils.base64 import PIL_to_base64
 import requests
 
@@ -55,32 +55,35 @@ class CBRFox(Resource):
         #Getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        ##getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"] 
-        target_names=model_info["attributes"]["target_names"]
-        features=model_info["attributes"]["features"]
-        feature_names=list(features.keys())
-        k=model_info["attributes"]["window_size"]
-
-        time_feature=None
-        for feature, info_feature in features.items():
-            if(info_feature["data_type"]=="time"):
-                time_feature=feature
-                break       
-
-        #denormalizing instance
-        df_instance=pd.DataFrame(instance,columns=feature_names).drop([time_feature], axis=1, errors='ignore')
-        denorm_instance=denormalize_dataframe(df_instance, model_info).to_numpy()
-        feature_names.remove(time_feature)
-        
         #loading data
         if data_file!=None:
             dataframe = pd.read_csv(data_file,header=0)
         else:
             raise Exception("The training data file was not provided.")
 
-        dataframe.drop([time_feature], axis=1,inplace=True)
+        ##getting params from info
+        model_info=json.load(model_info_file)
+        backend = model_info["backend"] 
+        target_names=model_info["attributes"]["target_names"]
+        features=model_info["attributes"]["features"]
+        feature_names=list(dataframe.columns)
+        k=model_info["attributes"]["window_size"]
+
+        time_feature=None
+        for feature, info_feature in features.items():
+            if(info_feature["data_type"]=="time"):
+                time_feature=feature
+                break 
+            
+        if time_feature is not None:
+            dataframe.drop([time_feature], axis=1,inplace=True)
+            feature_names.remove(time_feature)
+
+        #denormalizing instance
+        df_instance=pd.DataFrame(instance)
+        df_instance=df_instance[feature_names]
+        norm_instance=normalize_dataframe(df_instance, model_info).to_numpy()
+        
         numpy_train=split_sequences(dataframe,k)
 
         target_columns=[feature_names.index(target) for target in target_names]
@@ -136,7 +139,7 @@ class CBRFox(Resource):
         componentsLen = windows.shape[-1]
         windowLen = windows.shape[-2]
 
-        prediction = predic_func(np.array([denorm_instance]))
+        prediction = predic_func(np.array([norm_instance]))
         actualPrediction=prediction[-1]
 
         titleColumns = [ feature_names[col] for col in target_columns]
@@ -228,8 +231,6 @@ class CBRFox(Resource):
         response={"type":"image","explanation":b64Image}#,"explanation":dict_exp}
         return response
         
-        response={"plot_png":getcall+".png"}
-        return response
 
     def get(self):
         return {

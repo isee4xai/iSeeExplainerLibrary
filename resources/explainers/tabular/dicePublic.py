@@ -42,22 +42,19 @@ class DicePublic(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) 
+        else:
+            raise Exception("The training data file was not provided.")
+
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"]  ##error handling?
         features=model_info["attributes"]["features"]
         target_names=model_info["attributes"]["target_names"]
         outcome_name=target_names[0]
-        feature_names=list(features.keys())
-
-
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) 
-            dataframe=dataframe[feature_names]
-        else:
-            raise Exception("The training data file was not provided.")
-
+        feature_names=list(dataframe.columns)
         for target in target_names:
             feature_names.remove(target)
 

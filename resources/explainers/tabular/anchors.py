@@ -46,24 +46,19 @@ class Anchors(Resource):
         #getting model info, data, and file from local repository
         model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) ##error handling?
+        else:
+            raise Exception("The training data file was not provided.")
 
         ##getting params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"] 
         target_name=model_info["attributes"]["target_names"][0]
         features=model_info["attributes"]["features"]
-        feature_names=list(features.keys())
-        
-
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-            dataframe=dataframe[feature_names]
-        else:
-            raise Exception("The training data file was not provided.")
-
         dataframe.drop([target_name], axis=1, inplace=True)
-        feature_names.remove(target_name)
+        feature_names=list(dataframe.columns)
 
         categorical_names={}
         for feature in feature_names:
