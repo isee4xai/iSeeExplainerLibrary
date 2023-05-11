@@ -159,7 +159,8 @@ class ShapKernelLocal(Resource):
 
 
     def get(self,id=None):
-        return {
+        
+        base_dict={
         "_method_description": "This method displays the contribution of each attribute for an individual prediction based on Shapley values. This method accepts 4 arguments: " 
                            "the 'id', the 'instance', the 'url',  and the 'params' JSON with the configuration parameters of the method. "
                            "These arguments are described below.",
@@ -204,5 +205,24 @@ class ShapKernelLocal(Resource):
                 "requiresAttributes":[]
             }
         }
+
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, _ = get_model_files(id,self.model_folder)
+                model_info=json.load(model_info_file)
+            except:
+                return base_dict
+
+            target_name=model_info["attributes"]["target_names"][0]
+            output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+
+            base_dict["params"]["target_class"]["range"]=output_names
+            base_dict["params"]["target_class"]["default"]=output_names[1]
+
+            return base_dict
+
+        else:
+            return base_dict
     
 

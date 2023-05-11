@@ -53,6 +53,7 @@ class DicePublic(Resource):
         backend = model_info["backend"]  ##error handling?
         features=model_info["attributes"]["features"]
         target_names=model_info["attributes"]["target_names"]
+        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         outcome_name=target_names[0]
         feature_names=list(dataframe.columns)
         for target in target_names:
@@ -104,13 +105,15 @@ class DicePublic(Resource):
         
 
         desired_class=0
-        if(len(features[outcome_name]["values_raw"])==2): #binary classification
+        if(len(output_names)==2): #binary classification
             desired_class="opposite"
         kwargsData2 = dict(desired_class=desired_class,total_CFs=3)
         if "num_cfs" in params_json:
            kwargsData2["total_CFs"] = int(params_json["num_cfs"])
         if "desired_class" in params_json:
-           kwargsData2["desired_class"] = params_json["desired_class"] if params_json["desired_class"]=="opposite" else int(params_json["desired_class"])
+            if params_json["desired_class"]!="opposite":
+                if params_json["desired_class"] in output_names:
+                    desired_class = output_names.index(params_json["desired_class"])
         if "features_to_vary" in params_json:
            kwargsData2["features_to_vary"] = params_json["features_to_vary"] if params_json["features_to_vary"]=="all" else json.loads(params_json["features_to_vary"])
 
@@ -165,7 +168,8 @@ class DicePublic(Resource):
         return response
 
     def get(self,id=None):
-        return {
+       
+        base_dict={
         "_method_description": "Diverse Counterfactual Explanations (DiCE) public method generates counterfactuals using the ML model's training data as a baseline. Accepts 3 arguments: " 
                            "the 'id' string, the 'instance', and the 'params' dictionary (optional) containing the configuration parameters of the explainer."
                            " These arguments are described below.",
@@ -173,8 +177,8 @@ class DicePublic(Resource):
         "instance": "Array representing a row with the feature values of an instance without including the target class.",
         "params": { 
                 "desired_class": {
-                    "description": "Integer representing the index of the desired counterfactual class. Defaults to class 0 for multiclass problems and to opposite class for binary class problems. You may also use the string 'opposite' for binary classification",
-                    "type":"int",
+                    "description": "String representing the desired counterfactual class. Defaults to class 0 for multiclass problems and to opposite class for binary class problems. You may also use the string 'opposite' for binary classification",
+                    "type":"string",
                     "default": None,
                     "range":None,
                     "required":False
@@ -217,3 +221,32 @@ class DicePublic(Resource):
                 "requiresAttributes":[]
             }
         }
+
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, data_file = get_model_files(id,self.model_folder)
+            except:
+                return base_dict
+
+
+            dataframe = joblib.load(data_file)
+            model_info=json.load(model_info_file)
+            target_name=model_info["attributes"]["target_names"][0]
+            output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+            feature_names=list(dataframe.columns)
+            feature_names.remove(target_name)
+
+            if(len(output_names)==2): #binary classification
+                base_dict["params"]["desired_class"]["range"]=["opposite"] + output_names
+                base_dict["params"]["desired_class"]["default"]="opposite"
+            else:
+                base_dict["params"]["desired_class"]["range"]=output_names
+                base_dict["params"]["desired_class"]["default"]=output_names[0]
+
+            base_dict["params"]["features_to_vary"]["default"]=feature_names
+            base_dict["params"]["features_to_vary"]["range"]=feature_names
+        
+            return base_dict
+        else:
+            return base_dict

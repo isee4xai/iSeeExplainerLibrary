@@ -59,6 +59,7 @@ class Nice(Resource):
         model_info=json.load(model_info_file)
         backend = model_info["backend"]
         target_name=model_info["attributes"]["target_names"][0]
+        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         features=model_info["attributes"]["features"]
         feature_names=list(dataframe.columns)
         feature_names.remove(target_name)
@@ -117,12 +118,9 @@ class Nice(Resource):
         if "optimization_criteria" in params_json and params_json["optimization_criteria"] in ["sparsity","proximity","plausibility"]:
            optimization_criteria = params_json["optimization_criteria"]
         if "desired_class" in params_json:
-           try: 
-               u_class=int(params_json["desired_class"])
-               if u_class >= 0 and u_class < instance_pred.shape[-1]:
-                   desired_class=[u_class]
-           except:
-               pass
+            if params_json["desired_class"]!="opposite":
+                if params_json["desired_class"] in output_names:
+                    desired_class = output_names.index(params_json["desired_class"])
 
         # Generate counterfactuals
         NICE_res = NICE(predic_func,X,categorical_features,y_train=y,optimization=optimization_criteria)
@@ -161,7 +159,8 @@ class Nice(Resource):
         return response
 
     def get(self,id=None):
-        return {
+
+        base_dict={
         "_method_description": "NICE is an algorithm to generate Counterfactual Explanations for heterogeneous tabular data."
                                "NICE exploits information from a nearest instance to speed up the search process and guarantee that an explanation will be found. Accepts 4 arguments: " 
                            "the 'id' string, the 'instance', the 'url' (optional), and the 'params' dictionary (optional) containing the configuration parameters of the explainer."
@@ -172,9 +171,9 @@ class Nice(Resource):
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
                 "desired_class": {
-                    "description": "Integer representing the index of the desired counterfactual class. Defaults to string 'other', which will look for any different class.",
-                    "type":"int",
-                    "default": None,
+                    "description": "String representing the name of the desired counterfactual class. Defaults to string 'other', which will look for any different class.",
+                    "type":"string",
+                    "default": "other",
                     "range":None,
                     "required":False
                     },
@@ -195,3 +194,24 @@ class Nice(Resource):
                 "requiresAttributes":[]
             }
         }
+
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, data_file = get_model_files(id,self.model_folder)
+            except:
+                return base_dict
+
+
+            dataframe = joblib.load(data_file)
+            model_info=json.load(model_info_file)
+            target_name=model_info["attributes"]["target_names"][0]
+            output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+            feature_names=list(dataframe.columns)
+            feature_names.remove(target_name)
+
+            base_dict["params"]["desired_class"]["range"]=["other"] + output_names
+
+            return base_dict
+        else:
+            return base_dict

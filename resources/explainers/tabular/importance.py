@@ -99,11 +99,12 @@ class Importance(Resource):
 
 
     def get(self,id=None):
-        return {
+
+        base_dict={
         "_method_description": "This method measures the increase in the prediction error of the model after the feature's values are randomly permuted. " 
                                 "A feature is considered important if the error of the model increases significantly when permuting it. Accepts 2 arguments: " 
-                           "the 'id' string, and the 'params' object (optional) containing the configuration parameters of the explainer."
-                           " These arguments are described below.",
+                            "the 'id' string, and the 'params' object (optional) containing the configuration parameters of the explainer."
+                            " These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
         "params": { 
                 "variables": {
@@ -116,11 +117,34 @@ class Importance(Resource):
                 },
         "output_description":{
                 "bar_plot": "A bar plot representing the increase in the prediction error (importance) for the features with the highest values."
-               },
+                },
         "meta":{
                 "supportsAPI":False,
                 "needsData": True,
                 "requiresAttributes":[]
             }
         }
+
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, data_file = get_model_files(id,self.model_folder)
+            except:
+                return base_dict
+
+
+            dataframe = joblib.load(data_file)
+            model_info=json.load(model_info_file)
+            target_name=model_info["attributes"]["target_names"][0]
+            feature_names=list(dataframe.columns)
+            feature_names.remove(target_name)
+
+            base_dict["params"]["variables"]["default"]=feature_names
+            base_dict["params"]["variables"]["range"]=feature_names
+
+            return base_dict
+           
+        else:
+            return base_dict
+         
     

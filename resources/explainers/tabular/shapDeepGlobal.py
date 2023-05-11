@@ -100,7 +100,8 @@ class ShapDeepGlobal(Resource):
 
 
     def get(self,id=None):
-        return {
+        
+        base_dict={
         "_method_description": "This method based on Shapley values computes the average contribution of each feature for the whole training dataset. DeepSHAP is intended for TensorFlow/Keras models only. This method accepts 2 arguments: " 
                            "the 'id', and the 'params' JSON with the configuration parameters of the method. "
                            "These arguments are described below.",
@@ -126,5 +127,24 @@ class ShapDeepGlobal(Resource):
             }
   
         }
+
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, _ = get_model_files(id,self.model_folder)
+                model_info=json.load(model_info_file)
+            except:
+                return base_dict
+
+            target_name=model_info["attributes"]["target_names"][0]
+            output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+
+            base_dict["params"]["target_class"]["range"]=output_names
+            base_dict["params"]["target_class"]["default"]=output_names[1]
+
+            return base_dict
+
+        else:
+            return base_dict
     
 

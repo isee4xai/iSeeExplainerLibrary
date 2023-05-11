@@ -57,6 +57,7 @@ class DisCERN(Resource):
         backend = model_info["backend"]
         features=model_info["attributes"]["features"]
         target_name=model_info["attributes"]["target_names"][0]
+        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         outcome_name=target_name
         feature_names=list(dataframe.columns)
         feature_names.remove(outcome_name)
@@ -81,15 +82,19 @@ class DisCERN(Resource):
         
 
         #getting params from request
-        desired_class='opposite'
+        desired_class=0
+        if(len(output_names)==2): #binary classification
+            desired_class="opposite"
         feature_attribution_method='LIME'
         imm_features = []
         if "desired_class" in params_json:
-            desired_class = params_json["desired_class"] if params_json["desired_class"]=="opposite" else int(params_json["desired_class"])
+            if params_json["desired_class"]!="opposite":
+                if params_json["desired_class"] in output_names:
+                    desired_class = output_names.index(params_json["desired_class"])
         if "feature_attribution_method" in params_json: 
             feature_attribution_method = params_json["feature_attribution_method"]  
         if "immutable_features" in params_json: 
-            imm_features = params_json["immutable_features"]  
+            imm_features = [dataframe.columns.get_loc(c) for c in params_json["immutable_features"] if c in dataframe]
 
         ## init discern
         discern_obj = discern_tabular.DisCERNTabular(model, feature_attribution_method)    
@@ -145,7 +150,8 @@ class DisCERN(Resource):
         return response
     
     def get(self,id=None):
-        return {
+        
+        base_dict={
         "_method_description": "Discovering Counterfactual Explanations using Relevance Features from Neighbourhoods (DisCERN) generates counterfactuals for scikit-learn-based models. Requires 3 arguments: " 
                            "the 'id' string, the 'instance' to be explained, and the 'params' object containing the configuration parameters of the explainer."
                            " These arguments are described below.",
@@ -154,8 +160,8 @@ class DisCERN(Resource):
         "instance": "Array of feature values of the instance to be explained.",
         "params": {
                 "desired_class": {
-                    "description": "Integer representing the index of the desired counterfactual class, or 'opposite' in the case of binary classification. Defaults to 'opposite'.",
-                    "type":"int",
+                    "description": "String representing the name of the desired counterfactual class, or 'opposite' in the case of binary classification. Defaults to 'opposite'.",
+                    "type":"string",
                     "default": None,
                     "range":None,
                     "required":False
@@ -168,9 +174,9 @@ class DisCERN(Resource):
                     "required":False
                     },
                 "immutable_features": {
-                    "description": "Array of feature indices that are immutable. The counterfactual will not recommend to change these features. Default is an empty array",
+                    "description": "Array of feature names that are immutable. The counterfactual will not recommend to change these features. Default is an empty array",
                     "type":"array",
-                    "default": None,
+                    "default": [],
                     "range":None,
                     "required":False
                     },
@@ -186,3 +192,30 @@ class DisCERN(Resource):
             }
         }
 
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, data_file = get_model_files(id,self.model_folder)
+            except:
+                return base_dict
+
+
+            dataframe = joblib.load(data_file)
+            model_info=json.load(model_info_file)
+            target_name=model_info["attributes"]["target_names"][0]
+            output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+            feature_names=list(dataframe.columns)
+            feature_names.remove(target_name)
+
+            if(len(output_names)==2): #binary classification
+                base_dict["params"]["desired_class"]["range"]=["opposite"] + output_names
+                base_dict["params"]["desired_class"]["default"]="opposite"
+            else:
+                base_dict["params"]["desired_class"]["range"]=output_names
+                base_dict["params"]["desired_class"]["default"]=output_names[0]
+
+            base_dict["params"]["immutable_features"]["range"]=feature_names
+        
+            return base_dict
+        else:
+            return base_dict
