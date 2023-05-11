@@ -232,7 +232,7 @@ class CBRFox(Resource):
         return response
         
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "This method applies the Case-Based Reasoning paradigm to provide explanations-by-example, where time series are split into different time-window cases that serve"
                            "as explanation cases for the outcome of the prediction model. It has been designed for domain-expert users -without ML skills- that need to understand and how (future)"

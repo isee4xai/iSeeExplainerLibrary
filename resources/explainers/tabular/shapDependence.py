@@ -91,7 +91,7 @@ class ShapDependence(Resource):
 
 
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Displays the the relationship between the values of a feature and the SHAP values. Only supports scikit-learn-based models. This method accepts 2 argument: " 
                            "the model 'id', and the 'params' JSON with the configuration parameters of the method. "

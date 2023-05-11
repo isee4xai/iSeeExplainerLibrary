@@ -133,7 +133,7 @@ class DicePrivate(Resource):
         response={"type":"html","explanation":str_html}
         return response
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Diverse Counterfactual Explanations (DiCE)  private method generates counterfactuals without training data. However, it requires the format and ranges of the data to be specified when uploading the model. This method is currently supported for TensorFlow models only.  Accepts 3 arguments: " 
                            "the 'id' string, the 'instance', and the 'params' dictionary (optional) containing the configuration parameters of the explainer."

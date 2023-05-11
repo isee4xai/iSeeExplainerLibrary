@@ -160,7 +160,7 @@ class Nice(Resource):
         response={"type":"html","explanation":df_norm.to_html()}
         return response
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "NICE is an algorithm to generate Counterfactual Explanations for heterogeneous tabular data."
                                "NICE exploits information from a nearest instance to speed up the search process and guarantee that an explanation will be found. Accepts 4 arguments: " 

@@ -92,7 +92,8 @@ class Ale(Resource):
         #getting params from request
         kwargsData2 = dict(features=None)
         if "features_to_show" in params_json:
-            kwargsData2["features"] = json.loads(params_json["features_to_show"]) if isinstance(params_json["features_to_show"],str) else params_json["features_to_show"]
+            features = json.loads(params_json["features_to_show"]) if isinstance(params_json["features_to_show"],str) else params_json["features_to_show"]
+            kwargsData2["features"]=[dataframe.columns.get_loc(c) for c in features if c in dataframe]
 
 
         proba_ale_lr = ALE(predic_func, **{k: v for k, v in kwargsData.items()})
@@ -116,33 +117,56 @@ class Ale(Resource):
         return response
 
 
-    def get(self):
-        return {
-        "_method_description": "Computes the accumulated local effects (ALE) of a model for the specified features. This method accepts 3 arguments: " 
-                           "the 'id', the 'url',  and the 'params' JSON with the configuration parameters of the method. "
-                           "These arguments are described below.",
+    def get(self, id=None):
 
-        "id": "Identifier of the ML model that was stored locally.",
-        "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
-               "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
-        "params": { 
-                "features_to_show": {
-                    "description":"Array of ints representing the indices of the features to be explained. Defaults to all features.",
-                    "type":"array",
-                    "default": None,
-                    "range":None,
-                    "required":False
-                    }
+        base_dict={
+            "_method_description": "Computes the accumulated local effects (ALE) of a model for the specified features. This method accepts 3 arguments: " 
+                               "the 'id', the 'url',  and the 'params' JSON with the configuration parameters of the method. "
+                               "These arguments are described below.",
 
-                },
-        "output_description":{
-                "ale_plot": "A plot for each of the specified features where the y-axis represents the global feature effect on the outcome value according to the computed ALE values."
-               },
+            "id": "Identifier of the ML model that was stored locally.",
+            "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
+                   "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
+            "params": { 
+                    "features_to_show": {
+                        "description":"Array of strings representing the name of the features to be explained. Defaults to all features.",
+                        "type":"array",
+                        "default": None,
+                        "range":None,
+                        "required":False
+                        }
 
-        "meta":{
-                "supportsAPI":True,
-                "needsData": True,
-                "requiresAttributes":[]
+                    },
+            "output_description":{
+                    "ale_plot": "A plot for each of the specified features where the y-axis represents the global feature effect on the outcome value according to the computed ALE values."
+                   },
+
+            "meta":{
+                    "supportsAPI":True,
+                    "needsData": True,
+                    "requiresAttributes":[]
+                }
             }
-        }
+        
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, data_file = get_model_files(id,self.model_folder)
+            except:
+                return base_dict
+
+
+            dataframe = joblib.load(data_file)
+            model_info=json.load(model_info_file)
+            target_name=model_info["attributes"]["target_names"][0]
+            feature_names=list(dataframe.columns)
+            feature_names.remove(target_name)
+
+            base_dict["params"]["features_to_show"]["default"]=feature_names
+
+            return base_dict
+           
+
+        else:
+            return base_dict
     

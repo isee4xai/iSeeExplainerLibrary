@@ -98,7 +98,7 @@ class Importance(Resource):
         return response
 
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "This method measures the increase in the prediction error of the model after the feature's values are randomly permuted. " 
                                 "A feature is considered important if the error of the model increases significantly when permuting it. Accepts 2 arguments: " 

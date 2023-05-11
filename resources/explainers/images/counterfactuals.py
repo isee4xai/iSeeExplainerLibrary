@@ -133,7 +133,7 @@ class CounterfactualsImage(Resource):
         response={"type":"image","explanation":b64Image}#,"explanation":json.loads(explanation.to_json())}
         return response
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Finds an image that is similar to the original, but that the model predicts to be from a different class. The class of the conterfactual can be explicitly specified."
                             "This method accepts 5 arguments: " 

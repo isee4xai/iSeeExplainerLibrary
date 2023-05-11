@@ -225,7 +225,8 @@ class NLPClassifierExpl(Resource):
 
         return response
 
-    def get(self):
+    def get(self,id=None):
+
         return {
         "_method_description": "An explainer for NLP classification models. ",
         "id": "Identifier of the ML model that was stored locally.",

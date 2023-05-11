@@ -86,7 +86,7 @@ class ShapInteraction(Resource):
 
 
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Displays the SHAP interaction values of a feature. Only supports scikit-learn-based models. This method accepts 2 argument: " 
                            "the model 'id', and the 'params' JSON with the configuration parameters of the method. "

@@ -124,7 +124,7 @@ class ShapKernelGlobal(Resource):
         return response
 
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "This method based on Shapley values computes the average contribution of each feature for the whole training dataset. This method accepts 3 arguments: " 
                            "the 'id', the 'url',  and the 'params' JSON with the configuration parameters of the method. "

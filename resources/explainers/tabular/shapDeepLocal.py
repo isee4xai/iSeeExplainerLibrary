@@ -129,7 +129,7 @@ class ShapDeepLocal(Resource):
         return response
 
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "This method displays the contribution of each attribute for an individual prediction based on Shapley values (for tree ensemble methods only). Supported for XGBoost, LightGBM, CatBoost, scikit-learn and pyspark tree models. This method accepts 3 arguments: " 
                            "the 'id', the 'instance', and the 'params' dictionary (optional) with the configuration parameters of the method. "

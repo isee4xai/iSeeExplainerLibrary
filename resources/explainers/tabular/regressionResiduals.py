@@ -82,7 +82,7 @@ class RegressionResiduals(Resource):
         return response
 
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Displays a plot of the residual values for this model. Only supports scikit-learn-based models. This method accepts 2 arguments: " 
                            "the model 'id' and the 'params' object.",

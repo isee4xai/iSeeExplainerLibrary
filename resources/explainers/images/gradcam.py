@@ -1,4 +1,3 @@
-from smtpd import MailmanProxy
 from flask_restful import Resource
 from flask import request
 from PIL import Image
@@ -248,7 +247,7 @@ class GradCam(Resource):
             response={"plot_png":getcall+".png"}
             return response
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Gradient-weighted Class Activation Mapping (Grad-CAM), uses the gradients of any target concept, flowing into the final convolutional layer to produce a coarse localization map highlighting important regions in the image for predicting the concept."
                            "This method accepts 4 arguments: " 

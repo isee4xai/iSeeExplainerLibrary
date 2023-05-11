@@ -164,7 +164,7 @@ class DicePublic(Resource):
         response={"type":"html","explanation":str_html}
         return response
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Diverse Counterfactual Explanations (DiCE) public method generates counterfactuals using the ML model's training data as a baseline. Accepts 3 arguments: " 
                            "the 'id' string, the 'instance', and the 'params' dictionary (optional) containing the configuration parameters of the explainer."

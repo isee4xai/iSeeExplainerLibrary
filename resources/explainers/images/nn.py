@@ -181,7 +181,7 @@ class NearestNeighboursImage(Resource):
         response={"type":"image","explanation":b64Image}
         return response
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "Finds the nearest neighbours to a data instances based on minimum euclidean distance",
         "id": "Identifier of the ML model that was stored locally.",

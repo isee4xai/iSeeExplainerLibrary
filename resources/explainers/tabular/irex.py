@@ -155,7 +155,7 @@ class IREX(Resource):
         response = {"type":"image","explanation":b64Image}#"explanation":json.loads(proba_exp_lr.to_json())}
         return response
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "IREX is a reusable method for the Iterative Refinement and EXplanation of classification models. It has been designed for domain-expert users -without machine learning skills- that need to understand" 
         " and improve classification models. This particular implementation of IREX uses ALE to identify anomalous features that may be contradictory to what the expert knowledge indicates. Anomalous features are highlighted in red in an ALE heatmap. This method accepts 3 arguments: " 

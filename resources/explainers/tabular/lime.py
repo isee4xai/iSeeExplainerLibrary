@@ -171,7 +171,7 @@ class Lime(Resource):
         return response
 
 
-    def get(self):
+    def get(self,id=None):
         return {
         "_method_description": "LIME perturbs the input data samples in order to train a simple model that approximates the prediction for the given instance and similar ones. "
                            "The explanation contains the weight of each attribute to the prediction value. This method accepts 4 arguments: " 
