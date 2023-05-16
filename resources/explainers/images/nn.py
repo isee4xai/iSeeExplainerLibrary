@@ -165,10 +165,12 @@ class NearestNeighboursImage(Resource):
             except:
                 print("Could not convert dimensions for .PNG output file. Using default dimensions.")
 
-        fig, axes = plt.subplots(nrows=1, ncols=4, figsize=size, gridspec_kw={'width_ratios':[3,3,3,3]})
+        fig, axes = plt.subplots(nrows=1, ncols=nn_instances.shape[0]+1, figsize=size)
         axes[0].imshow(Image.fromarray(instance_raw))
         axes[0].set_title("Original Image")
         nn_instances = np.squeeze(nn_instances, axis=3) if nn_instances.shape[-1] == 1 else nn_instances
+
+        print(nn_instances.shape)
         for i in range(nn_instances.shape[0]):
             axes[i+1].imshow(Image.fromarray(nn_instances[i]))
             axes[i+1].set_title("Nearest Neighbour "+str(i+1))
