@@ -3,7 +3,7 @@
 class Explainers(Resource):
     def get(self):
         return [ '/Images/Anchors',
-                 '/Images/Counterfactuals',
+                 #'/Images/Counterfactuals',
                  '/Images/GradCam',
                  '/Images/IntegratedGradients',
                  '/Images/LIME',

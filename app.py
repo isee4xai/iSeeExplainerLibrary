@@ -38,7 +38,7 @@ from resources.explainers.tabular.regressionPredictedVsActual import RegressionP
 from resources.explainers.tabular.regressionResiduals import RegressionResiduals
 from resources.explainers.images.lime import LimeImage
 from resources.explainers.images.anchors import AnchorsImage
-from resources.explainers.images.counterfactuals import CounterfactualsImage
+#from resources.explainers.images.counterfactuals import CounterfactualsImage
 from resources.explainers.images.gradcam import GradCam
 from resources.explainers.images.integratedGradients import IntegratedGradientsImage
 from resources.explainers.images.nn import NearestNeighboursImage
@@ -135,7 +135,7 @@ api.add_resource(RegressionPredictedVsActual, '/Tabular/RegressionPredictedVsAct
 api.add_resource(RegressionResiduals, '/Tabular/RegressionResiduals','/Tabular/RegressionResiduals/<id>',resource_class_kwargs=path_dict)
 api.add_resource(LimeImage, '/Images/LIME','/Images/LIME/<id>',resource_class_kwargs=path_dict)
 api.add_resource(AnchorsImage, '/Images/Anchors','/Images/Anchors/<id>',resource_class_kwargs=path_dict)
-api.add_resource(CounterfactualsImage, '/Images/Counterfactuals','/Images/Counterfactuals/<id>',resource_class_kwargs=path_dict)
+#api.add_resource(CounterfactualsImage, '/Images/Counterfactuals','/Images/Counterfactuals/<id>',resource_class_kwargs=path_dict)
 api.add_resource(GradCam, '/Images/GradCam','/Images/GradCam/<id>',resource_class_kwargs=path_dict)
 api.add_resource(IntegratedGradientsImage, '/Images/IntegratedGradients','/Images/IntegratedGradients/<id>',resource_class_kwargs=path_dict)
 api.add_resource(NearestNeighboursImage, '/Images/NearestNeighbours','/Images/NearestNeighbours/<id>',resource_class_kwargs=path_dict)
