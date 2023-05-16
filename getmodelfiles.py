@@ -24,6 +24,8 @@ def get_model_files(_id,model_folder):
             data=open(path + '_data.pkl','rb')
         elif exists(path + '_data.csv'):
             data=open(path + '_data.csv','r')
+        elif exists(path+"_data"):
+            data=path+"_data"
 
         return model, model_info, data
     else:

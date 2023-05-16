@@ -10,7 +10,7 @@ import h5py
 import heapq
 import json
 from io import BytesIO
-import csv
+from io import StringIO
 import matplotlib.pyplot as plt
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
@@ -27,17 +27,17 @@ class NearestNeighboursImage(Resource):
     def nn_data(self, label_raw, label, model_info, encoder, data_file):
         train_data = []
         
-        # if os.path.isdir(data_file):
-        #     # classification image dataset in zipped folder
-        #     _folders = [_f for _f in os.listdir(data_file) if _f == label_raw]
-        #     if len(_folders)!=1:
-        #         raise Exception("No data found.")
-        #     _folder_path = os.path.join(data_file, _folders[0])
-        #     _files = [os.path.join(_folder_path, f) for f in os.listdir(_folder_path)]
-        #     train_data = [np.array(Image.open(f)) for f in _files]
-        #     train_data = normalise_image_batch(train_data, model_info)
-        #     train_encodings = encoder(train_data)
-        #     return train_data, train_encodings
+        if type(data_file)==str and os.path.isdir(data_file):
+            # classification image dataset in zipped folder
+            _folders = [_f for _f in os.listdir(data_file) if _f == label_raw]
+            if len(_folders)!=1:
+                raise Exception("No data found.")
+            _folder_path = os.path.join(data_file, _folders[0])
+            _files = [os.path.join(_folder_path, f) for f in os.listdir(_folder_path)]
+            train_data = np.asarray([np.array(Image.open(f)) for f in _files])
+            train_data = normalise_image_batch(train_data, model_info)
+            train_encodings = encoder(train_data)
+            return train_data, train_encodings
         
         # if os.path.isfile(data_file):
         #     # csv file, first column is column names, 1st column maybe index 
@@ -58,22 +58,24 @@ class NearestNeighboursImage(Resource):
         #                 train_data = train_data.reshape((train_data.shape[0],)+tuple(model_info["attributes"]["features"]["image"]["shape"]))
         #                 train_encodings = encoder(train_data)
         #                 return train_data, train_encodings        
-        header = next(data_file).split(',')
-        header = [elem.strip() for elem in header]
+        
+        else:
+            header = next(data_file).split(',')
+            header = [elem.strip() for elem in header]
 
-        while True:
-            try:
-                s_instance = next(data_file)
-                s_instance = s_instance.replace('\n', '')
-                s_array = s_instance.split(',')
-                if label == float(s_array[-1]):
-                    s_array = [float(s) for s in s_array][:-1]
-                    train_data.append(s_array)
-            except Exception as e: #end of rows
-                train_data = np.asarray(train_data, dtype=float)
-                train_data = train_data.reshape((train_data.shape[0],)+tuple(model_info["attributes"]["features"]["image"]["shape"]))
-                train_encodings = encoder(train_data)
-                return train_data, train_encodings                 
+            while True:
+                try:
+                    s_instance = next(data_file)
+                    s_instance = s_instance.replace('\n', '')
+                    s_array = s_instance.split(',')
+                    if label == float(s_array[-1]):
+                        s_array = [float(s) for s in s_array][:-1]
+                        train_data.append(s_array)
+                except Exception as e: #end of rows
+                    train_data = np.asarray(train_data, dtype=float)
+                    train_data = train_data.reshape((train_data.shape[0],)+tuple(model_info["attributes"]["features"]["image"]["shape"]))
+                    train_encodings = encoder(train_data)
+                    return train_data, train_encodings                 
                     
     def knn(self, sample_size, data, query):
         ecd = euclidean_distances(query, data)[0]
@@ -148,12 +150,14 @@ class NearestNeighboursImage(Resource):
             instance=normalize_img(instance,model_info)
         except Exception as e:
                 return  "Could not normalize instance: " + str(e)
+
         instance_label = int(predic_func(instance)[0].numpy().argmax())
         instance_label_raw = output_names[instance_label]
         train_data, train_encodings = self.nn_data(instance_label_raw, instance_label, model_info, last_layer_func, data_file)
         nn_indices = self.knn(no_neighbours, train_encodings, last_layer_func(instance))
         nn_instances = np.array([train_data[n] for n in nn_indices[1:]])
         nn_instances = denormalise_image_batch(nn_instances, model_info)
+
         size=(12, 6)
         if "png_height" in params_json and "png_width" in params_json:
             try:
@@ -164,7 +168,7 @@ class NearestNeighboursImage(Resource):
         fig, axes = plt.subplots(nrows=1, ncols=4, figsize=size, gridspec_kw={'width_ratios':[3,3,3,3]})
         axes[0].imshow(Image.fromarray(instance_raw))
         axes[0].set_title("Original Image")
-        nn_instances = np.squeeze(nn_instances, axis=3) if nn_instances.shape[3] == 1 else nn_instances
+        nn_instances = np.squeeze(nn_instances, axis=3) if nn_instances.shape[-1] == 1 else nn_instances
         for i in range(nn_instances.shape[0]):
             axes[i+1].imshow(Image.fromarray(nn_instances[i]))
             axes[i+1].set_title("Nearest Neighbour "+str(i+1))
