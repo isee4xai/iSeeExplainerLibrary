@@ -4,11 +4,12 @@ import h5py
 import json
 import dice_ml
 import pandas as pd
+import joblib
 from getmodelfiles import get_model_files
 from flask import request
 from utils import ontologyConstants
 from utils.dataframe_processing import denormalize_dataframe
-from utils.dataframe_processing import normalize_dict
+from utils.dataframe_processing import normalize_dataframe
 
 class DicePrivate(Resource):
 
@@ -38,12 +39,23 @@ class DicePrivate(Resource):
             params_json=params["params"]
         
         #getting model info, data, and file from local repository
-        model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
+        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+
+        #loading data
+        if data_file!=None:
+            dataframe = joblib.load(data_file) 
+        else:
+            raise Exception("The training data file was not provided.")
 
         ## params from info
         model_info=json.load(model_info_file)
         backend = model_info["backend"] 
-        outcome_name=model_info["attributes"]["target_names"][0]
+        target_names=model_info["attributes"]["target_names"]
+        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+        outcome_name=target_names[0]
+        feature_names=list(dataframe.columns)
+        for target in target_names:
+            feature_names.remove(target)
 
         features=model_info["attributes"]["features"]
         feat=features.copy()
@@ -58,7 +70,12 @@ class DicePrivate(Resource):
         feat.pop(outcome_name)
 
         #normalize instance
-        norm_instance=normalize_dict(instance,model_info)
+        df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
+        for target_name in target_names:    
+            if target_name in df_inst.columns:
+                df_inst.drop([target_name], axis=1, inplace=True)
+        df_inst=df_inst[feature_names]
+        norm_instance=normalize_dataframe(df_inst,model_info)
       
         ## loading model
         model=None
@@ -84,8 +101,10 @@ class DicePrivate(Resource):
         if "num_cfs" in params_json:
            kwargsData2["total_CFs"] = int(params_json["num_cfs"])
         if "desired_class" in params_json:
-           kwargsData2["desired_class"] = params_json["desired_class"] if params_json["desired_class"]=="opposite" else int(params_json["desired_class"])
-        if "features_to_vary" in params_json:
+            if params_json["desired_class"]!="opposite":
+                if params_json["desired_class"] in output_names:
+                    desired_class = output_names.index(params_json["desired_class"])
+        if "features_to_vary" in params_json and params_json["features_to_vary"]:
            kwargsData2["features_to_vary"] = params_json["features_to_vary"] if params_json["features_to_vary"]=="all" else json.loads(params_json["features_to_vary"])
 
         # Create data
@@ -102,7 +121,7 @@ class DicePrivate(Resource):
 
        
         # Generate counterfactuals
-        e1 = exp.generate_counterfactuals(pd.DataFrame(norm_instance,index=[0]), **{k: v for k, v in kwargsData2.items() if v is not None})
+        e1 = exp.generate_counterfactuals(norm_instance, **{k: v for k, v in kwargsData2.items() if v is not None})
 
         #saving
         str_html=''
@@ -134,7 +153,8 @@ class DicePrivate(Resource):
         return response
 
     def get(self,id=None):
-        return {
+     
+        base_dict={
         "_method_description": "Diverse Counterfactual Explanations (DiCE)  private method generates counterfactuals without training data. However, it requires the format and ranges of the data to be specified when uploading the model. This method is currently supported for TensorFlow models only.  Accepts 3 arguments: " 
                            "the 'id' string, the 'instance', and the 'params' dictionary (optional) containing the configuration parameters of the explainer."
                            " These arguments are described below.",
@@ -144,8 +164,8 @@ class DicePrivate(Resource):
         "params": { 
 
                 "desired_class": {
-                    "description": "Integer representing the index of the desired counterfactual class. Defaults to class 0 for multiclass problems and to opposite class for binary class problems. You may also use the string 'opposite' for binary classification",
-                    "type":"int",
+                    "description": "String representing the desired counterfactual class. Defaults to class 0 for multiclass problems and to opposite class for binary class problems. You may also use the string 'opposite' for binary classification",
+                    "type":"string",
                     "default": None,
                     "range":None,
                     "required":False
@@ -179,5 +199,34 @@ class DicePrivate(Resource):
                 "modelAccess":"File",
                 "supportsBWImage":False,
                 "needsTrainingData": False
+            }
         }
-        }
+
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, data_file = get_model_files(id,self.model_folder)
+            except:
+                return base_dict
+
+
+            dataframe = joblib.load(data_file)
+            model_info=json.load(model_info_file)
+            target_name=model_info["attributes"]["target_names"][0]
+            output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+            feature_names=list(dataframe.columns)
+            feature_names.remove(target_name)
+
+            if(len(output_names)==2): #binary classification
+                base_dict["params"]["desired_class"]["range"]=["opposite"] + output_names
+                base_dict["params"]["desired_class"]["default"]="opposite"
+            else:
+                base_dict["params"]["desired_class"]["range"]=output_names
+                base_dict["params"]["desired_class"]["default"]=output_names[0]
+
+            base_dict["params"]["features_to_vary"]["default"]=feature_names
+            base_dict["params"]["features_to_vary"]["range"]=feature_names
+        
+            return base_dict
+        else:
+            return base_dict

@@ -98,7 +98,8 @@ class IntegratedGradientsImage(Resource):
 
         if(is_class):
             if "target_class" in params_json:
-                    target_class = params_json["target_class"]
+                if(params_json["target_class"]!="Highest Pred."):
+                    target_class = output_names.index(params_json["target_class"])
 
         size=(12, 6)
         if "png_height" in params_json and "png_width" in params_json:
@@ -204,7 +205,7 @@ class IntegratedGradientsImage(Resource):
         return response
 
     def get(self,id=None):
-        return {
+        base_dict={
         "_method_description": "Defines an attribution value for each pixel in the image provided based on the Integration Gradients method. It only works with Tensorflow/Keras models."
                             "This method accepts 4 arguments: " 
                            "the 'id', the 'params' dictionary (optional) with the configuration parameters of the method, the 'instance' containing the image that will be explained as a matrix, or the 'image' file that can be passed instead of the instance. "
@@ -215,8 +216,8 @@ class IntegratedGradientsImage(Resource):
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
                 "target_class":{
-                    "description": "Integer denoting the desired class for the computation of the attributions. Ignore for regression models. Defaults to the predicted class of the instance.",
-                    "type":"int",
+                    "description": "String denoting the desired class for the computation of the attributions. Ignore for regression models. Defaults to the predicted class of the instance.",
+                    "type":"string",
                     "default": None,
                     "range":None,
                     "required":False
@@ -268,4 +269,31 @@ class IntegratedGradientsImage(Resource):
 
         }
 
-    }
+        }
+
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, _ = get_model_files(id,self.model_folder)
+            except:
+                return base_dict
+
+            model_info=json.load(model_info_file)
+            target_name=model_info["attributes"]["target_names"][0]
+
+
+            if model_info["attributes"]["features"][target_name]["data_type"]=="categorical":
+
+                output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+
+                base_dict["params"]["target_class"]["default"]="Highest Pred."
+                base_dict["params"]["target_class"]["range"]=["Highest Pred."] + output_names
+
+                return base_dict
+
+            else:
+                base_dict["params"].pop("target_class")
+                return base_dict
+
+        else:
+            return base_dict

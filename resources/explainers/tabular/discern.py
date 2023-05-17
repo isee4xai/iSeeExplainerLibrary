@@ -93,7 +93,7 @@ class DisCERN(Resource):
                     desired_class = output_names.index(params_json["desired_class"])
         if "feature_attribution_method" in params_json: 
             feature_attribution_method = params_json["feature_attribution_method"]  
-        if "immutable_features" in params_json: 
+        if "immutable_features" in params_json and params_json["immutable_features"]: 
             imm_features = [dataframe.columns.get_loc(c) for c in params_json["immutable_features"] if c in dataframe]
 
         ## init discern

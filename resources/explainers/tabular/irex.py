@@ -103,8 +103,8 @@ class IREX(Resource):
             return "This method requires the expected answers parameter."
         if "threshold" in params_json:
             threshold = float(params_json["threshold"])
-        if "classes_to_show" in params_json:
-            classes_to_show = json.loads(params_json["classes_to_show"]) if isinstance(params_json["classes_to_show"],str) else params_json["classes_to_show"]
+        if "classes_to_show" in params_json and params_json["classes_to_show"]:
+            classes_to_show = [output_names.index(c) for c in params_json["classes_to_show"]]
 
 
         proba_ale_lr = ALE(predic_func, **{k: v for k, v in kwargsData.items()})
@@ -156,7 +156,8 @@ class IREX(Resource):
         return response
 
     def get(self,id=None):
-        return {
+        
+        base_dict={
         "_method_description": "IREX is a reusable method for the Iterative Refinement and EXplanation of classification models. It has been designed for domain-expert users -without machine learning skills- that need to understand" 
         " and improve classification models. This particular implementation of IREX uses ALE to identify anomalous features that may be contradictory to what the expert knowledge indicates. Anomalous features are highlighted in red in an ALE heatmap. This method accepts 3 arguments: " 
                            "the 'id', the 'url',  and the 'params' JSON with the configuration parameters of the method. "
@@ -182,7 +183,7 @@ class IREX(Resource):
                     "required":False
                     },
                 "classes_to_show": {
-                    "description":"Array of ints representing the indices of the features to be explained. Defaults to all features.",
+                    "description":"Array of string representing the names of the classes to be explained. Defaults to all classes.",
                     "type":"array",
                     "default": None,
                     "range":None,
@@ -196,6 +197,24 @@ class IREX(Resource):
                 "modelAccess":"Any",
                 "supportsBWImage":False,
                 "needsTrainingData": True
+            }
         }
-        }
+
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, _ = get_model_files(id,self.model_folder)
+            except:
+                return base_dict
+
+            model_info=json.load(model_info_file)
+            target_name=model_info["attributes"]["target_names"][0]
+            output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+
+            base_dict["params"]["classes_to_show"]["default"]=output_names
+            base_dict["params"]["classes_to_show"]["range"]=output_names
+        
+            return base_dict
+        else:
+            return base_dict
     

@@ -134,7 +134,7 @@ class LimeImage(Resource):
         return response
 
     def get(self,id=None):
-        return {
+        base_dict= {
         "_method_description": "Uses LIME to identify the group of pixels that contribute the most to the predicted class."
                            "This method accepts 5 arguments: " 
                            "the 'id', the 'url' (optional),  the 'params' dictionary (optional) with the configuration parameters of the method, the 'instance' containing the image that will be explained as a matrix, or the 'image' file instead. "
@@ -145,7 +145,7 @@ class LimeImage(Resource):
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
                 "top_classes":{
-                        "description": "Integer representing the number of classes with the highest prediction probability to be explained. Overrides 'output_classes' if provided.",
+                        "description": "Integer representing the number of classes with the highest prediction probability to be explained.",
                         "type":"int",
                         "default": 1,
                         "range":None,
@@ -183,4 +183,29 @@ class LimeImage(Resource):
                 "needsTrainingData": False
         }
     
-    }
+        }
+
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, _ = get_model_files(id,self.model_folder)
+            except:
+                return base_dict
+
+            model_info=json.load(model_info_file)
+            target_name=model_info["attributes"]["target_names"][0]
+
+            if model_info["attributes"]["features"][target_name]["data_type"]=="categorical":
+
+                output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+                base_dict["params"]["top_classes"]["range"]=[0,len(output_names)]
+
+                return base_dict
+
+            else:
+
+                base_dict["params"].pop("top_classes")
+                return base_dict
+
+        else:
+            return base_dict

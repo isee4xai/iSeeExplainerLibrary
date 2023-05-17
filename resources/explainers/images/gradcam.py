@@ -112,7 +112,8 @@ class GradCam(Resource):
 
         target_class=None
         if "target_class" in params_json:
-            target_class = str(params_json["target_class"])
+            if(params_json["target_class"]!="Highest Pred."):
+                target_class = str(params_json["target_class"])
 
         pred_index=None
         if target_class is not None:
@@ -248,7 +249,7 @@ class GradCam(Resource):
             return response
 
     def get(self,id=None):
-        return {
+        base_dict= {
         "_method_description": "Gradient-weighted Class Activation Mapping (Grad-CAM), uses the gradients of any target concept, flowing into the final convolutional layer to produce a coarse localization map highlighting important regions in the image for predicting the concept."
                            "This method accepts 4 arguments: " 
                            "the 'id', the 'params' dictionary (optional) with the configuration parameters of the method, the 'instance' containing the image that will be explained as a matrix, or the 'image' file instead. "
@@ -280,8 +281,8 @@ class GradCam(Resource):
                     "required":False
                     },
                 "target_class":{
-                    "description": "Integer representing the index of the target class to generate the explanation. If not provided, defaults to the class with the highest predicted probability.",
-                    "type":"int",
+                    "description": "String representing the target class to generate the explanation. If not provided, defaults to the class with the highest predicted probability.",
+                    "type":"string",
                     "default": None,
                     "range":None,
                     "required":False
@@ -303,4 +304,31 @@ class GradCam(Resource):
                 "supportsBWImage":True,
                 "needsTrainingData": False
         }
-    }
+        }
+
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, _ = get_model_files(id,self.model_folder)
+            except:
+                return base_dict
+
+            model_info=json.load(model_info_file)
+            target_name=model_info["attributes"]["target_names"][0]
+
+
+            if model_info["attributes"]["features"][target_name]["data_type"]=="categorical":
+
+                output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+
+                base_dict["params"]["target_class"]["default"]="Highest Pred."
+                base_dict["params"]["target_class"]["range"]=["Highest Pred."] + output_names
+
+                return base_dict
+
+            else:
+                base_dict["params"].pop("target_class")
+                return base_dict
+
+        else:
+            return base_dict
