@@ -113,9 +113,9 @@ class SummaryMetrics(Resource):
                 "metrics_table": "Displays a summary of the performance metrics of the model."
          },
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
             }
   
         }

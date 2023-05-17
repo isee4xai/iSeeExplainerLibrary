@@ -122,9 +122,9 @@ class LiftCurve(Resource):
                 "lift_curve": "shows the relation between the number of instances which were predicted positive and those that are indeed positive."
          },
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
             }
   
         }

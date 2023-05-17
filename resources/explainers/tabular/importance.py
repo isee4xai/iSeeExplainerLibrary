@@ -119,9 +119,9 @@ class Importance(Resource):
                 "bar_plot": "A bar plot representing the increase in the prediction error (importance) for the features with the highest values."
                 },
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
             }
         }
 

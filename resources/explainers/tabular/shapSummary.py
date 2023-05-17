@@ -82,9 +82,9 @@ class ShapSummary(Resource):
                 "bar_plot": "The bar plot displays the average SHAP values for each feature."
          },
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
             }
   
         }

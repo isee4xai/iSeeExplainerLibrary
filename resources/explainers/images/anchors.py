@@ -176,10 +176,9 @@ class AnchorsImage(Resource):
             },
 
         "meta":{
-                "supportsAPI":True,
-                "supportsB&WImage":True,
-                "needsData": False,
-                "requiresAttributes":[]
+                "modelAccess":"Any",
+                "supportsBWImage":True,
+                "needsTrainingData": False
 
             }
 

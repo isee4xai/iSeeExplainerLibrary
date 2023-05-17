@@ -100,9 +100,9 @@ class RegressionResiduals(Resource):
                 "residual_plot": "Shows the difference between the observed response and the fitted response values."
          },
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
             }
   
         }

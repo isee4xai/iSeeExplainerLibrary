@@ -105,10 +105,11 @@ class ShapInteraction(Resource):
         "output_description":{
                 "bar_plot": "The bar plot shows the SHAP interaction values with the other features for the selected feature."
          },
+
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
             }
   
         }

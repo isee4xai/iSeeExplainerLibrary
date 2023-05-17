@@ -262,10 +262,10 @@ class IntegratedGradientsImage(Resource):
             },
 
         "meta":{
-                "supportsAPI":False,
-                "supportsB&WImage":True,
-                "needsData": False,
-                "requiresAttributes":[]
-            }
+                "modelAccess":"File",
+                "supportsBWImage":True,
+                "needsTrainingData": False
 
         }
+
+    }

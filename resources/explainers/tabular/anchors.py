@@ -147,10 +147,10 @@ class Anchors(Resource):
                 "anchor_json": "A JSON object with the boolean rule (anchor) that was found, and values for its precision and coverage (scope in which that rules applies to similar instances)."
                },
 
-        "meta":{
-                "supportsAPI":True,
-                "needsData": True,
-                "requiresAttributes":[]
+            "meta":{
+                    "modelAccess":"Any",
+                    "supportsBWImage":False,
+                    "needsTrainingData": True
             }
         }
     

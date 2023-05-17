@@ -299,17 +299,8 @@ class GradCam(Resource):
             },
 
         "meta":{
-                "supportsAPI":False,
-                "needsData": False,
-                "supportsB&WImage":False,
-                "requiresAttributes":[{"target_layer":"name of target layer to be provided as a string. This is the layer that you want to compute the visualization for. Usually this will be the last convolutional layer in the model. It is also possible to specify internal components of this layer by         passing the target_layer_index parameter in params when making a call to the explainer resource. To get the target layer, this method executes 'model.<target_layer>        [<target_layer_index>]' "
-                                                        "\nSome common examples of these parameters for well-known models:"
-                                                        "\nResnet18 and 50: model.layer4 -> 'target_layer':'layer4'"
-                                                        "\nVGG, densenet161: model.features[-1] -> 'target_layer':'features', 'target_layer_index':-1"
-                                                        "\nmnasnet1_0: model.layers[-1] -> 'target_layer':'layers', 'target_layer_index':-1"},
-
-                                      ]
-
-            }
-
+                "modelAccess":"File",
+                "supportsBWImage":True,
+                "needsTrainingData": False
         }
+    }

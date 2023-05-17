@@ -101,12 +101,12 @@ class CumulativePrecision(Resource):
                 "cumulative_precision_plot": "Shows the cumulative precision per class when sampling the top percentages of the model scores."
          },
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
-            }
-  
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
         }
+  
+    }
 
         if id is not None:
             #Getting model info, data, and file from local repository
