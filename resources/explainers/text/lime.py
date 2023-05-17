@@ -176,8 +176,8 @@ class LimeText(Resource):
                 "The same applies to classification models, but there can be a plot for each possible class. The text instance with highlighted words is included in the explanation."
                },
         "meta":{
-                "supportsAPI":True,
-                "needsData": False,
-                "requiresAttributes":[]
-            }
+                "modelAccess":"Any",
+                "supportsBWImage":False,
+                "needsTrainingData": False
+         }
         }

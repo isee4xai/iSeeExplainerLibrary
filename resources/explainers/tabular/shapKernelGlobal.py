@@ -147,10 +147,11 @@ class ShapKernelGlobal(Resource):
                 "beeswarm_plot": "The beeswarm plot is designed to display an information-dense summary of how the top features in a dataset impact the model's output. Each instance the given explanation is represented by a single dot" 
                                  "on each feature fow. The x position of the dot is determined by the SHAP value of that feature, and dots 'pile up' along each feature row to show density. Color is used to display the original value of a feature. "
                },
+
         "meta":{
-                "supportsAPI":True,
-                "needsData": True,
-                "requiresAttributes":[]
+                "modelAccess":"Any",
+                "supportsBWImage":False,
+                "needsTrainingData": True
             }
         }
 

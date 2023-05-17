@@ -242,8 +242,8 @@ class NLPClassifierExpl(Resource):
                     }
         },
         "meta":{
-                "supportsAPI":False,
-                "needsData": False,
-                "requiresAttributes":[]
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
             }
         }

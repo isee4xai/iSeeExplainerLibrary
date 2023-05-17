@@ -66,8 +66,10 @@ class AIModelPerformance(Resource):
                 "html": "This explanation presents the perfromance metrics of the AI System."
                },
         "meta":{
-                "supportsAPI":True,
-                "needsData": False,
-                "requiresAttributes":[]
-            }
+                "modelAccess":"Any",
+                "supportsBWImage":True,
+                "needsTrainingData": False
+
+
         }
+    }

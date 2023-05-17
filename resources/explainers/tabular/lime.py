@@ -224,8 +224,8 @@ class Lime(Resource):
                },
 
         "meta":{
-                "supportsAPI":True,
-                "needsData": True,
-                "requiresAttributes":[]
-            }
+                "modelAccess":"Any",
+                "supportsBWImage":False,
+                "needsTrainingData": True
+        }
         }

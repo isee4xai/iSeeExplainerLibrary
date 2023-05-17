@@ -119,9 +119,9 @@ class PRAUC(Resource):
                 "prauc_curve": "Shows the tradeoff between precision and recall for different thresholds. A high area under the curve represents both high recall and high precision, where high precision relates to a low false positive rate, and high recall relates to a low false negative rate"
          },
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
             }
   
         } 

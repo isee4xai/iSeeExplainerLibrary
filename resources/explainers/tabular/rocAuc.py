@@ -117,10 +117,11 @@ class ROCAUC(Resource):
         "output_description":{
                 "rocauc_curve": "shows the performance measurement for the classification problem at various threshold settings. ROC is a probability curve and AUC represents the degree or measure of separability. It tells how much the model is capable of distinguishing between classes"
          },
+
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
             }
   
         }

@@ -216,10 +216,10 @@ class DicePublic(Resource):
                 "html_table": "An html page containing a table with the original instance compared against a table with the generated couterfactuals."
                },
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
-            }
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
+        }
         }
 
         if id is not None:

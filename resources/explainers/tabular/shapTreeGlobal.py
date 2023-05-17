@@ -124,9 +124,9 @@ class ShapTreeGlobal(Resource):
                                  "on each feature fow. The x position of the dot is determined by the SHAP value of that feature, and dots 'pile up' along each feature row to show density. Color is used to display the original value of a feature. "
                },
         "meta":{
-                "supportsAPI":True,
-                "needsData": True,
-                "requiresAttributes":[]
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
             }
         }
 

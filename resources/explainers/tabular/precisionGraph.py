@@ -114,10 +114,11 @@ class PrecisionGraph(Resource):
         "output_description":{
                 "precision_plot": "Shows the percentange and count of instances that actually belong to the positive class against the probability predicted by the model."
          },
+
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
             }
   
         }

@@ -101,11 +101,11 @@ class ConfusionMatrix(Resource):
                 "confusion_matrix": "Each row of the matrix represents the instances in an actual class while each column represents the instances in a predicted class."
          },
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
-            }
-  
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
         }
+  
+    }
     
 

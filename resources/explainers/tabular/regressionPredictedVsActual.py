@@ -80,10 +80,10 @@ class RegressionPredictedVsActual(Resource):
                 "predicted_vs_actual": "Shows the values predicted for the instances against their actual target values."
          },
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
-            }
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": True
+         }
   
         }
     

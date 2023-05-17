@@ -193,9 +193,9 @@ class IREX(Resource):
                 "heatmap": "A heatmap displaying the relevance of the features according to ALE, where anomalous features (behavior differring from expected values) are highlighted in red."
                },
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[{"expected_answers":"Array containing the expected answers to the questions of a questionnaire that are supposed to contribute to the target class by experts."}]
-            }
+                "modelAccess":"Any",
+                "supportsBWImage":False,
+                "needsTrainingData": True
+        }
         }
     

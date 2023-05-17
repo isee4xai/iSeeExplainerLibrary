@@ -178,10 +178,9 @@ class LimeImage(Resource):
             },
 
         "meta":{
-                "supportsAPI":True,
-                "supportsB&WImage":False,
-                "needsData": False,
-                "requiresAttributes":[]
-
-            }
+                "modelAccess":"Any",
+                "supportsBWImage":False,
+                "needsTrainingData": False
         }
+    
+    }

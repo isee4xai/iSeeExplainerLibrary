@@ -142,11 +142,11 @@ class Ale(Resource):
                    },
 
             "meta":{
-                    "supportsAPI":True,
-                    "needsData": True,
-                    "requiresAttributes":[]
-                }
+                    "modelAccess":"Any",
+                    "supportsBWImage":False,
+                    "needsTrainingData": True
             }
+        }
         
         if id is not None:
             #Getting model info, data, and file from local repository

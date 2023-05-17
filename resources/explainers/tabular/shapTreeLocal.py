@@ -179,9 +179,9 @@ class ShapTreeLocal(Resource):
                 "bar_plot": "The bar plot is a local feature importance plot, where the bars are the SHAP values for each feature. Note that the feature values are shown in the left next to the feature names."
          },
         "meta":{
-                "supportsAPI":True,
-                "needsData": False,
-                "requiresAttributes":[]
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": False
             }
   
         }

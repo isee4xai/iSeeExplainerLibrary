@@ -188,12 +188,13 @@ class Nice(Resource):
         "output_description":{
                 "html_table": "An html page containing a table with the original instance compared against the generated counterfactual."
                },
+
         "meta":{
-                "supportsAPI":True,
-                "needsData": True,
-                "requiresAttributes":[]
-            }
+                "modelAccess":"Any",
+                "supportsBWImage":False,
+                "needsTrainingData": True
         }
+    }
 
         if id is not None:
             #Getting model info, data, and file from local repository

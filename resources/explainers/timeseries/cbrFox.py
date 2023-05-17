@@ -268,9 +268,9 @@ class CBRFox(Resource):
                     }
                 },
         "meta":{
-                "supportsAPI":False,
-                "needsData": True,
-                "requiresAttributes":[]
+                "modelAccess":"Any",
+                "supportsBWImage":False,
+                "needsTrainingData": True
             }
 
         }

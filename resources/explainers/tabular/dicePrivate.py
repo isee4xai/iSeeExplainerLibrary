@@ -176,9 +176,8 @@ class DicePrivate(Resource):
                 "html_table": "An html page containing a table with the original instance compared against a table with the generated couterfactuals."
                },
         "meta":{
-                "supportsAPI":False,
-                "needsData": False,
-                "needsMin&Max":True,
-                "requiresAttributes":[]
-            }
+                "modelAccess":"File",
+                "supportsBWImage":False,
+                "needsTrainingData": False
+        }
         }
