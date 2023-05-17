@@ -122,11 +122,14 @@ class Lime(Resource):
 
         #getting params from request
 
-        kwargsData2 = dict(labels=None, top_labels=1, num_features=None)
-        if "output_classes" in params_json: #labels
-            kwargsData2["labels"] = json.loads(params_json["output_classes"]) if isinstance(params_json["output_classes"],str) else params_json["output_classes"]  
-        if "top_classes" in params_json:
+        kwargsData2 = dict(labels=None, top_labels=None, num_features=None)
+
+        if "output_classes" in params_json and params_json["output_classes"] and class_names: #labels (if classification)
+            kwargsData2["labels"] = [class_names.index(c) for c in params_json["output_classes"]]
+        if "top_classes" in params_json and class_names: #if classification
             kwargsData2["top_labels"] = int(params_json["top_classes"])   #top labels
+            if(not kwargsData2["top_labels"]):
+                kwargsData2["top_labels"]=None
         if "num_features" in params_json:
             kwargsData2["num_features"] = int(params_json["num_features"])
 
@@ -157,11 +160,12 @@ class Lime(Resource):
         hti.output_path= os.getcwd()
         print(hti.output_path)
         size=(10, 4)
+        css="body {background: white;}"
         if "png_height" in params_json and "png_width" in params_json:
             size=(int(params_json["png_width"])/100,int(params_json["png_height"])/100)
-            hti.screenshot(html_str=explanation.as_html(), save_as="temp.png", size=size)   
+            hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png", size=size)   
         else:
-            hti.screenshot(html_str=explanation.as_html(), save_as="temp.png")
+            hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png")
 
         im=Image.open("temp.png")
         b64Image=PIL_to_base64(im)
@@ -172,7 +176,8 @@ class Lime(Resource):
 
 
     def get(self,id=None):
-        return {
+        
+        base_dict={
         "_method_description": "LIME perturbs the input data samples in order to train a simple model that approximates the prediction for the given instance and similar ones. "
                            "The explanation contains the weight of each attribute to the prediction value. This method accepts 4 arguments: " 
                            "the 'id', the 'instance', the 'url'(optional),  and the 'params' dictionary (optiohnal) with the configuration parameters of the method. "
@@ -183,7 +188,7 @@ class Lime(Resource):
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
                     "output_classes" : {
-                        "description":  "Array of integers representing the classes to be explained. Defaults to class 1.",
+                        "description":  "Array of strings representing the classes to be explained. Defaults to class at index 1. This parameter is overriden by 'top_classes' so make sure to set 'top_classes' to 0 to use it",
                         "type":"array",
                         "default": None,
                         "range":None,
@@ -203,7 +208,7 @@ class Lime(Resource):
                         "range":None,
                         "required":False
                     },
-                        "png_width":{
+                    "png_width":{
                         "description": "Width (in pixels) of the png image containing the explanation.",
                         "type":"int",
                         "default": 1000,
@@ -229,3 +234,38 @@ class Lime(Resource):
                 "needsTrainingData": True
         }
         }
+
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, data_file = get_model_files(id,self.model_folder)
+            except:
+                return base_dict
+
+            dataframe = joblib.load(data_file)
+            model_info=json.load(model_info_file)
+            target_name=model_info["attributes"]["target_names"][0]
+            feature_names=list(dataframe.columns)
+            feature_names.remove(target_name)
+
+            base_dict["params"]["num_features"]["range"]=[1,len(feature_names)]
+            base_dict["params"]["num_features"]["default"]=min(10,len(feature_names))
+
+            if model_info["attributes"]["features"][target_name]["data_type"]=="categorical":
+
+                output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+
+                base_dict["params"]["output_classes"]["default"]=[output_names[1]]
+                base_dict["params"]["output_classes"]["range"]=output_names
+
+                base_dict["params"]["top_classes"]["range"]=[0,len(output_names)]
+
+                return base_dict
+
+            else:
+                base_dict["params"].pop("output_classes")
+                base_dict["params"].pop("top_classes")
+                return base_dict
+
+        else:
+            return base_dict

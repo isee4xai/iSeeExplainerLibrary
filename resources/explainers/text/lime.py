@@ -90,10 +90,12 @@ class LimeText(Resource):
         # Create explainer
         explainer = lime.lime_text.LimeTextExplainer(class_names=output_names)
         kwargsData2 = dict(labels=None, top_labels=1, num_features=None)
-        if "output_classes" in params_json:
-            kwargsData2["labels"] = json.loads(params_json["output_classes"]) if isinstance(params_json["output_classes"],str) else params_json["output_classes"]  #labels
-        if "top_classes" in params_json:
+        if "output_classes" in params_json and params_json["output_classes"] and output_names: #labels (if classification)
+            kwargsData2["labels"] = [output_names.index(c) for c in params_json["output_classes"]]
+        if "top_classes" in params_json and output_names: #if classification
             kwargsData2["top_labels"] = int(params_json["top_classes"])   #top labels
+            if(not kwargsData2["top_labels"]):
+                kwargsData2["top_labels"]=None
         if "num_features" in params_json:
             kwargsData2["num_features"] = int(params_json["num_features"])
 
@@ -125,7 +127,7 @@ class LimeText(Resource):
         return response
 
     def get(self,id=None):
-        return {
+        base_dict= {
         "_method_description": "LIME perturbs the input data samples in order to train a simple model that approximates the prediction for the given instance and similar ones. "
                            "The explanation contains the weight of each word to the prediction value. This method accepts 4 arguments: " 
                            "the 'id', the 'instance', the 'url',  and the 'params' JSON with the configuration parameters of the method. "
@@ -172,7 +174,7 @@ class LimeText(Resource):
                     }
                 },
         "output_description":{
-                "lime_plot": "An image contaning a plot with the most influyent words for the given instance. For regression models, the plot displays both positive and negative contributions of each word to the predicted outcome."
+                "lime_plot": "An image contaning a plot with the most important words for the given instance. For regression models, the plot displays both positive and negative contributions of each word to the predicted outcome."
                 "The same applies to classification models, but there can be a plot for each possible class. The text instance with highlighted words is included in the explanation."
                },
         "meta":{
@@ -181,3 +183,33 @@ class LimeText(Resource):
                 "needsTrainingData": False
          }
         }
+
+        if id is not None:
+            #Getting model info, data, and file from local repository
+            try:
+                _, model_info_file, _ = get_model_files(id,self.model_folder)
+            except:
+                return base_dict
+
+            model_info=json.load(model_info_file)
+            target_name=model_info["attributes"]["target_names"][0]
+
+
+            if model_info["attributes"]["features"][target_name]["data_type"]=="categorical":
+
+                output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+
+                base_dict["params"]["output_classes"]["default"]=[output_names[1]]
+                base_dict["params"]["output_classes"]["range"]=output_names
+
+                base_dict["params"]["top_classes"]["range"]=[0,len(output_names)]
+
+                return base_dict
+
+            else:
+                base_dict["params"].pop("output_classes")
+                base_dict["params"].pop("top_classes")
+                return base_dict
+
+        else:
+            return base_dict

@@ -114,7 +114,7 @@ class DicePublic(Resource):
             if params_json["desired_class"]!="opposite":
                 if params_json["desired_class"] in output_names:
                     desired_class = output_names.index(params_json["desired_class"])
-        if "features_to_vary" in params_json:
+        if "features_to_vary" in params_json and params_json["features_to_vary"]:
            kwargsData2["features_to_vary"] = params_json["features_to_vary"] if params_json["features_to_vary"]=="all" else json.loads(params_json["features_to_vary"])
 
         # Create data

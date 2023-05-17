@@ -91,7 +91,7 @@ class Ale(Resource):
       
         #getting params from request
         kwargsData2 = dict(features=None)
-        if "features_to_show" in params_json:
+        if "features_to_show" in params_json and params_json["features_to_show"]:
             features = json.loads(params_json["features_to_show"]) if isinstance(params_json["features_to_show"],str) else params_json["features_to_show"]
             kwargsData2["features"]=[dataframe.columns.get_loc(c) for c in features if c in dataframe]
 
