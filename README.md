@@ -4,7 +4,11 @@ This repository comprises XAI methods (Explainers) used in the iSee Project.
 
 ## Want to include your Explainer?
 
-If you want to contribute by including an explainer in the repository, please have a look at the notebooks in the **Explainer Template** folders. Once you have adapted the explainer following the notebook, please reach out to us via Github issues so we can integrate it to the platform. 
+If you want to contribute by including an explainer in the repository, please have a look at the notebooks in the **Explainer Template** folders. Once you have adapted the explainer following the notebook, please reach out to us via Github issues so we can integrate it to the platform. You can also open the notebook in colab by clicking on the button below:
+
+<a target="_blank" href="https://colab.research.google.com/github/isee4xai/iSeeExplainerLibrary/blob/dev/Explainer%20Template/iSee_Explainer_Template.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
 
 ## Using the API with Postman
 
