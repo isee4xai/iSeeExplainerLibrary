@@ -45,6 +45,7 @@ from resources.explainers.images.nn import NearestNeighboursImage
 from resources.explainers.text.lime import LimeText
 from resources.explainers.text.nlp_clf_explainer import NLPClassifierExpl
 from resources.explainers.timeseries.cbrFox import CBRFox
+from resources.explainers.timeseries.iGenCBR import IGenCBR
 from resources.explainers.misc.performance import AIModelPerformance
 
 
@@ -142,6 +143,7 @@ api.add_resource(NearestNeighboursImage, '/Images/NearestNeighbours','/Images/Ne
 api.add_resource(LimeText, '/Text/LIME','/Text/LIME/<id>',resource_class_kwargs=path_dict)
 api.add_resource(NLPClassifierExpl, "/Text/NLPClassifier",'/Text/NLPClassifier/<id>', resource_class_kwargs=path_dict)
 api.add_resource(CBRFox, "/Timeseries/CBRFox",'/Timeseries/CBRFox/<id>', resource_class_kwargs=path_dict)
+api.add_resource(IGenCBR, "/Timeseries/iGenCBR",'/Timeseries/iGenCBR/<id>', resource_class_kwargs=path_dict)
 api.add_resource(AIModelPerformance, "/Misc/AIModelPerformance",'/Misc/AIModelPerformance/<id>', resource_class_kwargs=path_dict)
 
 

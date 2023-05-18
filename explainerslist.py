@@ -38,4 +38,5 @@ class Explainers(Resource):
                  '/Text/LIME',
                  '/Text/NLPClassifier',
                  '/Timeseries/CBRFox',
+                 '/Timeseries/iGenCBR',
                  '/Misc/AIModelPerformance']
