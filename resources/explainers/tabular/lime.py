@@ -165,7 +165,7 @@ class Lime(Resource):
             size=(int(params_json["png_width"])/100,int(params_json["png_height"])/100)
             hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png", size=size)   
         else:
-            hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png")
+            hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png",size=(1500,350))
 
         im=Image.open("temp.png")
         b64Image=PIL_to_base64(im)
