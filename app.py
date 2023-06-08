@@ -36,6 +36,8 @@ from resources.explainers.tabular.cumulativePrecision import CumulativePrecision
 from resources.explainers.tabular.summaryMetrics import SummaryMetrics
 from resources.explainers.tabular.regressionPredictedVsActual import RegressionPredictedVsActual
 from resources.explainers.tabular.regressionResiduals import RegressionResiduals
+from resources.explainers.tabular.skPDP import SklearnPDP
+from resources.explainers.tabular.skICE import SklearnICE
 from resources.explainers.images.lime import LimeImage
 from resources.explainers.images.anchors import AnchorsImage
 #from resources.explainers.images.counterfactuals import CounterfactualsImage
@@ -134,6 +136,8 @@ api.add_resource(CumulativePrecision, '/Tabular/CumulativePrecision','/Tabular/C
 api.add_resource(SummaryMetrics, '/Tabular/SummaryMetrics','/Tabular/SummaryMetrics/<id>',resource_class_kwargs=path_dict)
 api.add_resource(RegressionPredictedVsActual, '/Tabular/RegressionPredictedVsActual','/Tabular/RegressionPredictedVsActual/<id>',resource_class_kwargs=path_dict)
 api.add_resource(RegressionResiduals, '/Tabular/RegressionResiduals','/Tabular/RegressionResiduals/<id>',resource_class_kwargs=path_dict)
+api.add_resource(SklearnPDP, '/Tabular/PDP','/Tabular/PDP/<id>',resource_class_kwargs=path_dict)
+api.add_resource(SklearnICE, '/Tabular/ICE','/Tabular/ICE/<id>',resource_class_kwargs=path_dict)
 api.add_resource(LimeImage, '/Images/LIME','/Images/LIME/<id>',resource_class_kwargs=path_dict)
 api.add_resource(AnchorsImage, '/Images/Anchors','/Images/Anchors/<id>',resource_class_kwargs=path_dict)
 #api.add_resource(CounterfactualsImage, '/Images/Counterfactuals','/Images/Counterfactuals/<id>',resource_class_kwargs=path_dict)

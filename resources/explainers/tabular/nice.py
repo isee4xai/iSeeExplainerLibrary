@@ -155,7 +155,7 @@ class Nice(Resource):
         #    hti.screenshot(html_str=df.to_html(), save_as=filename+".png")
         
 
-        response={"type":"html","explanation":df_norm.to_html()}
+        response={"type":"html","explanation":df_norm.to_html().replace("\n"," ")}
         return response
 
     def get(self,id=None):
