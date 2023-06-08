@@ -99,13 +99,16 @@ class Ale(Resource):
         proba_ale_lr = ALE(predic_func, **{k: v for k, v in kwargsData.items()})
         proba_exp_lr = proba_ale_lr.explain(dataframe.drop([target_name], axis=1, inplace=False).to_numpy(),**{k: v for k, v in kwargsData2.items()})
         
+        
         if(kwargsData2["features"]!=None):
-            dim = math.ceil(len(kwargsData2["features"])**(1/2))
+            n_features=len(kwargsData2["features"])
+            dim = math.ceil(n_features**(1/2))
         else:
-            dim = math.ceil(len(proba_exp_lr.feature_names)**(1/2))
+            n_features=len(proba_exp_lr.feature_names)
+            dim = math.ceil(n_features**(1/2))
 
-        fig, ax = plt.subplots(dim, dim, sharey='all');
-        plot_ale(proba_exp_lr,ax=ax,fig_kw={'figwidth': 12, 'figheight': 10})
+        fig, ax = plt.subplots(dim, n_features/dim, sharey='all');
+        plot_ale(proba_exp_lr,ax=ax,fig_kw={'figwidth': dim*4, 'figheight': dim*3})
         
         #saving
         img_buf = BytesIO()

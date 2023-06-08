@@ -53,8 +53,8 @@ class DicePublic(Resource):
         backend = model_info["backend"]  ##error handling?
         features=model_info["attributes"]["features"]
         target_names=model_info["attributes"]["target_names"]
-        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
         outcome_name=target_names[0]
+        output_names=model_info["attributes"]["features"][outcome_name]["values_raw"]
         feature_names=list(dataframe.columns)
         for target in target_names:
             feature_names.remove(target)
@@ -164,7 +164,7 @@ class DicePublic(Resource):
         #    hti.screenshot(html_str=str_html, save_as=filename+".png")
         #response={"plot_html":getcall+".html","plot_png":getcall+".png","explanation":json.loads(e1.to_json())}
         
-        response={"type":"html","explanation":str_html}
+        response={"type":"html","explanation":str_html.replace("\n"," ")}
         return response
 
     def get(self,id=None):

@@ -146,7 +146,7 @@ class DisCERN(Resource):
         #    hti.screenshot(html_str=str_html, save_as=filename+".png")
        
         
-        response={"type":"html","explanation":str_html}
+        response={"type":"html","explanation":str_html.replace("\n"," ")}
         return response
     
     def get(self,id=None):
