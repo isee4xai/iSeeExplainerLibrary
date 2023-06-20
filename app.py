@@ -48,6 +48,9 @@ from resources.explainers.text.lime import LimeText
 from resources.explainers.text.nlp_clf_explainer import NLPClassifierExpl
 from resources.explainers.timeseries.cbrFox import CBRFox
 from resources.explainers.timeseries.iGenCBR import IGenCBR
+from resources.explainers.timeseries.limeSegment import LimeSegment
+from resources.explainers.timeseries.leftist import Leftist
+from resources.explainers.timeseries.neves import Neves
 from resources.explainers.misc.performance import AIModelPerformance
 
 
@@ -148,6 +151,9 @@ api.add_resource(LimeText, '/Text/LIME','/Text/LIME/<id>',resource_class_kwargs=
 api.add_resource(NLPClassifierExpl, "/Text/NLPClassifier",'/Text/NLPClassifier/<id>', resource_class_kwargs=path_dict)
 api.add_resource(CBRFox, "/Timeseries/CBRFox",'/Timeseries/CBRFox/<id>', resource_class_kwargs=path_dict)
 api.add_resource(IGenCBR, "/Timeseries/iGenCBR",'/Timeseries/iGenCBR/<id>', resource_class_kwargs=path_dict)
+api.add_resource(LimeSegment, "/Timeseries/LimeSegment",'/Timeseries/LimeSegment/<id>', resource_class_kwargs=path_dict)
+api.add_resource(Leftist, "/Timeseries/LEFTIST",'/Timeseries/LEFTIST/<id>', resource_class_kwargs=path_dict)
+api.add_resource(Neves, "/Timeseries/NEVES",'/Timeseries/NEVES/<id>', resource_class_kwargs=path_dict)
 api.add_resource(AIModelPerformance, "/Misc/AIModelPerformance",'/Misc/AIModelPerformance/<id>', resource_class_kwargs=path_dict)
 
 
