@@ -31,8 +31,5 @@ seaborn==0.12.1
 lightgbm==3.3.3
 NICEx==0.2.3
 explainerdashboard==0.4.2.1
-<<<<<<< HEAD
 tslearn=0.5.2
 git+https://github.com/isee4xai/LIMESegment
-=======
->>>>>>> d1ceed8c5a5187cd10c1960c3d73eeab0f4cb7bd
