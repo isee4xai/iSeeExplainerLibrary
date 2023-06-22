@@ -39,4 +39,8 @@ class Explainers(Resource):
                  '/Text/NLPClassifier',
                  '/Timeseries/CBRFox',
                  '/Timeseries/iGenCBR',
+                 '/Timeseries/LEFTIST',
+                 '/Timeseries/LIMESegment',
+                 '/Timeseries/NativeGuides',
+                 '/Timeseries/NEVES',
                  '/Misc/AIModelPerformance']
