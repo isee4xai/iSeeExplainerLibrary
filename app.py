@@ -157,7 +157,7 @@ api.add_resource(LimeSegment, "/Timeseries/LIMESegment",'/Timeseries/LIMESegment
 api.add_resource(Leftist, "/Timeseries/LEFTIST",'/Timeseries/LEFTIST/<id>', resource_class_kwargs=path_dict)
 api.add_resource(Neves, "/Timeseries/NEVES",'/Timeseries/NEVES/<id>', resource_class_kwargs=path_dict)
 api.add_resource(NativeGuides, "/Timeseries/NativeGuides",'/Timeseries/NativeGuides/<id>', resource_class_kwargs=path_dict)
-api.add_resource(TSNearestNeighbours, "/Timeseries/NearestNeighbours",'/Timeseries/TSNearestNeighbours/<id>', resource_class_kwargs=path_dict)
+api.add_resource(TSNearestNeighbours, "/Timeseries/NearestNeighbours",'/Timeseries/NearestNeighbours/<id>', resource_class_kwargs=path_dict)
 api.add_resource(AIModelPerformance, "/Misc/AIModelPerformance",'/Misc/AIModelPerformance/<id>', resource_class_kwargs=path_dict)
 
 
