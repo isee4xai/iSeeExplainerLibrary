@@ -163,6 +163,7 @@ class NativeGuides(Resource):
 
         prob_target = predic_func(generated_cf.reshape(1,-1))[0][target]
 
+        # TODO: include timeout
         while prob_target < pred_treshold:
             beta +=0.01 
             generated_cf = generated_cf = dtw_barycenter_averaging([query, insample_cf], weights=np.array([(1-beta), beta]))

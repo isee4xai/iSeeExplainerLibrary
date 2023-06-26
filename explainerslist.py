@@ -42,5 +42,6 @@ class Explainers(Resource):
                  '/Timeseries/LEFTIST',
                  '/Timeseries/LIMESegment',
                  '/Timeseries/NativeGuides',
+                 '/Timeseries/NearestNeighbours',
                  '/Timeseries/NEVES',
                  '/Misc/AIModelPerformance']
