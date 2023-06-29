@@ -72,7 +72,7 @@ class TSNearestNeighbours(Resource):
             distance = str(params_json["distance"])
         n=3
         if "n_neighbours" in params_json: 
-            n = str(params_json["n_neighbours"])
+            n = int(params_json["n_neighbours"])
 
         #reshaping instance
         instance=np.array(instance)
