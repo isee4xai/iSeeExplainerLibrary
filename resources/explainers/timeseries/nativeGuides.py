@@ -71,7 +71,7 @@ class NativeGuides(Resource):
         X_train=dataframe.drop(target_names,axis=1).to_numpy()
         X_train=X_train.reshape(tuple(X_train.shape[:1])+tuple(model_info["attributes"]["features"][feature]["shape"]))
         y_train=dataframe[target_names[0]].to_numpy()
-        feature=features[0]
+ 
 
         #check univariate
         if(1):
