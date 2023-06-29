@@ -38,10 +38,12 @@ class Explainers(Resource):
                  '/Text/LIME',
                  '/Text/NLPClassifier',
                  '/Timeseries/CBRFox',
+                 '/Timeseries/ConfusionMatrix',
                  '/Timeseries/iGenCBR',
                  '/Timeseries/LEFTIST',
                  '/Timeseries/LIMESegment',
                  '/Timeseries/NativeGuides',
                  '/Timeseries/NearestNeighbours',
                  '/Timeseries/NEVES',
+                 '/Timeseries/SummaryMetrics',
                  '/Misc/AIModelPerformance']
