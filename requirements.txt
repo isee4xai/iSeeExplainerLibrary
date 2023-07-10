@@ -33,3 +33,4 @@ NICEx==0.2.3
 explainerdashboard==0.4.2.1
 tslearn==0.5.2
 git+https://github.com/isee4xai/LIMESegment
+pertCF==0.1.18
