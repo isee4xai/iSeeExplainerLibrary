@@ -1,3 +1,4 @@
+from http.client import BAD_REQUEST
 from flask_restful import Resource
 import joblib
 import json
@@ -10,6 +11,7 @@ from flask import request
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
+import traceback
 
 
 class SklearnPDP(Resource):
@@ -21,11 +23,11 @@ class SklearnPDP(Resource):
     def post(self):
         params = request.json
         if params is None:
-            return "The json body is missing."
+            return "The json body is missing.",BAD_REQUEST
         
         #Check params
         if("id" not in params):
-            return "The model id was not specified in the params."
+            return "The model id was not specified in the params.",BAD_REQUEST
 
         _id =params["id"]
         params_json={}
@@ -36,83 +38,84 @@ class SklearnPDP(Resource):
 
 
     def explain(self,_id,params_json):
-        
-        #getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+        try:
+            #getting model info, data, and file from local repository
+            model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        #getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"]
-        target_names=model_info["attributes"]["target_names"]
-        target_name=target_names[0]
-        features=model_info["attributes"]["features"]
+            #getting params from info
+            model_info=json.load(model_info_file)
+            backend = model_info["backend"]
+            target_names=model_info["attributes"]["target_names"]
+            target_name=target_names[0]
+            features=model_info["attributes"]["features"]
 
-        output_names=[]
-        if model_info["attributes"]["features"][target_name]["data_type"]=="categorical": #is classification
-            output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+            output_names=[]
+            if model_info["attributes"]["features"][target_name]["data_type"]=="categorical": #is classification
+                output_names=model_info["attributes"]["features"][target_name]["values_raw"]
 
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-        else:
-            raise Exception("The training data file was not provided.")
-
-        dataframe.drop(target_names,axis=1,inplace=True)
-
-        categorical_features=[]
-        for feature in dataframe.columns:
-            if features[feature]["data_type"]=="categorical":
-                categorical_features.append(True)
+            #loading data
+            if data_file!=None:
+                dataframe = joblib.load(data_file) ##error handling?
             else:
-                categorical_features.append(False)
+                return "The training data file was not provided.",BAD_REQUEST
 
-        print(categorical_features)
+            dataframe.drop(target_names,axis=1,inplace=True)
 
-        #loading model (.pkl file)
-        if model_file!=None:
-            if backend in ontologyConstants.SKLEARN_URIS:
-                model = joblib.load(model_file)
-            elif backend in ontologyConstants.XGBOOST_URIS:
-                model = joblib.load(model_file)
-            elif backend in ontologyConstants.LIGHTGBM_URIS:
-                model = joblib.load(model_file)
+            categorical_features=[]
+            for feature in dataframe.columns:
+                if features[feature]["data_type"]=="categorical":
+                    categorical_features.append(True)
+                else:
+                    categorical_features.append(False)
+
+            print(categorical_features)
+
+            #loading model (.pkl file)
+            if model_file!=None:
+                if backend in ontologyConstants.SKLEARN_URIS:
+                    model = joblib.load(model_file)
+                elif backend in ontologyConstants.XGBOOST_URIS:
+                    model = joblib.load(model_file)
+                elif backend in ontologyConstants.LIGHTGBM_URIS:
+                    model = joblib.load(model_file)
+                else:
+                    return "This explainer only supports scikit-learn-based models",BAD_REQUEST
             else:
-                return "This explainer only supports scikit-learn-based models"
-        else:
-            return "Model file was not uploaded."
+                return "Model file was not uploaded.",BAD_REQUEST
 
-        #getting params from request
-        features=None
-        if "features_to_show" in params_json and params_json["features_to_show"]:
-            features=json.loads(params_json["features_to_show"]) if isinstance(params_json["features_to_show"],str) else params_json["features_to_show"]
-            features=[dataframe.columns.get_loc(c) for c in features if c in dataframe]
+            #getting params from request
+            features=None
+            if "features_to_show" in params_json and params_json["features_to_show"]:
+                features=json.loads(params_json["features_to_show"]) if isinstance(params_json["features_to_show"],str) else params_json["features_to_show"]
+                features=[dataframe.columns.get_loc(c) for c in features if c in dataframe]
 
-        target=None
-        if "target_class" in params_json: # only present for multiclass settings
-            target_class=str(params_json["target_class"])
-            try:
-                target=output_names.index(target_class)
-            except:
-                pass
+            target=None
+            if "target_class" in params_json: # only present for multiclass settings
+                target_class=str(params_json["target_class"])
+                try:
+                    target=output_names.index(target_class)
+                except:
+                    pass
 
-        if(len(output_names)>2 and target is None): #multiclass
-            target=1
+            if(len(output_names)>2 and target is None): #multiclass
+                target=1
 
-        if(features is None):
-            features=[i for i in range(len(dataframe.columns))] #defaults to all features
+            if(features is None):
+                features=[i for i in range(len(dataframe.columns))] #defaults to all features
 
-        fig, ax = plt.subplots(figsize=(18,math.ceil(len(features)/3)*6))
-        PartialDependenceDisplay.from_estimator(model,dataframe,features,categorical_features=categorical_features,feature_names=dataframe.columns,kind="average",ax=ax,target=target)
+            fig, ax = plt.subplots(figsize=(18,math.ceil(len(features)/3)*6))
+            PartialDependenceDisplay.from_estimator(model,dataframe,features,categorical_features=categorical_features,feature_names=dataframe.columns,kind="average",ax=ax,target=target)
 
-        #saving
-        img_buf = BytesIO()
-        plt.savefig(img_buf,bbox_inches="tight")
-        im = Image.open(img_buf)
-        b64Image=PIL_to_base64(im)
+            #saving
+            img_buf = BytesIO()
+            plt.savefig(img_buf,bbox_inches="tight")
+            im = Image.open(img_buf)
+            b64Image=PIL_to_base64(im)
 
-        response={"type":"html","explanation":b64Image}
-        return response
-
+            response={"type":"html","explanation":b64Image}
+            return response
+        except:
+            return traceback.format_exc(), 500
 
     def get(self,id=None):
         

@@ -1,3 +1,4 @@
+from http.client import BAD_REQUEST
 from flask_restful import Resource
 import tensorflow as tf
 import torch
@@ -16,6 +17,7 @@ from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
 from utils.dataframe_processing import normalize_dataframe
 import requests
+import traceback
 
 class ShapKernelLocal(Resource):
 
@@ -24,139 +26,141 @@ class ShapKernelLocal(Resource):
         self.upload_folder = upload_folder
         
     def post(self):
-        params = request.json
-        if params is None:
-            return "The json body is missing."
+        try:
+            params = request.json
+            if params is None:
+                return "The json body is missing."
         
-        #Check params
-        if("id" not in params):
-            return "The model id was not specified in the params."
-        if("type" not in params):
-            return "The instance type was not specified in the params."
-        if("instance" not in params):
-            return "The instance was not specified in the params."
+            #Check params
+            if("id" not in params):
+                return "The model id was not specified in the params.",BAD_REQUEST
+            if("type" not in params):
+                return "The instance type was not specified in the params.",BAD_REQUEST
+            if("instance" not in params):
+                return "The instance was not specified in the params.",BAD_REQUEST
 
-        _id =params["id"]
-        if("type"  in params):
-            inst_type=params["type"]
-        instance=params["instance"]
-        url=None
-        if "url" in params:
-            url=params["url"]
-        params_json={}
-        if "params" in params:
-            params_json=params["params"]
+            _id =params["id"]
+            if("type"  in params):
+                inst_type=params["type"]
+            instance=params["instance"]
+            url=None
+            if "url" in params:
+                url=params["url"]
+            params_json={}
+            if "params" in params:
+                params_json=params["params"]
         
         
-        #getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+            #getting model info, data, and file from local repository
+            model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-        else:
-            raise Exception("The training data file was not provided.")
-
-        #getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"]
-        target_name=model_info["attributes"]["target_names"][0]
-        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
-        dataframe.drop([target_name], axis=1, inplace=True)
-        feature_names=list(dataframe.columns)
-        kwargsData = dict(feature_names=feature_names, output_names=output_names)
-       
-        #getting params from request
-        index=0
-        if "target_class" in params_json:
-            target_class=str(params_json["target_class"])
-            try:
-                index=output_names.index(target_class)
-            except:
-                pass
-        plot_type=None
-        if "plot_type" in params_json:
-            plot_type=params_json["plot_type"]
-
-        
-        
-        ## getting predict function
-        predic_func=None
-        if model_file!=None:
-            if backend in ontologyConstants.TENSORFLOW_URIS:
-                model=h5py.File(model_file, 'w')
-                mlp = tf.keras.models.load_model(model)
-                predic_func=mlp
-            elif backend in ontologyConstants.SKLEARN_URIS:
-                mlp = joblib.load(model_file)
-                try:
-                    predic_func=mlp.predict_proba
-                except:
-                    predic_func=mlp.predict
-            elif backend in ontologyConstants.PYTORCH_URIS:
-                mlp = torch.load(model_file)
-                predic_func=mlp.predict
+            #loading data
+            if data_file!=None:
+                dataframe = joblib.load(data_file) ##error handling?
             else:
-                try:
-                    mlp = joblib.load(model_file)
-                    predic_func=mlp.predict
-                except Exception as e:
-                    return "Could not extract prediction function from model: " + str(e)
-        elif url!=None:
-            def predict(X):
-                return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
-            predic_func=predict
-        else:
-            raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
+                return "The training data file was not provided.",BAD_REQUEST
 
-        #normalize instance
-        df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
-        if target_name in df_inst.columns:
-            df_inst.drop([target_name], axis=1, inplace=True)
-        df_inst=df_inst[feature_names]
-        norm_instance=normalize_dataframe(df_inst,model_info).to_numpy()[0]
-
-        # Create data
-        explainer = shap.KernelExplainer(predic_func, dataframe,**{k: v for k, v in kwargsData.items()})
-        shap_values = explainer.shap_values(norm_instance)
-        
-        if(len(np.array(shap_values).shape)!=1):
-            explainer.expected_value=explainer.expected_value[index]
-            shap_values=shap_values[index]
-            
-        #plotting
-        plt.switch_backend('agg')
-        if plot_type=="bar":
-            shap.plots._bar.bar_legacy(shap_values,features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"],show=False)
-        elif plot_type=="decision":
-            shap.decision_plot(explainer.expected_value,shap_values=shap_values,features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"])
-        elif plot_type=="force":
-                shap.plots._force.force(explainer.expected_value,shap_values=shap_values,features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"],out_names=target_name,matplotlib=True,show=False)
-        else:
-            if plot_type==None:
-                print("No plot type was specified. Defaulting to waterfall plot.")
-            elif plot_type!="waterfall":
-                print("No plot with the specified name was found. Defaulting to waterfall plot.")
-            shap.plots._waterfall.waterfall_legacy(explainer.expected_value,shap_values=shap_values,features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"],show=False)
+            #getting params from info
+            model_info=json.load(model_info_file)
+            backend = model_info["backend"]
+            target_name=model_info["attributes"]["target_names"][0]
+            output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+            dataframe.drop([target_name], axis=1, inplace=True)
+            feature_names=list(dataframe.columns)
+            kwargsData = dict(feature_names=feature_names, output_names=output_names)
        
-        #saving force plot to html (DEPRECATED)
-        #additive_exp = shap.force_plot(explainer.expected_value, shap_values,features=np.array(instance),feature_names=kwargsData["feature_names"],out_names=out_names,show=False)
+            #getting params from request
+            index=0
+            if "target_class" in params_json:
+                target_class=str(params_json["target_class"])
+                try:
+                    index=output_names.index(target_class)
+                except:
+                    pass
+            plot_type=None
+            if "plot_type" in params_json:
+                plot_type=params_json["plot_type"]
+
         
-        #formatting json output
-        #shap_values = [x.tolist() for x in shap_values]
-        #ret=json.loads(json.dumps(shap_values))
+        
+            ## getting predict function
+            predic_func=None
+            if model_file!=None:
+                if backend in ontologyConstants.TENSORFLOW_URIS:
+                    model=h5py.File(model_file, 'w')
+                    mlp = tf.keras.models.load_model(model)
+                    predic_func=mlp
+                elif backend in ontologyConstants.SKLEARN_URIS:
+                    mlp = joblib.load(model_file)
+                    try:
+                        predic_func=mlp.predict_proba
+                    except:
+                        predic_func=mlp.predict
+                elif backend in ontologyConstants.PYTORCH_URIS:
+                    mlp = torch.load(model_file)
+                    predic_func=mlp.predict
+                else:
+                    try:
+                        mlp = joblib.load(model_file)
+                        predic_func=mlp.predict
+                    except Exception as e:
+                        return "Could not extract prediction function from model: " + str(e),BAD_REQUEST
+            elif url!=None:
+                def predict(X):
+                    return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
+                predic_func=predict
+            else:
+                return "Either a stored model or a valid URL for the prediction function must be provided.",BAD_REQUEST
 
-        ##saving
-        img_buf = BytesIO()
-        plt.savefig(img_buf,bbox_inches="tight")
-        im = Image.open(img_buf)
-        b64Image=PIL_to_base64(im)
-        plt.close()
+            #normalize instance
+            df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
+            if target_name in df_inst.columns:
+                df_inst.drop([target_name], axis=1, inplace=True)
+            df_inst=df_inst[feature_names]
+            norm_instance=normalize_dataframe(df_inst,model_info).to_numpy()[0]
 
-        response={"type":"image","explanation":b64Image}
+            # Create data
+            explainer = shap.KernelExplainer(predic_func, dataframe,**{k: v for k, v in kwargsData.items()})
+            shap_values = explainer.shap_values(norm_instance)
+        
+            if(len(np.array(shap_values).shape)!=1):
+                explainer.expected_value=explainer.expected_value[index]
+                shap_values=shap_values[index]
+            
+            #plotting
+            plt.switch_backend('agg')
+            if plot_type=="bar":
+                shap.plots._bar.bar_legacy(shap_values,features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"],show=False)
+            elif plot_type=="decision":
+                shap.decision_plot(explainer.expected_value,shap_values=shap_values,features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"])
+            elif plot_type=="force":
+                    shap.plots._force.force(explainer.expected_value,shap_values=shap_values,features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"],out_names=target_name,matplotlib=True,show=False)
+            else:
+                if plot_type==None:
+                    print("No plot type was specified. Defaulting to waterfall plot.")
+                elif plot_type!="waterfall":
+                    print("No plot with the specified name was found. Defaulting to waterfall plot.")
+                shap.plots._waterfall.waterfall_legacy(explainer.expected_value,shap_values=shap_values,features=np.array(list(df_inst.to_dict("records")[0].values())),feature_names=kwargsData["feature_names"],show=False)
+       
+            #saving force plot to html (DEPRECATED)
+            #additive_exp = shap.force_plot(explainer.expected_value, shap_values,features=np.array(instance),feature_names=kwargsData["feature_names"],out_names=out_names,show=False)
+        
+            #formatting json output
+            #shap_values = [x.tolist() for x in shap_values]
+            #ret=json.loads(json.dumps(shap_values))
 
-        return response
+            ##saving
+            img_buf = BytesIO()
+            plt.savefig(img_buf,bbox_inches="tight")
+            im = Image.open(img_buf)
+            b64Image=PIL_to_base64(im)
+            plt.close()
 
+            response={"type":"image","explanation":b64Image}
+
+            return response
+        except:
+            return traceback.format_exc(), 500
 
     def get(self,id=None):
         

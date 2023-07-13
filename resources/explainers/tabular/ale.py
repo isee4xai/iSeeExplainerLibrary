@@ -1,3 +1,4 @@
+from http.client import BAD_REQUEST
 from flask_restful import Resource
 import tensorflow as tf
 import torch
@@ -15,6 +16,7 @@ from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
 import requests
+import traceback
 
 class Ale(Resource):
     
@@ -23,102 +25,105 @@ class Ale(Resource):
         self.upload_folder = upload_folder
 
     def post(self):
-        params = request.json
-        if params is None:
-            return "The json body is missing"
+        try:
+            params = request.json
+            if params is None:
+                return "The json body is missing",BAD_REQUEST
         
-        #Check params
-        if("id" not in params):
-            return "The model id was not specified in the params."
+            #Check params
+            if("id" not in params):
+                return "The model id was not specified in the params.",BAD_REQUEST
 
-        _id =params["id"]
-        if("type"  in params):
-            inst_type=params["type"]
-        url=None
-        if "url" in params:
-            url=params["url"]
-        params_json={}
-        if "params" in params:
-            params_json=params["params"]
+            _id =params["id"]
+            if("type"  in params):
+                inst_type=params["type"]
+            url=None
+            if "url" in params:
+                url=params["url"]
+            params_json={}
+            if "params" in params:
+                params_json=params["params"]
         
-        #Getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+            #Getting model info, data, and file from local repository
+            model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
 
-        ## loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file)
-        else:
-            raise Exception("The training data file was not provided.")
-
-        ##getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"] 
-        target_name=model_info["attributes"]["target_names"][0]
-        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
-        feature_names=list(dataframe.columns)
-        kwargsData = dict(feature_names=feature_names,target_names=output_names)
-        feature_names.remove(target_name)
-
-        ## getting predict function
-        predic_func=None
-        if model_file!=None:
-            if backend in ontologyConstants.TENSORFLOW_URIS:
-                model=h5py.File(model_file, 'w')
-                mlp = tf.keras.models.load_model(model)
-                predic_func=mlp
-            elif backend in ontologyConstants.SKLEARN_URIS:
-                mlp = joblib.load(model_file)
-                try:
-                    predic_func=mlp.predict_proba
-                except:
-                    predic_func=mlp.predict
-            elif backend in ontologyConstants.PYTORCH_URIS:
-                mlp = torch.load(model_file)
-                predic_func=mlp.predict
+            ## loading data
+            if data_file!=None:
+                dataframe = joblib.load(data_file)
             else:
-                try:
+                return "The training data file was not provided.", BAD_REQUEST
+
+            ##getting params from info
+            model_info=json.load(model_info_file)
+            backend = model_info["backend"] 
+            target_name=model_info["attributes"]["target_names"][0]
+            output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+            feature_names=list(dataframe.columns)
+            kwargsData = dict(feature_names=feature_names,target_names=output_names)
+            feature_names.remove(target_name)
+
+            ## getting predict function
+            predic_func=None
+            if model_file!=None:
+                if backend in ontologyConstants.TENSORFLOW_URIS:
+                    model=h5py.File(model_file, 'w')
+                    mlp = tf.keras.models.load_model(model)
+                    predic_func=mlp
+                elif backend in ontologyConstants.SKLEARN_URIS:
                     mlp = joblib.load(model_file)
+                    try:
+                        predic_func=mlp.predict_proba
+                    except:
+                        predic_func=mlp.predict
+                elif backend in ontologyConstants.PYTORCH_URIS:
+                    mlp = torch.load(model_file)
                     predic_func=mlp.predict
-                except Exception as e:
-                    return "Could not extract prediction function from model: " + str(e)
-        elif url!=None:
-            def predict(X):
-                return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
-            predic_func=predict
-        else:
-            raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
+                else:
+                    try:
+                        mlp = joblib.load(model_file)
+                        predic_func=mlp.predict
+                    except Exception as e:
+                        return "Could not extract prediction function from model: " + str(e),BAD_REQUEST
+            elif url!=None:
+                def predict(X):
+                    return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
+                predic_func=predict
+            else:
+                return "Either a stored model or a valid URL for the prediction function must be provided.",BAD_REQUEST
       
-        #getting params from request
-        kwargsData2 = dict(features=None)
-        if "features_to_show" in params_json and params_json["features_to_show"]:
-            features = json.loads(params_json["features_to_show"]) if isinstance(params_json["features_to_show"],str) else params_json["features_to_show"]
-            kwargsData2["features"]=[dataframe.columns.get_loc(c) for c in features if c in dataframe]
+            #getting params from request
+            kwargsData2 = dict(features=None)
+            if "features_to_show" in params_json and params_json["features_to_show"]:
+                features = json.loads(params_json["features_to_show"]) if isinstance(params_json["features_to_show"],str) else params_json["features_to_show"]
+                kwargsData2["features"]=[dataframe.columns.get_loc(c) for c in features if c in dataframe]
 
 
-        proba_ale_lr = ALE(predic_func, **{k: v for k, v in kwargsData.items()})
-        proba_exp_lr = proba_ale_lr.explain(dataframe.drop([target_name], axis=1, inplace=False).to_numpy(),**{k: v for k, v in kwargsData2.items()})
+            proba_ale_lr = ALE(predic_func, **{k: v for k, v in kwargsData.items()})
+            proba_exp_lr = proba_ale_lr.explain(dataframe.drop([target_name], axis=1, inplace=False).to_numpy(),**{k: v for k, v in kwargsData2.items()})
         
         
-        if(kwargsData2["features"]!=None):
-            n_features=len(kwargsData2["features"])
-            dim = math.ceil(n_features**(1/2))
-        else:
-            n_features=len(proba_exp_lr.feature_names)
-            dim = math.ceil(n_features**(1/2))
+            if(kwargsData2["features"]!=None):
+                n_features=len(kwargsData2["features"])
+                dim = math.ceil(n_features**(1/2))
+            else:
+                n_features=len(proba_exp_lr.feature_names)
+                dim = math.ceil(n_features**(1/2))
 
-        fig, ax = plt.subplots(dim, n_features/dim, sharey='all');
-        plot_ale(proba_exp_lr,ax=ax,fig_kw={'figwidth': dim*4, 'figheight': dim*3})
+            fig, ax = plt.subplots(dim, math.ceil(n_features/dim), sharey='all');
+            plot_ale(proba_exp_lr,ax=ax,fig_kw={'figwidth': dim*4, 'figheight': dim*3})
         
-        #saving
-        img_buf = BytesIO()
-        fig.savefig(img_buf,bbox_inches="tight")
-        im = Image.open(img_buf)
-        b64Image=PIL_to_base64(im)
+            #saving
+            img_buf = BytesIO()
+            fig.savefig(img_buf,bbox_inches="tight")
+            im = Image.open(img_buf)
+            b64Image=PIL_to_base64(im)
 
-        response={"type":"image","explanation":b64Image}#,"explanation":dict_exp}
-        return response
+            response={"type":"image","explanation":b64Image}#,"explanation":dict_exp}
+            return response
 
+        except:
+            return traceback.format_exc(), 500
 
     def get(self, id=None):
 

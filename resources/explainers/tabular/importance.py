@@ -1,3 +1,4 @@
+from http.client import BAD_REQUEST
 from flask_restful import Resource
 import tensorflow as tf
 import torch
@@ -11,6 +12,7 @@ from io import BytesIO
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
+import traceback
 
 class Importance(Resource):
 
@@ -19,83 +21,85 @@ class Importance(Resource):
         self.upload_folder = upload_folder 
         
     def post(self):
-        params = request.json
-        if params is None:
-            return "The json body is missing"
+        try:
+            params = request.json
+            if params is None:
+                return "The json body is missing",BAD_REQUEST
         
-        #Check params
-        if("id" not in params):
-            return "The model id was not specified in the params."
+            #Check params
+            if("id" not in params):
+                return "The model id was not specified in the params.",BAD_REQUEST
 
-        _id =params["id"]
-        if("type"  in params):
-            inst_type=params["type"]
-        url=None
-        if "url" in params:
-            url=params["url"]
-        params_json={}
-        if "params" in params:
-            params_json=params["params"]
+            _id =params["id"]
+            if("type"  in params):
+                inst_type=params["type"]
+            url=None
+            if "url" in params:
+                url=params["url"]
+            params_json={}
+            if "params" in params:
+                params_json=params["params"]
        
-        #Getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+            #Getting model info, data, and file from local repository
+            model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        ## loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file)
-        else:
-            raise Exception("The training data file was not provided.")
-
-        ## params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"]  
-        target_names=model_info["attributes"]["target_names"]
-        feature_names=list(dataframe.columns)
-        for target in target_names:
-            feature_names.remove(target)
-        
-        #Checking model task
-        model_task = model_info["model_task"]  
-        if model_task in ontologyConstants.CLASSIFICATION_URIS:
-            model_task="classification"
-        elif model_task in ontologyConstants.REGRESSION_URIS:
-            model_task="regression"
-        else:
-            return "Model task not supported: " + model_task
-
-        ## loading model
-        if model_file!=None:
-            if backend in ontologyConstants.TENSORFLOW_URIS:
-                model=h5py.File(model_file, 'w')
-                model=tf.keras.models.load_model(model)
-            elif backend in ontologyConstants.SKLEARN_URIS:
-                model = joblib.load(model_file)
-            elif backend in ontologyConstants.PYTORCH_URIS:
-                model = torch.load(model_file)
+            ## loading data
+            if data_file!=None:
+                dataframe = joblib.load(data_file)
             else:
-                return "The model backend is not supported: " + backend
-        else:
-            return "Model file was not uploaded."
+                return "The training data file was not provided.",BAD_REQUEST
+
+            ## params from info
+            model_info=json.load(model_info_file)
+            backend = model_info["backend"]  
+            target_names=model_info["attributes"]["target_names"]
+            feature_names=list(dataframe.columns)
+            for target in target_names:
+                feature_names.remove(target)
         
+            #Checking model task
+            model_task = model_info["model_task"]  
+            if model_task in ontologyConstants.CLASSIFICATION_URIS:
+                model_task="classification"
+            elif model_task in ontologyConstants.REGRESSION_URIS:
+                model_task="regression"
+            else:
+                return "Model task not supported: " + model_task,BAD_REQUEST
 
+            ## loading model
+            if model_file!=None:
+                if backend in ontologyConstants.TENSORFLOW_URIS:
+                    model=h5py.File(model_file, 'w')
+                    model=tf.keras.models.load_model(model)
+                elif backend in ontologyConstants.SKLEARN_URIS:
+                    model = joblib.load(model_file)
+                elif backend in ontologyConstants.PYTORCH_URIS:
+                    model = torch.load(model_file)
+                else:
+                    return "The model backend is not supported: " + backend,BAD_REQUEST
+            else:
+                return "Model file was not uploaded.",BAD_REQUEST
 
-        ## params from the request
-        kwargsData = dict()
-        if "variables" in params_json and params_json["variables"]:
-            kwargsData["variables"] = json.loads(params_json["variables"]) if isinstance(params_json["variables"],str) else params_json["variables"]
+            ## params from the request
+            kwargsData = dict()
+            if "variables" in params_json and params_json["variables"]:
+                kwargsData["variables"] = json.loads(params_json["variables"]) if isinstance(params_json["variables"],str) else params_json["variables"]
        
-        explainer = dx.Explainer(model, dataframe.drop(target_names, axis=1, inplace=False), dataframe.loc[:, target_names],model_type=model_task)
-        parts = explainer.model_parts(**{k: v for k, v in kwargsData.items()})
-        fig=parts.plot(show=False)
+            explainer = dx.Explainer(model, dataframe.drop(target_names, axis=1, inplace=False), dataframe.loc[:, target_names],model_type=model_task)
+            parts = explainer.model_parts(**{k: v for k, v in kwargsData.items()})
+            fig=parts.plot(show=False)
         
-        #saving
-        img_buf = BytesIO()
-        fig.write_image(img_buf)
-        im = Image.open(img_buf)
-        b64Image=PIL_to_base64(im)
+            #saving
+            img_buf = BytesIO()
+            fig.write_image(img_buf)
+            im = Image.open(img_buf)
+            b64Image=PIL_to_base64(im)
 
-        response={"type":"image","explanation":b64Image}#,"explanation":dict_exp}
-        return response
+            response={"type":"image","explanation":b64Image}#,"explanation":dict_exp}
+            return response
+
+        except:
+            return traceback.format_exc(), 500 
 
 
     def get(self,id=None):

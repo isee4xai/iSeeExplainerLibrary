@@ -1,3 +1,4 @@
+from http.client import BAD_REQUEST
 from flask_restful import Resource
 from flask import request
 import tensorflow as tf
@@ -16,6 +17,7 @@ from utils import ontologyConstants
 from utils.dataframe_processing import normalize_dataframe
 from utils.base64 import PIL_to_base64
 from html2image import Html2Image
+import traceback
 
 class Lime(Resource):
 
@@ -24,155 +26,159 @@ class Lime(Resource):
         self.upload_folder = upload_folder    
 
     def post(self):
-        params = request.json
-        if params is None:
-            return "The json body is missing."
-        
-        #Check params
-        if("id" not in params):
-            return "The model id was not specified in the params."
-        if("type" not in params):
-            return "The instance type was not specified in the params."
-        if("instance" not in params):
-            return "The instance was not specified in the params."
-
-        _id =params["id"]
-        if("type"  in params):
-            inst_type=params["type"]
-        instance=params["instance"]
-        url=None
-        if "url" in params:
-            url=params["url"]
-        params_json={}
-        if "params" in params:
-            params_json=params["params"]
-        
-        #getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
-
-        ## loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-        else:
-            raise Exception("The training data file was not provided.")
-        
-
-        ##getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"] 
-        
-        #Checking model task
-        model_task = model_info["model_task"]  
-        if model_task in ontologyConstants.CLASSIFICATION_URIS:
-            model_task="classification"
-        elif model_task in ontologyConstants.REGRESSION_URIS:
-            model_task="regression"
-        else:
-            return "Model task not supported: " + model_task
-
-        features=model_info["attributes"]["features"]
-        target_name=model_info["attributes"]["target_names"][0]
-        feature_names=list(dataframe.columns)
-        feature_names.remove(target_name)
         try:
-            class_names=features[target_name]["values_raw"]
-        except:
-            class_names=None
+            params = request.json
+            if params is None:
+                return "The json body is missing.",BAD_REQUEST
         
-        categorical_features=[]
-        categorical_names={}
-        for feature in feature_names:
-            if features[feature]["data_type"]=="categorical":
-                i=dataframe.columns.get_loc(feature)
-                categorical_features.append(i)
-                categorical_names.update({i:[ str(x) for x in features[feature]["values_raw"]]})
+            #Check params
+            if("id" not in params):
+                return "The model id was not specified in the params.",BAD_REQUEST
+            if("type" not in params):
+                return "The instance type was not specified in the params.",BAD_REQUEST
+            if("instance" not in params):
+                return "The instance was not specified in the params.",BAD_REQUEST
 
-        dataframe.drop([target_name], axis=1, inplace=True)
+            _id =params["id"]
+            if("type"  in params):
+                inst_type=params["type"]
+            instance=params["instance"]
+            url=None
+            if "url" in params:
+                url=params["url"]
+            params_json={}
+            if "params" in params:
+                params_json=params["params"]
+        
+            #getting model info, data, and file from local repository
+            model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        kwargsData = dict(mode=model_task, feature_names=feature_names, categorical_features=categorical_features,categorical_names=categorical_names, class_names=class_names)
-
-        ## getting predict function
-        predic_func=None
-        if model_file!=None:
-            if backend in ontologyConstants.TENSORFLOW_URIS:
-                model=h5py.File(model_file, 'w')
-                mlp = tf.keras.models.load_model(model)
-                predic_func=mlp
-            elif backend in ontologyConstants.SKLEARN_URIS:
-                mlp = joblib.load(model_file)
-                try:
-                    predic_func=mlp.predict_proba
-                except:
-                    predic_func=mlp.predict
-            elif backend in ontologyConstants.PYTORCH_URIS:
-                mlp = torch.load(model_file)
-                predic_func=mlp.predict
+            ## loading data
+            if data_file!=None:
+                dataframe = joblib.load(data_file) ##error handling?
             else:
-                try:
+                return "The training data file was not provided.",BAD_REQUEST
+        
+
+            ##getting params from info
+            model_info=json.load(model_info_file)
+            backend = model_info["backend"] 
+        
+            #Checking model task
+            model_task = model_info["model_task"]  
+            if model_task in ontologyConstants.CLASSIFICATION_URIS:
+                model_task="classification"
+            elif model_task in ontologyConstants.REGRESSION_URIS:
+                model_task="regression"
+            else:
+                return "Model task not supported: " + model_task
+
+            features=model_info["attributes"]["features"]
+            target_name=model_info["attributes"]["target_names"][0]
+            feature_names=list(dataframe.columns)
+            feature_names.remove(target_name)
+            try:
+                class_names=features[target_name]["values_raw"]
+            except:
+                class_names=None
+        
+            categorical_features=[]
+            categorical_names={}
+            for feature in feature_names:
+                if features[feature]["data_type"]=="categorical":
+                    i=dataframe.columns.get_loc(feature)
+                    categorical_features.append(i)
+                    categorical_names.update({i:[ str(x) for x in features[feature]["values_raw"]]})
+
+            dataframe.drop([target_name], axis=1, inplace=True)
+
+            kwargsData = dict(mode=model_task, feature_names=feature_names, categorical_features=categorical_features,categorical_names=categorical_names, class_names=class_names)
+
+            ## getting predict function
+            predic_func=None
+            if model_file!=None:
+                if backend in ontologyConstants.TENSORFLOW_URIS:
+                    model=h5py.File(model_file, 'w')
+                    mlp = tf.keras.models.load_model(model)
+                    predic_func=mlp
+                elif backend in ontologyConstants.SKLEARN_URIS:
                     mlp = joblib.load(model_file)
+                    try:
+                        predic_func=mlp.predict_proba
+                    except:
+                        predic_func=mlp.predict
+                elif backend in ontologyConstants.PYTORCH_URIS:
+                    mlp = torch.load(model_file)
                     predic_func=mlp.predict
-                except Exception as e:
-                    return "Could not extract prediction function from model: " + str(e)
-        elif url!=None:
-            def predict(X):
-                return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
-            predic_func=predict
-        else:
-            raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
+                else:
+                    try:
+                        mlp = joblib.load(model_file)
+                        predic_func=mlp.predict
+                    except Exception as e:
+                        return "Could not extract prediction function from model: " + str(e),BAD_REQUEST
+            elif url!=None:
+                def predict(X):
+                    return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
+                predic_func=predict
+            else:
+                return "Either a stored model or a valid URL for the prediction function must be provided.",BAD_REQUEST
 
-        #getting params from request
+            #getting params from request
 
-        kwargsData2 = dict(labels=None, top_labels=None, num_features=None)
+            kwargsData2 = dict(labels=None, top_labels=None, num_features=None)
 
-        if "output_classes" in params_json and params_json["output_classes"] and class_names: #labels (if classification)
-            kwargsData2["labels"] = [class_names.index(c) for c in params_json["output_classes"]]
-        if "top_classes" in params_json and class_names: #if classification
-            kwargsData2["top_labels"] = int(params_json["top_classes"])   #top labels
-            if(not kwargsData2["top_labels"]):
-                kwargsData2["top_labels"]=None
-        if "num_features" in params_json:
-            kwargsData2["num_features"] = int(params_json["num_features"])
+            if "output_classes" in params_json and params_json["output_classes"] and class_names: #labels (if classification)
+                kwargsData2["labels"] = [class_names.index(c) for c in params_json["output_classes"]]
+            if "top_classes" in params_json and class_names: #if classification
+                kwargsData2["top_labels"] = int(params_json["top_classes"])   #top labels
+                if(not kwargsData2["top_labels"]):
+                    kwargsData2["top_labels"]=None
+            if "num_features" in params_json:
+                kwargsData2["num_features"] = int(params_json["num_features"])
 
-        #normalize instance
-        df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
-        if target_name in df_inst.columns:
-            df_inst.drop([target_name], axis=1, inplace=True)
-        df_inst=df_inst[feature_names]
-        norm_instance=normalize_dataframe(df_inst,model_info).to_numpy()[0]
+            #normalize instance
+            df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
+            if target_name in df_inst.columns:
+                df_inst.drop([target_name], axis=1, inplace=True)
+            df_inst=df_inst[feature_names]
+            norm_instance=normalize_dataframe(df_inst,model_info).to_numpy()[0]
 
-        explainer = lime.lime_tabular.LimeTabularExplainer(dataframe.to_numpy(),
-                                                          **{k: v for k, v in kwargsData.items() if v is not None})
-        explanation = explainer.explain_instance(norm_instance, predic_func, **{k: v for k, v in kwargsData2.items() if v is not None}) 
+            explainer = lime.lime_tabular.LimeTabularExplainer(dataframe.to_numpy(),
+                                                              **{k: v for k, v in kwargsData.items() if v is not None})
+            explanation = explainer.explain_instance(norm_instance, predic_func, **{k: v for k, v in kwargsData2.items() if v is not None}) 
 
         
-        #formatting json explanation
-        #ret = explanation.as_map()
-        #ret = {str(k):[(int(i),float(j)) for (i,j) in v] for k,v in ret.items()}
-        #if kwargsData["class_names"]!=None:
-        #    ret = {kwargsData["class_names"][int(k)]:v for k,v in ret.items()}
-        #if kwargsData["feature_names"]!=None:
-        #    ret = {k:[(kwargsData["feature_names"][i],j) for (i,j) in v] for k,v in ret.items()}
-        #ret=json.loads(json.dumps(ret))
+            #formatting json explanation
+            #ret = explanation.as_map()
+            #ret = {str(k):[(int(i),float(j)) for (i,j) in v] for k,v in ret.items()}
+            #if kwargsData["class_names"]!=None:
+            #    ret = {kwargsData["class_names"][int(k)]:v for k,v in ret.items()}
+            #if kwargsData["feature_names"]!=None:
+            #    ret = {k:[(kwargsData["feature_names"][i],j) for (i,j) in v] for k,v in ret.items()}
+            #ret=json.loads(json.dumps(ret))
 
-        ##saving
+            ##saving
 
-        hti = Html2Image()
-        hti.output_path= os.getcwd()
-        print(hti.output_path)
-        size=(10, 4)
-        css="body {background: white;}"
-        if "png_height" in params_json and "png_width" in params_json:
-            size=(int(params_json["png_width"])/100,int(params_json["png_height"])/100)
-            hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png", size=size)   
-        else:
-            hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png",size=(1300,350))
+            hti = Html2Image()
+            hti.output_path= os.getcwd()
+            print(hti.output_path)
+            size=(10, 4)
+            css="body {background: white;}"
+            if "png_height" in params_json and "png_width" in params_json:
+                size=(int(params_json["png_width"])/100,int(params_json["png_height"])/100)
+                hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png", size=size)   
+            else:
+                hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png",size=(1300,350))
 
-        im=Image.open("temp.png")
-        b64Image=PIL_to_base64(im)
-        os.remove("temp.png")
+            im=Image.open("temp.png")
+            b64Image=PIL_to_base64(im)
+            os.remove("temp.png")
 
-        response={"type":"image","explanation":b64Image}
-        return response
+            response={"type":"image","explanation":b64Image}
+            return response
+
+        except:
+            return traceback.format_exc(), 500
 
 
     def get(self,id=None):

@@ -1,3 +1,4 @@
+from http.client import BAD_REQUEST
 from flask_restful import Resource
 from flask import request
 import tensorflow as tf
@@ -18,6 +19,7 @@ from utils import ontologyConstants
 from utils.dataframe_processing import split_sequences, normalize_dataframe
 from utils.base64 import PIL_to_base64
 import requests
+import traceback
 
 
 
@@ -28,209 +30,211 @@ class CBRFox(Resource):
         self.upload_folder = upload_folder    
 
     def post(self):
-        params = request.json
-        if params is None:
-            return "The json body is missing."
-        
-        #Check params
-        if("id" not in params):
-            return "The model id was not specified in the params."
-        if("type" not in params):
-            return "The instance type was not specified in the params."
-        if("instance" not in params):
-            return "The instance was not specified in the params."
-
-        _id =params["id"]
-        if("type"  in params):
-            inst_type=params["type"]
-        instance=params["instance"]
-        url=None
-        if "url" in params:
-            url=params["url"]
-        params_json={}
-        if "params" in params:
-            params_json=params["params"]
-        
-        
-        #Getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
-
-        #loading data
-        if data_file!=None:
-            dataframe = pd.read_csv(data_file,header=0)
-        else:
-            raise Exception("The training data file was not provided.")
-
-        ##getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"] 
-        target_names=model_info["attributes"]["target_names"]
-        features=model_info["attributes"]["features"]
-        feature_names=list(dataframe.columns)
-        k=model_info["attributes"]["window_size"]
-
-        time_feature=None
-        for feature, info_feature in features.items():
-            if(info_feature["data_type"]=="time"):
-                time_feature=feature
-                break 
-            
-        if time_feature is not None:
-            dataframe.drop([time_feature], axis=1,inplace=True)
-            feature_names.remove(time_feature)
-
-        #denormalizing instance
-        df_instance=pd.DataFrame(instance)
-        df_instance=df_instance[feature_names]
-        norm_instance=normalize_dataframe(df_instance, model_info).to_numpy()
-        
-        numpy_train=split_sequences(dataframe,k)
-
-        target_columns=[feature_names.index(target) for target in target_names]
-        nonOutputColumns=list(set([i for i in range(len(feature_names))]).difference(set(target_columns)))
-       
-        ## getting predict function
-        predic_func=None
-        if model_file!=None:
-            if backend in ontologyConstants.TENSORFLOW_URIS:
-                model=h5py.File(model_file, 'w')
-                mlp = tf.keras.models.load_model(model)
-                predic_func=mlp
-            elif backend in ontologyConstants.SKLEARN_URIS:
-                mlp = joblib.load(model_file)
-                try:
-                    predic_func=mlp.predict_proba
-                except:
-                    predic_func=mlp.predict
-            elif backend in ontologyConstants.PYTORCH_URIS:
-                mlp = torch.load(model_file)
-                predic_func=mlp.predict
-            else:
-                try:
-                    mlp = joblib.load(model_file)
-                    predic_func=mlp.predict
-                except Exception as e:
-                    return "Could not extract prediction function from model: " + str(e)
-        elif url!=None:
-            def predict(X):
-                return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
-            predic_func=predict
-        else:
-            raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
-
-        #getting params from request
-        smoothnessFactor = .03
-        punishedSumFactor = .5
-        method_list=["average","max","min","median"]
-        explicationMethodResult = 1         #1 average, 2 Max values, 3 min values, 4 median
-        if "smoothness_factor" in params_json: 
-            smoothnessFactor = float(params_json["smoothness_factor"])
-        if "punished_sum_factor" in params_json:
-            punishedSumFactor = float(params_json["punished_sum_factor"])   
-        if "reference_method" in params_json:
-            method_str=str(params_json["reference_method"]).lower()
-            if method_str in method_list:
-                explicationMethodResult=method_list.index(method_str)+1
-
-        #explanation generation
-        windows = np.delete(numpy_train, nonOutputColumns, len(numpy_train.shape)-1)
-        targetWindow, windows = windows[-1], windows[:-1]
-        windowsLen = len(windows)
-        componentsLen = windows.shape[-1]
-        windowLen = windows.shape[-2]
-
-        prediction = predic_func(np.array([norm_instance]))
-        actualPrediction=prediction[-1]
-
-        titleColumns = [ feature_names[col] for col in target_columns]
-
-        pearsonCorrelation = np.array(([np.corrcoef(windows[currentWindow,:,currentComponent], targetWindow[:,currentComponent])[0][1]
-        for currentWindow in range(len(windows)) for currentComponent in range(componentsLen)])).reshape(-1,componentsLen)
-
-        euclideanDistance = np.array(([np.linalg.norm(targetWindow[:,currentComponent] - windows[currentWindow,:,currentComponent])
-        for currentWindow in range(windowsLen) for currentComponent in range(componentsLen)])).reshape(-1,componentsLen)
-
-        normalizedEuclideanDistance = euclideanDistance / np.amax(euclideanDistance,axis=0)
-
-        normalizedCorrelation = (.5+(pearsonCorrelation-2*normalizedEuclideanDistance+1)/4)
-
-        correlationPerWindow = np.sum(((normalizedCorrelation+punishedSumFactor)**2), axis=1)
-        correlationPerWindow /= max(correlationPerWindow)
-
-        smoothedCorrelation = lowess(correlationPerWindow, np.arange(len(correlationPerWindow)), smoothnessFactor)[:,1]
-
-        valleyIndex, peakIndex = signal.argrelextrema(smoothedCorrelation, np.less)[0], signal.argrelextrema(smoothedCorrelation, np.greater)[0]
-
-        concaveSegments = np.split(np.transpose(np.array((np.arange(windowsLen), correlationPerWindow))), valleyIndex)
-        convexSegments = np.split(np.transpose(np.array((np.arange(windowsLen), correlationPerWindow))), peakIndex)
-
-        bestWindowsIndex, worstWindowsIndex = list(), list()
-
-        for split in concaveSegments:
-            bestWindowsIndex.append(int(split[np.where(split == max(split[:,1]))[0][0],0]))
-        for split in convexSegments:
-            worstWindowsIndex.append(int(split[np.where(split == min(split[:,1]))[0][0],0]))
-
-        bestDic = {index: correlationPerWindow[index] for index in bestWindowsIndex}
-        worstDic = {index: correlationPerWindow[index] for index in worstWindowsIndex}
-
-        bestSorted = sorted(bestDic.items(),reverse=True, key=lambda x:x[1])
-        worstSorted = sorted(worstDic.items(), key=lambda x:x[1])
-
-        maxComp,minComp,lims=[],[],[]
-        for i in range(componentsLen):
-            maxComp.append(int(max(max(a) for a in windows[:,:,i])))
-            minComp.append(int(min(min(a) for a in windows[:,:,i])))
-            lims.append(range(minComp[i],maxComp[i],int((maxComp[i]-minComp[i])/8)))
-
-        bestMAE,worstMAE = [],[]
-        for i in range(len(bestSorted)):
-            rawBestMAE=rawWorstMAE=0
-            for f in range(componentsLen):
-                rawBestMAE+=(windows[bestSorted[i][0]][windowLen-1][f]-minComp[f])/maxComp[f]
-                rawWorstMAE+=(windows[worstSorted[i][0]][windowLen-1][f]-minComp[f])/maxComp[f]
-            bestMAE.append(rawBestMAE/componentsLen) 
-            worstMAE.append(rawWorstMAE/componentsLen)
-
-        def subOptions(op):
-            if op==1:
-                newCase = np.sum(windows[list(dict(bestSorted).keys())], axis=0)/len(bestSorted)
-            elif op==2:
-                newCase = np.max(windows[list(dict(bestSorted).keys())], axis=0)
-            elif op==3:
-                newCase = np.min(windows[list(dict(bestSorted).keys())], axis=0)
-            elif op==4:
-                newCase = np.median(windows[list(dict(bestSorted).keys())], axis=0)
-            return newCase
-
-        cont=np.arange(1,windowLen+1)
-        plt.figure(figsize=(12,8))
-        newCase = np.zeros((windowLen,componentsLen))
         try:
-            newCase = subOptions(explicationMethodResult)
-        except:
-            print("Unavailable option")
-        for f in range(componentsLen):
-            plt.subplot(componentsLen,1,f+1)
-            plt.title(titleColumns[f])
-            plt.plot(cont,targetWindow[:,f], '.-k', label = "Target")
-            plt.plot(cont,newCase[:,f], '.-g' ,label= "Data")
-            plt.plot(windowLen+1,actualPrediction[f], 'dk', label = "Prediction")
-            plt.plot(windowLen+1,newCase[windowLen-1][f], 'dg', label = "Next day")
-            plt.grid()
-            plt.xticks(range(1,windowLen+2,1))
-            plt.yticks(lims[f])
-        plt.tight_layout()
-
-        #saving
-        img_buf = BytesIO()
-        plt.savefig(img_buf,bbox_inches="tight")
-        im = Image.open(img_buf)
-        b64Image=PIL_to_base64(im)
-
-        response={"type":"image","explanation":b64Image}#,"explanation":dict_exp}
-        return response
+            params = request.json
+            if params is None:
+                return "The json body is missing.",BAD_REQUEST
         
+            #Check params
+            if("id" not in params):
+                return "The model id was not specified in the params.",BAD_REQUEST
+            if("type" not in params):
+                return "The instance type was not specified in the params.",BAD_REQUEST
+            if("instance" not in params):
+                return "The instance was not specified in the params.",BAD_REQUEST
+
+            _id =params["id"]
+            if("type"  in params):
+                inst_type=params["type"]
+            instance=params["instance"]
+            url=None
+            if "url" in params:
+                url=params["url"]
+            params_json={}
+            if "params" in params:
+                params_json=params["params"]
+        
+        
+            #Getting model info, data, and file from local repository
+            model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+
+            #loading data
+            if data_file!=None:
+                dataframe = pd.read_csv(data_file,header=0)
+            else:
+                return "The training data file was not provided.",BAD_REQUEST
+
+            ##getting params from info
+            model_info=json.load(model_info_file)
+            backend = model_info["backend"] 
+            target_names=model_info["attributes"]["target_names"]
+            features=model_info["attributes"]["features"]
+            feature_names=list(dataframe.columns)
+            k=model_info["attributes"]["window_size"]
+
+            time_feature=None
+            for feature, info_feature in features.items():
+                if(info_feature["data_type"]=="time"):
+                    time_feature=feature
+                    break 
+            
+            if time_feature is not None:
+                dataframe.drop([time_feature], axis=1,inplace=True)
+                feature_names.remove(time_feature)
+
+            #denormalizing instance
+            df_instance=pd.DataFrame(instance)
+            df_instance=df_instance[feature_names]
+            norm_instance=normalize_dataframe(df_instance, model_info).to_numpy()
+        
+            numpy_train=split_sequences(dataframe,k)
+
+            target_columns=[feature_names.index(target) for target in target_names]
+            nonOutputColumns=list(set([i for i in range(len(feature_names))]).difference(set(target_columns)))
+       
+            ## getting predict function
+            predic_func=None
+            if model_file!=None:
+                if backend in ontologyConstants.TENSORFLOW_URIS:
+                    model=h5py.File(model_file, 'w')
+                    mlp = tf.keras.models.load_model(model)
+                    predic_func=mlp
+                elif backend in ontologyConstants.SKLEARN_URIS:
+                    mlp = joblib.load(model_file)
+                    try:
+                        predic_func=mlp.predict_proba
+                    except:
+                        predic_func=mlp.predict
+                elif backend in ontologyConstants.PYTORCH_URIS:
+                    mlp = torch.load(model_file)
+                    predic_func=mlp.predict
+                else:
+                    try:
+                        mlp = joblib.load(model_file)
+                        predic_func=mlp.predict
+                    except Exception as e:
+                        return "Could not extract prediction function from model: " + str(e),BAD_REQUEST
+            elif url!=None:
+                def predict(X):
+                    return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
+                predic_func=predict
+            else:
+                return "Either a stored model or a valid URL for the prediction function must be provided.",BAD_REQUEST
+
+            #getting params from request
+            smoothnessFactor = .03
+            punishedSumFactor = .5
+            method_list=["average","max","min","median"]
+            explicationMethodResult = 1         #1 average, 2 Max values, 3 min values, 4 median
+            if "smoothness_factor" in params_json: 
+                smoothnessFactor = float(params_json["smoothness_factor"])
+            if "punished_sum_factor" in params_json:
+                punishedSumFactor = float(params_json["punished_sum_factor"])   
+            if "reference_method" in params_json:
+                method_str=str(params_json["reference_method"]).lower()
+                if method_str in method_list:
+                    explicationMethodResult=method_list.index(method_str)+1
+
+            #explanation generation
+            windows = np.delete(numpy_train, nonOutputColumns, len(numpy_train.shape)-1)
+            targetWindow, windows = windows[-1], windows[:-1]
+            windowsLen = len(windows)
+            componentsLen = windows.shape[-1]
+            windowLen = windows.shape[-2]
+
+            prediction = predic_func(np.array([norm_instance]))
+            actualPrediction=prediction[-1]
+
+            titleColumns = [ feature_names[col] for col in target_columns]
+
+            pearsonCorrelation = np.array(([np.corrcoef(windows[currentWindow,:,currentComponent], targetWindow[:,currentComponent])[0][1]
+            for currentWindow in range(len(windows)) for currentComponent in range(componentsLen)])).reshape(-1,componentsLen)
+
+            euclideanDistance = np.array(([np.linalg.norm(targetWindow[:,currentComponent] - windows[currentWindow,:,currentComponent])
+            for currentWindow in range(windowsLen) for currentComponent in range(componentsLen)])).reshape(-1,componentsLen)
+
+            normalizedEuclideanDistance = euclideanDistance / np.amax(euclideanDistance,axis=0)
+
+            normalizedCorrelation = (.5+(pearsonCorrelation-2*normalizedEuclideanDistance+1)/4)
+
+            correlationPerWindow = np.sum(((normalizedCorrelation+punishedSumFactor)**2), axis=1)
+            correlationPerWindow /= max(correlationPerWindow)
+
+            smoothedCorrelation = lowess(correlationPerWindow, np.arange(len(correlationPerWindow)), smoothnessFactor)[:,1]
+
+            valleyIndex, peakIndex = signal.argrelextrema(smoothedCorrelation, np.less)[0], signal.argrelextrema(smoothedCorrelation, np.greater)[0]
+
+            concaveSegments = np.split(np.transpose(np.array((np.arange(windowsLen), correlationPerWindow))), valleyIndex)
+            convexSegments = np.split(np.transpose(np.array((np.arange(windowsLen), correlationPerWindow))), peakIndex)
+
+            bestWindowsIndex, worstWindowsIndex = list(), list()
+
+            for split in concaveSegments:
+                bestWindowsIndex.append(int(split[np.where(split == max(split[:,1]))[0][0],0]))
+            for split in convexSegments:
+                worstWindowsIndex.append(int(split[np.where(split == min(split[:,1]))[0][0],0]))
+
+            bestDic = {index: correlationPerWindow[index] for index in bestWindowsIndex}
+            worstDic = {index: correlationPerWindow[index] for index in worstWindowsIndex}
+
+            bestSorted = sorted(bestDic.items(),reverse=True, key=lambda x:x[1])
+            worstSorted = sorted(worstDic.items(), key=lambda x:x[1])
+
+            maxComp,minComp,lims=[],[],[]
+            for i in range(componentsLen):
+                maxComp.append(int(max(max(a) for a in windows[:,:,i])))
+                minComp.append(int(min(min(a) for a in windows[:,:,i])))
+                lims.append(range(minComp[i],maxComp[i],int((maxComp[i]-minComp[i])/8)))
+
+            bestMAE,worstMAE = [],[]
+            for i in range(len(bestSorted)):
+                rawBestMAE=rawWorstMAE=0
+                for f in range(componentsLen):
+                    rawBestMAE+=(windows[bestSorted[i][0]][windowLen-1][f]-minComp[f])/maxComp[f]
+                    rawWorstMAE+=(windows[worstSorted[i][0]][windowLen-1][f]-minComp[f])/maxComp[f]
+                bestMAE.append(rawBestMAE/componentsLen) 
+                worstMAE.append(rawWorstMAE/componentsLen)
+
+            def subOptions(op):
+                if op==1:
+                    newCase = np.sum(windows[list(dict(bestSorted).keys())], axis=0)/len(bestSorted)
+                elif op==2:
+                    newCase = np.max(windows[list(dict(bestSorted).keys())], axis=0)
+                elif op==3:
+                    newCase = np.min(windows[list(dict(bestSorted).keys())], axis=0)
+                elif op==4:
+                    newCase = np.median(windows[list(dict(bestSorted).keys())], axis=0)
+                return newCase
+
+            cont=np.arange(1,windowLen+1)
+            plt.figure(figsize=(12,8))
+            newCase = np.zeros((windowLen,componentsLen))
+            try:
+                newCase = subOptions(explicationMethodResult)
+            except:
+                print("Unavailable option")
+            for f in range(componentsLen):
+                plt.subplot(componentsLen,1,f+1)
+                plt.title(titleColumns[f])
+                plt.plot(cont,targetWindow[:,f], '.-k', label = "Target")
+                plt.plot(cont,newCase[:,f], '.-g' ,label= "Data")
+                plt.plot(windowLen+1,actualPrediction[f], 'dk', label = "Prediction")
+                plt.plot(windowLen+1,newCase[windowLen-1][f], 'dg', label = "Next day")
+                plt.grid()
+                plt.xticks(range(1,windowLen+2,1))
+                plt.yticks(lims[f])
+            plt.tight_layout()
+
+            #saving
+            img_buf = BytesIO()
+            plt.savefig(img_buf,bbox_inches="tight")
+            im = Image.open(img_buf)
+            b64Image=PIL_to_base64(im)
+
+            response={"type":"image","explanation":b64Image}#,"explanation":dict_exp}
+            return response
+        except:
+            return traceback.format_exc(), 500       
 
     def get(self,id=None):
         return {

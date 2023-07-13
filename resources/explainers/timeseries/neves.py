@@ -1,3 +1,4 @@
+from http.client import BAD_REQUEST
 from flask_restful import Resource
 from flask import request
 import tensorflow as tf
@@ -14,6 +15,7 @@ from PIL import Image
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
+import traceback
 
 
 from LIMESegment.LIMESegmentExplainers import Explainer
@@ -26,128 +28,130 @@ class Neves(Resource):
         self.upload_folder = upload_folder 
         
     def post(self):
-        params = request.json
-        if params is None:
-            return "The json body is missing."
+        try:
+            params = request.json
+            if params is None:
+                return "The json body is missing.",BAD_REQUEST
         
-        #Check params
-        if("id" not in params):
-            return "The model id was not specified in the params."
-        if("type" not in params):
-            return "The instance type was not specified in the params."
-        if("instance" not in params):
-            return "The instance was not specified in the params."
+            #Check params
+            if("id" not in params):
+                return "The model id was not specified in the params.",BAD_REQUEST
+            if("type" not in params):
+                return "The instance type was not specified in the params.",BAD_REQUEST
+            if("instance" not in params):
+                return "The instance was not specified in the params.",BAD_REQUEST
 
-        _id =params["id"]
-        if("type"  in params):
-            inst_type=params["type"]
-        instance=params["instance"]
-        url=None
-        if "url" in params:
-            url=params["url"]
-        params_json={}
-        if "params" in params:
-            params_json=params["params"]
+            _id =params["id"]
+            if("type"  in params):
+                inst_type=params["type"]
+            instance=params["instance"]
+            url=None
+            if "url" in params:
+                url=params["url"]
+            params_json={}
+            if "params" in params:
+                params_json=params["params"]
         
         
-        #Getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+            #Getting model info, data, and file from local repository
+            model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        #loading data
-        if data_file!=None:
-            dataframe = pd.read_csv(data_file,header=0)
-        else:
-            raise Exception("The training data file was not provided.")
-
-        ##getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"] 
-        target_names=model_info["attributes"]["target_names"]
-        features=list(model_info["attributes"]["features"].keys())
-        for target in target_names:
-            features.remove(target)
-        dataframe.drop(target_names,axis=1,inplace=True)
-        feature=features[0]
-
-
-
-        #check univariate
-        if(1):
-            pass
-        else:
-            return "This method only supports univariate timeseries datasets."
-
-        #check binary class
-        if(1):
-            pass
-        else:
-            return "This method only supports binary classification tasks."
-
-        ## getting predict function
-        model_type="proba"
-        predic_func=None
-        if model_file!=None:
-            if backend in ontologyConstants.TENSORFLOW_URIS:
-                model=h5py.File(model_file, 'w')
-                mlp = tf.keras.models.load_model(model)
-                predic_func=mlp
-            elif backend in ontologyConstants.SKLEARN_URIS:
-                mlp = joblib.load(model_file)
-                try:
-                    predic_func=mlp.predict_proba
-                except:
-                    predic_func=mlp.predict
-                    model_type="class"
-            elif backend in ontologyConstants.PYTORCH_URIS:
-                mlp = torch.load(model_file)
-                predic_func=mlp.predict
+            #loading data
+            if data_file!=None:
+                dataframe = pd.read_csv(data_file,header=0)
             else:
-                try:
+                return "The training data file was not provided.",BAD_REQUEST
+
+            ##getting params from info
+            model_info=json.load(model_info_file)
+            backend = model_info["backend"] 
+            target_names=model_info["attributes"]["target_names"]
+            features=list(model_info["attributes"]["features"].keys())
+            for target in target_names:
+                features.remove(target)
+            dataframe.drop(target_names,axis=1,inplace=True)
+            feature=features[0]
+
+
+
+            #check univariate
+            if(1):
+                pass
+            else:
+                return "This method only supports univariate timeseries datasets.",BAD_REQUEST
+
+            #check binary class
+            if(1):
+                pass
+            else:
+                return "This method only supports binary classification tasks.",BAD_REQUEST
+
+            ## getting predict function
+            model_type="proba"
+            predic_func=None
+            if model_file!=None:
+                if backend in ontologyConstants.TENSORFLOW_URIS:
+                    model=h5py.File(model_file, 'w')
+                    mlp = tf.keras.models.load_model(model)
+                    predic_func=mlp
+                elif backend in ontologyConstants.SKLEARN_URIS:
                     mlp = joblib.load(model_file)
+                    try:
+                        predic_func=mlp.predict_proba
+                    except:
+                        predic_func=mlp.predict
+                        model_type="class"
+                elif backend in ontologyConstants.PYTORCH_URIS:
+                    mlp = torch.load(model_file)
                     predic_func=mlp.predict
-                except Exception as e:
-                    return "Could not extract prediction function from model: " + str(e)
-        elif url!=None:
-            def predict(X):
-                return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
-            predic_func=predict
-        else:
-            raise Exception("Either a stored model or a valid URL for the prediction function must be provided.")
+                else:
+                    try:
+                        mlp = joblib.load(model_file)
+                        predic_func=mlp.predict
+                    except Exception as e:
+                        return "Could not extract prediction function from model: " + str(e),BAD_REQUEST
+            elif url!=None:
+                def predict(X):
+                    return np.array(json.loads(requests.post(url, data=dict(inputs=str(X.tolist()))).text))
+                predic_func=predict
+            else:
+                return "Either a stored model or a valid URL for the prediction function must be provided.",BAD_REQUEST
 
-        class ModelWrapper:
-            def predict(self,x):
-                return predic_func(x)
+            class ModelWrapper:
+                def predict(self,x):
+                    return predic_func(x)
 
-        model=ModelWrapper()
+            model=ModelWrapper()
 
-        #reshaping instance
-        instance=np.array(instance)
-        instance=instance.reshape(model_info["attributes"]["features"][feature]["shape"])
+            #reshaping instance
+            instance=np.array(instance)
+            instance=instance.reshape(model_info["attributes"]["features"][feature]["shape"])
 
-        #explanation
-        explainer = Explainer()
-        explanation = explainer.explain (
-                         example = instance, 
-                         model = model,
-                         model_type=model_type,
-                         X_background=np.expand_dims(dataframe.to_numpy(),axis=-1),
-                         explainer="NEVES"
-                         )
-        explainer.plot_explanation(instance, 
-                                   explanation,
-                                   title="Attributions for Class " + str(model_info["attributes"]["features"][target_names[0]]["values_raw"][1]),
-                                   y_label=feature
-                                   )
-        #saving
-        img_buf = BytesIO()
-        plt.savefig(img_buf,bbox_inches="tight")
-        im = Image.open(img_buf)
-        b64Image=PIL_to_base64(im)
-        plt.close()
+            #explanation
+            explainer = Explainer()
+            explanation = explainer.explain (
+                             example = instance, 
+                             model = model,
+                             model_type=model_type,
+                             X_background=np.expand_dims(dataframe.to_numpy(),axis=-1),
+                             explainer="NEVES"
+                             )
+            explainer.plot_explanation(instance, 
+                                       explanation,
+                                       title="Attributions for Class " + str(model_info["attributes"]["features"][target_names[0]]["values_raw"][1]),
+                                       y_label=feature
+                                       )
+            #saving
+            img_buf = BytesIO()
+            plt.savefig(img_buf,bbox_inches="tight")
+            im = Image.open(img_buf)
+            b64Image=PIL_to_base64(im)
+            plt.close()
 
-        response={"type":"image","explanation":b64Image}#,"explanation":dict_exp}
-        return response
-        
+            response={"type":"image","explanation":b64Image}#,"explanation":dict_exp}
+            return response
+        except:
+            return traceback.format_exc(), 500        
 
     def get(self,id=None):
         base_dict={
