@@ -3,6 +3,7 @@ import os
 import json
 import markdown
 import markdown.extensions.fenced_code
+import traceback
 from flask import Flask, send_from_directory, make_response
 from flask_restful import Api
 from flask_cors import CORS
@@ -165,7 +166,6 @@ api.add_resource(TSNearestNeighbours, "/Timeseries/NearestNeighbours",'/Timeseri
 api.add_resource(TSConfusionMatrix, "/Timeseries/ConfusionMatrix",'/Timeseries/ConfusionMatrix/<id>', resource_class_kwargs=path_dict)
 api.add_resource(TSSummaryMetrics, "/Timeseries/SummaryMetrics",'/Timeseries/SummaryMetrics/<id>', resource_class_kwargs=path_dict)
 api.add_resource(AIModelPerformance, "/Misc/AIModelPerformance",'/Misc/AIModelPerformance/<id>', resource_class_kwargs=path_dict)
-
 
 @api.representation('image/png')
 def output_file_png(data, code, headers):

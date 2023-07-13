@@ -1,14 +1,14 @@
+from http.client import BAD_REQUEST
 from flask_restful import Resource
 import json
 import pandas as pd
-import numpy as np
 from getmodelfiles import get_model_files
 import joblib
 from pertCF.PertCF import PertCF
 from flask import request
 from utils import ontologyConstants
 from utils.dataframe_processing import normalize_dataframe, denormalize_dataframe
-
+import traceback
 
 class Pertcf(Resource):
 
@@ -19,15 +19,15 @@ class Pertcf(Resource):
     def post(self):
         params = request.json
         if params is None:
-            return "The json body is missing."
+            return "The json body is missing.",BAD_REQUEST
         
         #Check params
         if("id" not in params):
-            return "The model id was not specified in the params."
+            return "The model id was not specified in the params.",BAD_REQUEST
         if("type" not in params):
-            return "The instance type was not specified in the params."
+            return "The instance type was not specified in the params.",BAD_REQUEST
         if("instance" not in params):
-            return "The instance was not specified in the params."
+            return "The instance was not specified in the params.",BAD_REQUEST
 
         _id =params["id"]
         if("type"  in params):
@@ -49,7 +49,7 @@ class Pertcf(Resource):
         if data_file!=None:
             data = joblib.load(data_file) 
         else:
-            raise Exception("The training data file was not provided.")
+            return "The training data file was not provided.",BAD_REQUEST
 
         ## loading model
         model=None
@@ -57,74 +57,77 @@ class Pertcf(Resource):
             if backend in ontologyConstants.SKLEARN_URIS:
                 model = joblib.load(model_file)
             else:
-                return "This method currently supports Scikit-learn and scikit-learn classification models only."
+                return "This method currently supports scikit-learn classification models only.",BAD_REQUEST
         else:
-            raise Exception("The model file was not uploaded.") 
+            return "The model file was not uploaded.",BAD_REQUEST
 
         return self.explain(model, model_info, data, params_json, instance)
 
     def explain(self,model, model_info, data=None, params_json=None, instance=None):
 
-        #params from model info
-        features=model_info["attributes"]["features"]
-        target_name=model_info["attributes"]["target_names"][0]
-        output_names=features[target_name]["values_raw"]
-        label=target_name
-        feature_names=list(data.columns)
-        feature_names.remove(label)
+        try:
+            #params from model info
+            features=model_info["attributes"]["features"]
+            target_name=model_info["attributes"]["target_names"][0]
+            output_names=features[target_name]["values_raw"]
+            label=target_name
+            feature_names=list(data.columns)
+            feature_names.remove(label)
 
-        feature_groups={'categorical': None, 'numeric': None, 'ordinal': None}
+            feature_groups={'categorical': None, 'numeric': None, 'ordinal': None}
 
-        #params from json
-        encode_cat='OrdinalEncoder'
-        if 'encode_cat' in params_json:
-            encode_cat = str(params_json['encode_cat'])
-        global_sim='euclidean'
-        if 'global_sim' in params_json:
-            global_sim = str(params_json['global_sim'])
-        local_sim='auto'
-        if 'local_sim' in params_json:
-            local_sim = str(params_json['local_sim'])
-        sample_shap=50
-        if 'shap_sample' in params_json:
-            sample_shap=int(params_json['shap_sample'])
-        candidate_threshold=0.5
-        if 'candidate_threshold' in params_json:
-            candidate_threshold=float(candidate_threshold)
-        candidate_max_iter=20
-        if 'candidate_max_iter' in params_json:
-            candidate_max_iter=int(candidate_max_iter)
-
-
-        model.feature_names_in_=feature_names
-        explainer = PertCF(dataset = data,
-                           label = label,
-                           model = model,
-                           feature_names = feature_groups, ###
-                           encode_cat = encode_cat,
-                           global_sim = global_sim,
-                           local_sim = local_sim,
-                           shap_param = {'sample':sample_shap,'Visualize': False, 'Normalize': False},
-                           candidate_param = {'thresh':candidate_threshold,'max_iter':candidate_max_iter})
+            #params from json
+            encode_cat='OrdinalEncoder'
+            if 'encode_cat' in params_json:
+                encode_cat = str(params_json['encode_cat'])
+            global_sim='euclidean'
+            if 'global_sim' in params_json:
+                global_sim = str(params_json['global_sim'])
+            local_sim='auto'
+            if 'local_sim' in params_json:
+                local_sim = str(params_json['local_sim'])
+            sample_shap=50
+            if 'shap_sample' in params_json:
+                sample_shap=int(params_json['shap_sample'])
+            candidate_threshold=0.5
+            if 'candidate_threshold' in params_json:
+                candidate_threshold=float(candidate_threshold)
+            candidate_max_iter=20
+            if 'candidate_max_iter' in params_json:
+                candidate_max_iter=int(candidate_max_iter)
 
 
-        #normalize instance
-        df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
-        if target_name in df_inst.columns:
-            df_inst.drop([target_name], axis=1, inplace=True)
-        df_inst=df_inst[feature_names]
-        norm_instance=normalize_dataframe(df_inst,model_info)
+            model.feature_names_in_=feature_names
+            explainer = PertCF(dataset = data,
+                               label = label,
+                               model = model,
+                               feature_names = feature_groups, ###
+                               encode_cat = encode_cat,
+                               global_sim = global_sim,
+                               local_sim = local_sim,
+                               shap_param = {'sample':sample_shap,'Visualize': False, 'Normalize': False},
+                               candidate_param = {'thresh':candidate_threshold,'max_iter':candidate_max_iter})
 
-        test_label = model.predict(norm_instance.to_numpy())[0]
-        norm_instance[label]=test_label
 
-        norm_explanation = explainer.explain(norm_instance.iloc[0])
-        denorm_explanation=denormalize_dataframe(norm_explanation,model_info)
-        denorm_explanation.index.name=None
+            #normalize instance
+            df_inst=pd.DataFrame([instance.values()],columns=instance.keys())
+            if target_name in df_inst.columns:
+                df_inst.drop([target_name], axis=1, inplace=True)
+            df_inst=df_inst[feature_names]
+            norm_instance=normalize_dataframe(df_inst,model_info)
 
-        ret={"type":"html", "explanation":denorm_explanation.to_html()}
-        return ret
-    
+            test_label = model.predict(norm_instance.to_numpy())[0]
+            norm_instance[label]=test_label
+
+            norm_explanation = explainer.explain(norm_instance.iloc[0])
+            denorm_explanation=denormalize_dataframe(norm_explanation,model_info)
+            denorm_explanation.index.name=None
+
+            ret={"type":"html", "explanation":denorm_explanation.to_html()}
+            return ret
+
+        except:
+            return traceback.format_exc(), 500
     
     def get(self,id=None):
         

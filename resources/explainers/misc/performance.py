@@ -1,8 +1,10 @@
+from http.client import BAD_REQUEST
 from flask_restful import Resource
 from flask import request
 import json
 import pandas as pd
 import numpy as np
+import traceback
 
 class AIModelPerformance(Resource):
 
@@ -13,13 +15,13 @@ class AIModelPerformance(Resource):
     def post(self):
         params = request.json
         if params is None:
-            return "The json body is missing."
+            return "The json body is missing.",BAD_REQUEST
         
         #Check params
         if("id" not in params):
-            return "The model id was not specified in the params."
+            return "The model id was not specified in the params.",BAD_REQUEST
         if("usecase" not in params):
-            return "The usecase was not specified in the params."
+            return "The usecase was not specified in the params.",BAD_REQUEST
 
         params_json={}
         if "params" in params:
@@ -28,32 +30,36 @@ class AIModelPerformance(Resource):
         return self.explain(params["usecase"], params_json)
 
     def explain(self, usecase, params_json):
-        selected_metrics = [f.lower() for f in params_json["selected_metrics"]] if "selected_metrics" in params_json else None
+
+        try:
+            selected_metrics = [f.lower() for f in params_json["selected_metrics"]] if "selected_metrics" in params_json else None
         
-        # get case structure from the request
-        case_structure = usecase
-        #get assessment details from the first case
-        assessments = case_structure[0]["http://www.w3id.org/iSeeOnto/explanationexperience#hasDescription"]["http://www.w3id.org/iSeeOnto/explanationexperience#hasAIModel"]["http://www.w3id.org/iSeeOnto/evaluation#annotatedBy"]
+            # get case structure from the request
+            case_structure = usecase
+            #get assessment details from the first case
+            assessments = case_structure[0]["http://www.w3id.org/iSeeOnto/explanationexperience#hasDescription"]["http://www.w3id.org/iSeeOnto/explanationexperience#hasAIModel"]["http://www.w3id.org/iSeeOnto/evaluation#annotatedBy"]
 
-        evals = []
-        for temp in assessments:
-            metric = temp["http://sensornet.abdn.ac.uk/onts/Qual-O#basedOn"].split("#")[-1].replace("_", " ")         
-            value = temp["http://www.w3.org/ns/prov#value"]["value"]
-            evals.append([metric, value])
+            evals = []
+            for temp in assessments:
+                metric = temp["http://sensornet.abdn.ac.uk/onts/Qual-O#basedOn"].split("#")[-1].replace("_", " ")         
+                value = temp["http://www.w3.org/ns/prov#value"]["value"]
+                evals.append([metric, value])
 
-        selected_evals = []
-        if selected_metrics:
-            selected_evals = [[k,v] for k,v in evals if k.lower() in selected_metrics]
-            if len(selected_evals) > 0:
-                result_df = pd.DataFrame(np.array(selected_evals), columns=["Assessment Metric", "Value"])
-                str_html= result_df.to_html(index=False)+'<br>'
-                response={"type":"html", "explanation":str_html}
-                return response
+            selected_evals = []
+            if selected_metrics:
+                selected_evals = [[k,v] for k,v in evals if k.lower() in selected_metrics]
+                if len(selected_evals) > 0:
+                    result_df = pd.DataFrame(np.array(selected_evals), columns=["Assessment Metric", "Value"])
+                    str_html= result_df.to_html(index=False)+'<br>'
+                    response={"type":"html", "explanation":str_html}
+                    return response
             
-        result_df = pd.DataFrame(np.array(evals), columns=["Assessment Metric", "Value"])
-        str_html= result_df.to_html(index=False)+'<br>'
-        response={"type":"html", "explanation":str_html}
-        return response
+            result_df = pd.DataFrame(np.array(evals), columns=["Assessment Metric", "Value"])
+            str_html= result_df.to_html(index=False)+'<br>'
+            response={"type":"html", "explanation":str_html}
+            return response
+        except:
+            return traceback.format_exc(), 500
 
     def get(self,id=None):
         return {

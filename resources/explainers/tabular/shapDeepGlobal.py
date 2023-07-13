@@ -1,3 +1,4 @@
+from http.client import BAD_REQUEST
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
@@ -12,6 +13,7 @@ from io import BytesIO
 from PIL import Image
 from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
+import traceback
 
 
 class ShapDeepGlobal(Resource):
@@ -21,83 +23,86 @@ class ShapDeepGlobal(Resource):
         self.upload_folder = upload_folder   
 
     def post(self):
-        params = request.json
-        if params is None:
-            return "The json body is missing"
+        try:
+            params = request.json
+            if params is None:
+                return "The json body is missing",BAD_REQUEST
         
-        #Check params
-        if("id" not in params):
-            return "The model id was not specified in the params."
-        _id =params["id"]
-        if("type"  in params):
-            inst_type=params["type"]
-        params_json={}
-        if "params" in params:
-            params_json=params["params"]
+            #Check params
+            if("id" not in params):
+                return "The model id was not specified in the params.",BAD_REQUEST
+            _id =params["id"]
+            if("type"  in params):
+                inst_type=params["type"]
+            params_json={}
+            if "params" in params:
+                params_json=params["params"]
         
-        #getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+            #getting model info, data, and file from local repository
+            model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-        else:
-            raise Exception("The training data file was not provided.")
-
-        #getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"]
-        target_name=model_info["attributes"]["target_names"][0]
-        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
-        dataframe.drop([target_name], axis=1, inplace=True)
-        feature_names=list(dataframe.columns)
-        
-        #getting params from request
-        index=0
-        if "target_class" in params_json:
-            target_class=str(params_json["target_class"])
-            try:
-                index=output_names.index(target_class)
-            except:
-                pass
-
-        #loading model (.h5 file)
-        if model_file!=None:
-            if backend in ontologyConstants.TENSORFLOW_URIS:
-                model=h5py.File(model_file, 'w')
-                model=tf.keras.models.load_model(model)
+            #loading data
+            if data_file!=None:
+                dataframe = joblib.load(data_file) ##error handling?
             else:
-                return "The model backend is not supported: " + backend
-        else:
-            return "Model file was not uploaded."
+                return "The training data file was not provided.",BAD_REQUEST
 
-        #creating explanation
-        explainer = shap.DeepExplainer(model,dataframe.to_numpy())
-        shap_values = explainer.shap_values(dataframe.to_numpy())
+            #getting params from info
+            model_info=json.load(model_info_file)
+            backend = model_info["backend"]
+            target_name=model_info["attributes"]["target_names"][0]
+            output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+            dataframe.drop([target_name], axis=1, inplace=True)
+            feature_names=list(dataframe.columns)
         
-        if(len(np.array(shap_values).shape)==3): #multiclass shape: (#_of_classes, #_of_instances,#_of_features)
-            shap_values=shap_values[index]
+            #getting params from request
+            index=0
+            if "target_class" in params_json:
+                target_class=str(params_json["target_class"])
+                try:
+                    index=output_names.index(target_class)
+                except:
+                    pass
+
+            #loading model (.h5 file)
+            if model_file!=None:
+                if backend in ontologyConstants.TENSORFLOW_URIS:
+                    model=h5py.File(model_file, 'w')
+                    model=tf.keras.models.load_model(model)
+                else:
+                    return "The model backend is not supported: " + backend,BAD_REQUEST
+            else:
+                return "Model file was not uploaded.",BAD_REQUEST
+
+            #creating explanation
+            explainer = shap.DeepExplainer(model,dataframe.to_numpy())
+            shap_values = explainer.shap_values(dataframe.to_numpy())
+        
+            if(len(np.array(shap_values).shape)==3): #multiclass shape: (#_of_classes, #_of_instances,#_of_features)
+                shap_values=shap_values[index]
            
-        #plotting   
-        plt.switch_backend('agg')
-        shap.summary_plot(shap_values,features=dataframe, feature_names=feature_names,class_names=output_names,show=False)
+            #plotting   
+            plt.switch_backend('agg')
+            shap.summary_plot(shap_values,features=dataframe, feature_names=feature_names,class_names=output_names,show=False)
 
-        #formatting json output
-        #shap_values = [x.tolist() for x in shap_values]
-        #ret=json.loads(json.dumps(shap_values))
+            #formatting json output
+            #shap_values = [x.tolist() for x in shap_values]
+            #ret=json.loads(json.dumps(shap_values))
 
-        ##saving
-        img_buf = BytesIO()
-        plt.savefig(img_buf,bbox_inches="tight")
-        im = Image.open(img_buf)
-        b64Image=PIL_to_base64(im)
-        plt.close()
+            ##saving
+            img_buf = BytesIO()
+            plt.savefig(img_buf,bbox_inches="tight")
+            im = Image.open(img_buf)
+            b64Image=PIL_to_base64(im)
+            plt.close()
         
-        #Insert code for image uploading and getting url
-        response={"type":"image","explanation":b64Image}
+            #Insert code for image uploading and getting url
+            response={"type":"image","explanation":b64Image}
 
-        return response
+            return response
 
+        except:
+            return traceback.format_exc(), 500
 
     def get(self,id=None):
         

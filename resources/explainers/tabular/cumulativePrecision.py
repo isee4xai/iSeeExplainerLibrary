@@ -1,3 +1,4 @@
+from http.client import BAD_REQUEST
 from flask_restful import Resource
 import joblib
 import json
@@ -6,7 +7,7 @@ from explainerdashboard.dashboard_components.classifier_components import Cumula
 from flask import request
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
-
+import traceback
 
 class CumulativePrecision(Resource):
 
@@ -17,11 +18,11 @@ class CumulativePrecision(Resource):
     def post(self):
         params = request.json
         if params is None:
-            return "The json body is missing."
+            return "The json body is missing.",BAD_REQUEST
         
         #Check params
         if("id" not in params):
-            return "The model id was not specified in the params."
+            return "The model id was not specified in the params.",BAD_REQUEST
 
         _id =params["id"]
         params_json={}
@@ -36,13 +37,13 @@ class CumulativePrecision(Resource):
         model_task = model_info["model_task"]
 
         if model_task not in ontologyConstants.CLASSIFICATION_URIS:
-            return "AI task not supported. This explainer only supports scikit-learn-based classifiers."
+            return "AI task not supported. This explainer only supports scikit-learn-based classifiers.",BAD_REQUEST
 
         #loading data
         if data_file!=None:
             dataframe = joblib.load(data_file) ##error handling?
         else:
-            raise Exception("The training data file was not provided.")
+            return "The training data file was not provided.",BAD_REQUEST
 
         #loading model (.pkl file)
         if model_file!=None:
@@ -53,34 +54,36 @@ class CumulativePrecision(Resource):
             elif backend in ontologyConstants.LIGHTGBM_URIS:
                 model = joblib.load(model_file)
             else:
-                return "This explainer only supports scikit-learn-based models"
+                return "This explainer only supports scikit-learn-based models",BAD_REQUEST
         else:
-            return "Model file was not uploaded."
+            return "Model file was not uploaded.",BAD_REQUEST
 
         return self.explain(model,model_info,dataframe,params_json)
 
 
     def explain(self,model,model_info,data,params_json):
-        
-        #getting params from model info
-        target_name=model_info["attributes"]["target_names"][0]
-        output_names=model_info["attributes"]["features"][target_name]["values_raw"]
+        try:
+            #getting params from model info
+            target_name=model_info["attributes"]["target_names"][0]
+            output_names=model_info["attributes"]["features"][target_name]["values_raw"]
 
-        #getting params from json
-        label=None
-        if "label" in params_json:
-            try:
-                label=str(params_json["label"])
-            except Exception as e:
-                return "Could not convert to label to string: " + str(e)
+            #getting params from json
+            label=None
+            if "label" in params_json:
+                try:
+                    label=str(params_json["label"])
+                except Exception as e:
+                    return "Could not convert to label to string: " + str(e),BAD_REQUEST
 
-        explainer = ClassifierExplainer(model, data.drop([target_name], axis=1, inplace=False), data[target_name],labels=output_names)
-        exp=CumulativePrecisionComponent(explainer,pos_label=label)
-        exp_html=exp.to_html().replace('\n', ' ').replace("\"","'")
+            explainer = ClassifierExplainer(model, data.drop([target_name], axis=1, inplace=False), data[target_name],labels=output_names)
+            exp=CumulativePrecisionComponent(explainer,pos_label=label)
+            exp_html=exp.to_html().replace('\n', ' ').replace("\"","'")
 
-        response={"type":"html","explanation":exp_html}
-        return response
+            response={"type":"html","explanation":exp_html}
+            return response
 
+        except:
+            return traceback.format_exc(), 500
 
     def get(self,id=None):
 

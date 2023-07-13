@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-
+from http.client import BAD_REQUEST
 from flask_restful import Resource
 from flask import request
 import json
@@ -10,6 +10,7 @@ from NLPClassifierExplainer.NLPClassificationExplainer import NLPClassificationE
 from string import Template
 from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
+import traceback
 
 def _generate_html(explanation):
     # ------------------ header section ---------------------
@@ -155,75 +156,79 @@ class NLPClassifierExpl(Resource):
         self.upload_folder = upload_folder
 
     def post(self):
-        params = request.json
-        if params is None:
-            return "The json body is missing."
+        try:
+            params = request.json
+            if params is None:
+                return "The json body is missing.",BAD_REQUEST
         
-        #Check params
-        if("id" not in params):
-            return "The model id was not specified in the params."
-        if("type" not in params):
-            return "The instance type was not specified in the params."
-        if("instance" not in params):
-            return "The instance was not specified in the params."
+            #Check params
+            if("id" not in params):
+                return "The model id was not specified in the params.",BAD_REQUEST
+            if("type" not in params):
+                return "The instance type was not specified in the params.",BAD_REQUEST
+            if("instance" not in params):
+                return "The instance was not specified in the params.",BAD_REQUEST
 
-        _id =params["id"]
-        if("type"  in params):
-            inst_type=params["type"]
-        instance=str(params["instance"])
-        params_json={}
-        if "params" in params:
-            params_json=params["params"]
+            _id =params["id"]
+            if("type"  in params):
+                inst_type=params["type"]
+            instance=str(params["instance"])
+            params_json={}
+            if "params" in params:
+                params_json=params["params"]
         
-        #getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+            #getting model info, data, and file from local repository
+            model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        ##getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"] 
-        target_names=model_info["attributes"]["target_names"]
-        feature_names=list(model_info["attributes"]["features"].keys())
-        for target in target_names:
-            feature_names.remove(target)
+            ##getting params from info
+            model_info=json.load(model_info_file)
+            backend = model_info["backend"] 
+            target_names=model_info["attributes"]["target_names"]
+            feature_names=list(model_info["attributes"]["features"].keys())
+            for target in target_names:
+                feature_names.remove(target)
 
-        #loading data
-        if data_file!=None:
-            tmp = joblib.load(data_file) ##error handling?
-            source= tmp[feature_names[0]].values # tmp is a dataframe, turn it into a list of str
-        else:
-            source = None
+            #loading data
+            if data_file!=None:
+                tmp = joblib.load(data_file) ##error handling?
+                source= tmp[feature_names[0]].values # tmp is a dataframe, turn it into a list of str
+            else:
+                source = None
 
-        #load model
-        if model_file!=None:
-            if backend in ontologyConstants.SKLEARN_URIS:
-                model = joblib.load(model_file)
-        else:
-            return "The model file was not provided."
+            #load model
+            if model_file!=None:
+                if backend in ontologyConstants.SKLEARN_URIS:
+                    model = joblib.load(model_file)
+            else:
+                return "The model file was not provided.",BAD_REQUEST
 
-        explainer = NLPClassificationExplainer(model=model)
-        explanation =explainer.explain(instance, source=source)
+            explainer = NLPClassificationExplainer(model=model)
+            explanation =explainer.explain(instance, source=source)
         
-        output_format="html"
-        if "output_format" in params_json:
-            output_format = str(params_json["output_format"])
+            output_format="html"
+            if "output_format" in params_json:
+                output_format = str(params_json["output_format"])
 
-        response=None
-        if output_format=="html":
-            # HTML explanation
-            html = _generate_html(explanation)
-            html=html.replace("\n","<br>")
-            response={"type":"html","explanation":html}
-        elif output_format=="png":
-            # Image explanation
-            word_cloud = explainer.generate_word_cloud(explanation)
-            im=word_cloud.to_image()
-            b64str=PIL_to_base64(im)
-            response={"type":"image","explanation":b64str}
-        else:
-            # JSON explanation
-            response={"type":"dict","explanation":explanation}
+            response=None
+            if output_format=="html":
+                # HTML explanation
+                html = _generate_html(explanation)
+                html=html.replace("\n","<br>")
+                response={"type":"html","explanation":html}
+            elif output_format=="png":
+                # Image explanation
+                word_cloud = explainer.generate_word_cloud(explanation)
+                im=word_cloud.to_image()
+                b64str=PIL_to_base64(im)
+                response={"type":"image","explanation":b64str}
+            else:
+                # JSON explanation
+                response={"type":"dict","explanation":explanation}
 
-        return response
+            return response
+        except:
+            return traceback.format_exc(), 500
+
 
     def get(self,id=None):
 

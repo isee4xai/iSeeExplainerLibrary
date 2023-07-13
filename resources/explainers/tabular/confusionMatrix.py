@@ -1,3 +1,4 @@
+from http.client import BAD_REQUEST
 from flask_restful import Resource
 import joblib
 import json
@@ -6,7 +7,7 @@ from explainerdashboard.dashboard_components.classifier_components import Confus
 from flask import request
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
-
+import traceback
 
 class ConfusionMatrix(Resource):
 
@@ -17,11 +18,11 @@ class ConfusionMatrix(Resource):
     def post(self):
         params = request.json
         if params is None:
-            return "The json body is missing."
+            return "The json body is missing.",BAD_REQUEST
         
         #Check params
         if("id" not in params):
-            return "The model id was not specified in the params."
+            return "The model id was not specified in the params.",BAD_REQUEST
 
         _id =params["id"]
         params_json={}
@@ -32,55 +33,58 @@ class ConfusionMatrix(Resource):
 
 
     def explain(self,_id,params_json):
-        
-        #getting model info, data, and file from local repository
-        model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
+        try:
+            #getting model info, data, and file from local repository
+            model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)
 
-        #loading data
-        if data_file!=None:
-            dataframe = joblib.load(data_file) ##error handling?
-        else:
-            raise Exception("The training data file was not provided.")
-
-        #getting params from info
-        model_info=json.load(model_info_file)
-        backend = model_info["backend"]
-        target_name=model_info["attributes"]["target_names"][0]
-        features=model_info["attributes"]["features"]
-        output_names=features[target_name]["values_raw"]
-        model_task = model_info["model_task"]  
-
-        #loading model (.pkl file)
-        if model_file!=None:
-            if backend in ontologyConstants.SKLEARN_URIS:
-                model = joblib.load(model_file)
-            elif backend in ontologyConstants.XGBOOST_URIS:
-                model = joblib.load(model_file)
-            elif backend in ontologyConstants.LIGHTGBM_URIS:
-                model = joblib.load(model_file)
+            #loading data
+            if data_file!=None:
+                dataframe = joblib.load(data_file) ##error handling?
             else:
-                return "This explainer only supports scikit-learn-based models"
-        else:
-            return "Model file was not uploaded."
+                return "The training data file was not provided.",BAD_REQUEST
 
-        if model_task in ontologyConstants.CLASSIFICATION_URIS:
-            explainer = ClassifierExplainer(model, dataframe.drop([target_name], axis=1, inplace=False), dataframe[target_name],labels=output_names)
-        else:
-            return "AI task not supported. This explainer only supports scikit-learn-based classifiers."
+            #getting params from info
+            model_info=json.load(model_info_file)
+            backend = model_info["backend"]
+            target_name=model_info["attributes"]["target_names"][0]
+            features=model_info["attributes"]["features"]
+            output_names=features[target_name]["values_raw"]
+            model_task = model_info["model_task"]  
 
-        #getting params from request
-        cutoff=0.5
-        if "cutoff" in params_json:
-            try:
-                cutoff=float(params_json["cutoff"])
-            except Exception as e:
-                return "Could not convert to cuttoff to float: " + str(e)
+            #loading model (.pkl file)
+            if model_file!=None:
+                if backend in ontologyConstants.SKLEARN_URIS:
+                    model = joblib.load(model_file)
+                elif backend in ontologyConstants.XGBOOST_URIS:
+                    model = joblib.load(model_file)
+                elif backend in ontologyConstants.LIGHTGBM_URIS:
+                    model = joblib.load(model_file)
+                else:
+                    return "This explainer only supports scikit-learn-based models",BAD_REQUEST
+            else:
+                return "Model file was not uploaded.",BAD_REQUEST
 
-        exp=ConfusionMatrixComponent(explainer,cutoff=cutoff,binary=False)
-        exp_html=exp.to_html().replace('\n', ' ').replace("\"","'")
+            if model_task in ontologyConstants.CLASSIFICATION_URIS:
+                explainer = ClassifierExplainer(model, dataframe.drop([target_name], axis=1, inplace=False), dataframe[target_name],labels=output_names)
+            else:
+                return "AI task not supported. This explainer only supports scikit-learn-based classifiers.",BAD_REQUEST
 
-        response={"type":"html","explanation":exp_html}
-        return response
+            #getting params from request
+            cutoff=0.5
+            if "cutoff" in params_json:
+                try:
+                    cutoff=float(params_json["cutoff"])
+                except Exception as e:
+                    return "Could not convert to cuttoff to float: " + str(e),BAD_REQUEST
+
+            exp=ConfusionMatrixComponent(explainer,cutoff=cutoff,binary=False)
+            exp_html=exp.to_html().replace('\n', ' ').replace("\"","'")
+
+            response={"type":"html","explanation":exp_html}
+            return response
+
+        except:
+            return traceback.format_exc(), 500
 
 
     def get(self,id=None):
