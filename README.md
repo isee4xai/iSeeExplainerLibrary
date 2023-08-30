@@ -2,7 +2,7 @@
 
 This repository comprises XAI methods (Explainers) used in the iSee Project.
 
-## Want to include your Explainer?
+## Want to include your own Explainer?
 
 If you want to contribute by including an explainer in the repository, please have a look at the notebooks in the **Explainer Template** folders. Once you have adapted the explainer following the notebook, please reach out to us via Github issues so we can integrate it to the platform. You can also open the notebook in colab by clicking on the button below:
 
