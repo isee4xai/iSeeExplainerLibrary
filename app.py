@@ -46,6 +46,10 @@ from resources.explainers.images.anchors import AnchorsImage
 from resources.explainers.images.gradcam import GradCam
 from resources.explainers.images.integratedGradients import IntegratedGradientsImage
 from resources.explainers.images.nn import NearestNeighboursImage
+from resources.explainers.images.confusionMatrix import ConfusionMatrixImages
+from resources.explainers.images.classificationReport import ClassificationReport
+from resources.explainers.images.nnSSIM import SSIMNearestNeighbours
+from resources.explainers.images.cfSSIM import SSIMCounterfactual
 from resources.explainers.text.lime import LimeText
 from resources.explainers.text.nlp_clf_explainer import NLPClassifierExpl
 from resources.explainers.timeseries.cbrFox import CBRFox
@@ -150,10 +154,14 @@ api.add_resource(SklearnICE, '/Tabular/ICE','/Tabular/ICE/<id>',resource_class_k
 api.add_resource(Pertcf, '/Tabular/PertCF','/Tabular/PertCF/<id>',resource_class_kwargs=path_dict)
 api.add_resource(LimeImage, '/Images/LIME','/Images/LIME/<id>',resource_class_kwargs=path_dict)
 api.add_resource(AnchorsImage, '/Images/Anchors','/Images/Anchors/<id>',resource_class_kwargs=path_dict)
+api.add_resource(ClassificationReport, '/Images/ClassificationReport','/Images/ClassificationReport/<id>',resource_class_kwargs=path_dict)
 #api.add_resource(CounterfactualsImage, '/Images/Counterfactuals','/Images/Counterfactuals/<id>',resource_class_kwargs=path_dict)
 api.add_resource(GradCam, '/Images/GradCam','/Images/GradCam/<id>',resource_class_kwargs=path_dict)
 api.add_resource(IntegratedGradientsImage, '/Images/IntegratedGradients','/Images/IntegratedGradients/<id>',resource_class_kwargs=path_dict)
 api.add_resource(NearestNeighboursImage, '/Images/NearestNeighbours','/Images/NearestNeighbours/<id>',resource_class_kwargs=path_dict)
+api.add_resource(ConfusionMatrixImages, '/Images/ConfusionMatrix','/Images/ConfusionMatrix/<id>',resource_class_kwargs=path_dict)
+api.add_resource(SSIMNearestNeighbours, '/Images/SSIMNearestNeighbours','/Images/SSIMNearestNeighbours/<id>',resource_class_kwargs=path_dict)
+api.add_resource(SSIMCounterfactual, '/Images/SSIMCounterfactuals','/Images/SSIMCounterfactuals/<id>',resource_class_kwargs=path_dict)
 api.add_resource(LimeText, '/Text/LIME','/Text/LIME/<id>',resource_class_kwargs=path_dict)
 api.add_resource(NLPClassifierExpl, "/Text/NLPClassifier",'/Text/NLPClassifier/<id>', resource_class_kwargs=path_dict)
 api.add_resource(CBRFox, "/Timeseries/CBRFox",'/Timeseries/CBRFox/<id>', resource_class_kwargs=path_dict)

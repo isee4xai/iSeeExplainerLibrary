@@ -4,10 +4,13 @@ class Explainers(Resource):
     def get(self):
         return [ '/Images/Anchors',
                  #'/Images/Counterfactuals',
+                 '/Images/ConfusionMatrix'
                  '/Images/GradCam',
                  '/Images/IntegratedGradients',
                  '/Images/LIME',
                  '/Images/NearestNeighbours',
+                 '/Images/SSIMCounterfactuals'
+                 '/Images/SSIMNearestNeighbours'
                  '/Tabular/ALE',
                  '/Tabular/Anchors',
                  '/Tabular/ConfusionMatrix',

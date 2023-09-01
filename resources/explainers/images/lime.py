@@ -83,24 +83,43 @@ class LimeImage(Resource):
         
            #converting to vector
             try:
-                instance=base64_to_vector(instance)
+                im=base64_to_vector(instance)
             except Exception as e:  
                 return "Could not convert base64 Image to vector: " + str(e),BAD_REQUEST
 
             #normalizing
             try:
-                instance=normalize_img(instance,model_info)
+                instance=normalize_img(im,model_info)
             except Exception as e:
                     return  "Could not normalize instance: " + str(e)
 
             if len(model_info["attributes"]["features"]["image"]["shape_raw"])==2 or model_info["attributes"]["features"]["image"]["shape_raw"][-1]==1:
                return "LIME only supports RGB images.",BAD_REQUEST
 
+
+            segmentation_fn='slic'
+            if "segmentation_fn" in params_json:
+                segmentation_fn = params_json["segmentation_fn"]
+
+            segmentation_kwargs={}
+            if segmentation_fn=='slic':
+                segmentation_kwargs["n_segments"]=10
+                if "n_segments" in params_json:
+                    segmentation_kwargs["n_segments"]=int(params_json["n_segments"])
+            elif segmentation_fn=='quickshift':
+                segmentation_kwargs["kernel_size"]=5
+                if "kernel_size" in params_json:
+                    segmentation_kwargs["kernel_size"]=float(params_json["kernel_size"])
+            elif segmentation_fn=='felzenszwalb':
+                segmentation_kwargs["scale"]=1
+                if "scale" in params_json:
+                    segmentation_kwargs["scale"]=float(params_json["scale"])
+
             kwargsData = dict(top_labels=1,segmentation_fn=None)
             if "top_classes" in params_json:
                 kwargsData["top_labels"] = int(params_json["top_classes"])   #top labels
-            if "segmentation_fn" in params_json:
-                kwargsData["segmentation_fn"] = SegmentationAlgorithm(params_json["segmentation_fn"])
+
+            kwargsData["segmentation_fn"] = SegmentationAlgorithm(segmentation_fn,**{k: v for k, v in segmentation_kwargs.items() if v is not None})
 
             size=(12, 12)
             if "png_height" in params_json and "png_width" in params_json:
@@ -112,8 +131,10 @@ class LimeImage(Resource):
             explainer = lime_image.LimeImageExplainer()
             explanation = explainer.explain_instance(instance[0], classifier_fn=predic_func,**{k: v for k, v in kwargsData.items() if v is not None})
 
-            fig, axes = plt.subplots(1,len(explanation.top_labels), figsize = size)
-            i=0
+            fig, axes = plt.subplots(1,len(explanation.top_labels)+1, figsize = size)
+            axes[0].imshow(im)
+            axes[0].set_title("Original Image")
+            i=1
             for cat in explanation.top_labels:
                 temp, mask = explanation.get_image_and_mask(cat, positive_only=False,hide_rest=False)
                 axes[i].imshow(mark_boundaries(temp, mask))

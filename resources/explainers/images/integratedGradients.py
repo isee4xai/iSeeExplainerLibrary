@@ -9,6 +9,7 @@ import json
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from alibi.explainers import IntegratedGradients
+from alibi.utils import visualize_image_attr
 from io import BytesIO
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
@@ -126,42 +127,58 @@ class IntegratedGradientsImage(Resource):
             attrs = explanation.attributions[0]
             attr = attrs[0]
 
+            print(im.shape)
+            print(np.max(im))
+            print(attr.shape)
+            print(attr)
+            print(np.max(attr))
+
             # fig, (a0,a1,a2,a3,a4) = plt.subplots(nrows=1, ncols=5, figsize=size,gridspec_kw={'width_ratios':[3,3,3,3,1]})
 
             # a0.imshow(im)
             # a0.set_title("Original Image")
 
             if(plot_type=="attributions"):
-                fig, (a0,a1,a2, a3, a4) = plt.subplots(nrows=1, ncols=5, figsize=size,gridspec_kw={'width_ratios':[3,3,3,3,1]})
 
-                a0.imshow(im)
-                a0.set_title("Original Image")
+                if(im.shape[-1]!=3):
+                    fig, (a0,a1,a2, a3, a4) = plt.subplots(nrows=1, ncols=5, figsize=size,gridspec_kw={'width_ratios':[3,3,3,3,1]})
 
-                cmap_bound = np.abs(attrs).max()
+                    a0.imshow(im)
+                    a0.set_title("Original Image")
 
-                # attributions
-                im = a1.imshow(attr.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+                    cmap_bound = np.abs(attrs).max()
 
-                # positive attributions
-                attr_pos = attr.clip(0, 1)
-                im_pos = a2.imshow(attr_pos.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+                    # attributions
+                    im = a1.imshow(attr.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
 
-                # negative attributions
-                attr_neg = attr.clip(-1, 0)
-                im_neg = a3.imshow(attr_neg.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+                    # positive attributions
+                    attr_pos = attr.clip(0, 1)
+                    im_pos = a2.imshow(attr_pos.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
 
-                if(is_class):
-                    a1.set_title('Attributions for Class: ' + output_names[target_class])
-                else:
-                   a1.set_title("Attributions for Pred: " + str(np.squeeze(prediction).round(4)))
-                a2.set_title('Positive attributions');
-                a3.set_title('Negative attributions');
+                    # negative attributions
+                    attr_neg = attr.clip(-1, 0)
+                    im_neg = a3.imshow(attr_neg.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
 
-                for ax in fig.axes:
-                    ax.axis('off')
+                    if(is_class):
+                        a1.set_title('Attributions for Class: ' + output_names[target_class])
+                    else:
+                       a1.set_title("Attributions for Pred: " + str(np.squeeze(prediction).round(4)))
+                    a2.set_title('Positive attributions');
+                    a3.set_title('Negative attributions');
+
+                    for ax in fig.axes:
+                        ax.axis('off')
    
-                fig.colorbar(im)
-                fig.tight_layout()
+                    fig.colorbar(im)
+                    fig.tight_layout()
+                else:
+                    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
+                    visualize_image_attr(attr=None, original_image=im, method='original_image',
+                            title='Original Image', plt_fig_axis=(fig, ax[0]), use_pyplot=False)
+
+                    visualize_image_attr(attr=attrs.squeeze(), original_image=im, method='blended_heat_map',
+                            sign='all', show_colorbar=True, title='Overlaid Attributions',
+                            plt_fig_axis=(fig, ax[1]), use_pyplot=False);
 
             elif(plot_type=="heatmap"):
                 fig, (a0,a1,a2) = plt.subplots(nrows=1, ncols=3, figsize=size,gridspec_kw={'width_ratios':[3,3,1]})
@@ -173,12 +190,19 @@ class IntegratedGradientsImage(Resource):
                 heatmap=((attr_all-np.min(attr_all)) / (np.max(attr_all) - np.min(attr_all))).astype("float32")
                 heatmap = np.uint8(255 * heatmap)
 
+                print("Heatmap")
+                print(heatmap.shape)
+
+                if(heatmap.shape[-1]==3): #it's an RGB image, we transform to grayscale to impose the heatmap
+                   heatmap=Image.fromarray(heatmap).convert('L')
+
                 jet = cm.get_cmap("jet")
                 jet_colors = jet(np.arange(256))[:, :3]
                 jet_heatmap = jet_colors[heatmap]
                 jet_heatmap=np.uint8(255 * jet_heatmap)
                 if len(im.shape)==2:
                     im=im.reshape(im.shape+(1,))
+                
                 print(jet_heatmap.shape)
                 print(np.max(jet_heatmap))
                 print(im.shape)
