@@ -3,69 +3,49 @@ from flask_restful import Resource
 from flask import request
 from PIL import Image
 import os
-import torch.nn as nn
 import numpy as np
 import tensorflow as tf
 import torch
 import h5py
-import heapq
 import json
-from io import BytesIO
 import matplotlib.pyplot as plt
+from io import BytesIO
+from skimage.metrics import structural_similarity
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import base64_to_vector, PIL_to_base64
 from utils.img_processing import normalize_img, normalise_image_batch, denormalise_image_batch
-from sklearn.metrics.pairwise import euclidean_distances
+from utils.img_processing import normalise_image_batch
 import traceback
 
-class NearestNeighboursImage(Resource):
+class SSIMNearestNeighbours(Resource):
 
     def __init__(self,model_folder,upload_folder):
         self.model_folder = model_folder
         self.upload_folder = upload_folder
         
-    def nn_data(self, label_raw, label, model_info, encoder, data_file,sample=None):
+    def nn_data(self,label_raw, label,model_info, data_file,sample=None):
         train_data = []
+
         
         if type(data_file)==str and os.path.isdir(data_file):
             # classification image dataset in zipped folder
             _folders = [_f for _f in os.listdir(data_file) if _f == label_raw]
-            if len(_folders)!=1:
+            if len(_folders)<1:
                 raise Exception("No data found.")
 
             _folder_path = os.path.join(data_file, _folders[0])
             _files = [os.path.join(_folder_path, f) for f in os.listdir(_folder_path)]
-            train_data = np.asarray([np.array(Image.open(f)) for f in _files])
+            train_data=train_data+[np.array(Image.open(f)) for f in _files]
+            train_data=np.asarray(train_data)
 
             if sample!=None:
-                train_data=train_data[np.random.randint(train_data.shape[0], size=min(sample,len(train_data))), :]
-            print(train_data.shape)
+                sample_idx=np.random.randint(train_data.shape[0], size=min(sample,len(train_data)))
+                train_data=train_data[sample_idx,:]
             train_data = normalise_image_batch(train_data, model_info)
-            train_encodings = encoder(train_data)
 
-            return train_data, train_encodings
-        
-        # if os.path.isfile(data_file):
-        #     # csv file, first column is column names, 1st column maybe index 
-        #     with open(data_file, 'r') as f:
-        #         header = next(f).split(' ')
-        #         header = [elem.strip() for elem in header]
-
-        #         while True:
-        #             try:
-        #                 s_instance = next(f)
-        #                 s_instance = s_instance.replace('\n', '')
-        #                 s_array = s_instance.split(',')
-        #                 if label == float(s_array[-1]):
-        #                     s_array = [float(s) for s in s_array][:-2]
-        #                     train_data.append(s_array)
-        #             except Exception as e: #end of rows
-        #                 train_data = np.asarray(train_data, dtype=float)
-        #                 train_data = train_data.reshape((train_data.shape[0],)+tuple(model_info["attributes"]["features"]["image"]["shape"]))
-        #                 train_encodings = encoder(train_data)
-        #                 return train_data, train_encodings        
-        
+            return train_data
+           
         else:
             header = next(data_file).split(',')
             header = [elem.strip() for elem in header]
@@ -79,18 +59,15 @@ class NearestNeighboursImage(Resource):
                         s_array = [float(s) for s in s_array][:-1]
                         train_data.append(s_array)
                 except Exception as e: #end of rows
-                    
+                    train_data=np.asarray(train_data)
+
                     if sample!=None:
-                        train_data=train_data[np.random.randint(train_data.shape[0], size=min(sample,len(train_data))), :]
-                    train_data = np.asarray(train_data, dtype=float)
+                        sample_idx=np.random.randint(train_data.shape[0], size=min(sample,len(train_data)))
+                        train_data=train_data[sample_idx,:]
+
                     train_data = train_data.reshape((train_data.shape[0],)+tuple(model_info["attributes"]["features"]["image"]["shape"]))
-                    train_encodings = encoder(train_data)
-                    return train_data, train_encodings                 
-                    
-    def knn(self, sample_size, data, query):
-        ecd = euclidean_distances(query, data)[0]
-        top = heapq.nsmallest(sample_size+1, range(len(ecd)), ecd.take)
-        return top
+                    return train_data                 
+                   
  
     def post(self):
         params = request.json
@@ -113,9 +90,20 @@ class NearestNeighboursImage(Resource):
 
         return self.explain(_id, instance, params_json)
     
+
+    def knn(self,no_neighbours,query,data,channel_axis):
+        print(query.shape)
+        print(data[0].shape)
+        similarities=np.array([structural_similarity(query,image,channel_axis=channel_axis) for image in data])
+        ind = np.argpartition(similarities, -(no_neighbours+1))[-(no_neighbours+1):]
+        print(ind)
+        top=ind[np.argsort(similarities[ind])[::-1]]
+        print(ind)
+
+        return top,similarities[top]
+
     def explain(self, model_id, instance, params_json):
         try:
-            no_neighbours = params_json["no_neighbours"] if "no_neighbours" in params_json else 3
 
             #Getting model info, data, and file from local repository
             model_file, model_info_file, data_file = get_model_files(model_id,self.model_folder)
@@ -126,24 +114,15 @@ class NearestNeighboursImage(Resource):
             output_names=model_info["attributes"]["features"][model_info["attributes"]["target_names"][0]]["values_raw"]
 
             predic_func=None
-            last_layer_func=None
 
             if model_file!=None:
                 if backend in ontologyConstants.TENSORFLOW_URIS:
                     model = h5py.File(model_file, 'w')
                     model = tf.keras.models.load_model(model)
                     predic_func=model   
-                    def last_layer(x):
-                        new_model = tf.keras.models.Model([model.inputs], [model.layers[-2].output])
-                        return new_model(x)
-                    last_layer_func = last_layer
                 elif backend in ontologyConstants.PYTORCH_URIS:
                     model = torch.load(model_file)
                     predic_func=model.predict
-                    def last_layer(x):
-                        new_model = nn.Sequential(*list(model.children())[:-1])
-                        return new_model(x).flatten()
-                    last_layer_func = last_layer
                 else:
                     return "Only Tensorflow and PyTorch backends are supported.",BAD_REQUEST
             else:
@@ -165,17 +144,35 @@ class NearestNeighboursImage(Resource):
             pred=np.array(predic_func(instance)[0])
             if(len(pred.shape)==1):
                 instance_label = int(np.argmax(pred))
+                instance_prob=pred[instance_label]
             else:
                 instance_label=pred
+                instance_prob=instance_label
             instance_label_raw = output_names[instance_label]
-            
-            sample=None
-            if "sample" in params_json:
-                sample=int(params_json["sample"])
 
-            train_data, train_encodings = self.nn_data(instance_label_raw, instance_label, model_info, last_layer_func, data_file,sample=sample)
-            nn_indices = self.knn(no_neighbours, train_encodings, last_layer_func(instance))
+            instance=instance[0]
+            
+            no_neighbours = int(params_json["no_neighbours"]) if "no_neighbours" in params_json else 3
+
+            sample=None
+            if "samples" in params_json:
+                sample=int(params_json["samples"])
+
+            channel_axis=None
+            if(instance.shape[-1]==3):
+                channel_axis=-1
+
+            train_data = self.nn_data(instance_label_raw, instance_label, model_info, data_file,sample=sample)
+            nn_indices,sims = self.knn(no_neighbours,instance,train_data,channel_axis)
             nn_instances = np.array([train_data[n] for n in nn_indices[1:]])
+            sims=sims[1:]
+            preds=predic_func(nn_instances)
+            if(len(preds.shape)==2):
+                preds = np.delete(preds,np.s_[0:instance_label],1)
+                preds = np.delete(preds,np.s_[1:-1],1)
+
+            preds=np.squeeze(preds)
+
             nn_instances = denormalise_image_batch(nn_instances, model_info)
 
             size=(12, 6)
@@ -187,13 +184,13 @@ class NearestNeighboursImage(Resource):
 
             fig, axes = plt.subplots(nrows=1, ncols=nn_instances.shape[0]+1, figsize=size)
             axes[0].imshow(Image.fromarray(instance_raw))
-            axes[0].set_title("Original Image")
+            axes[0].set_title("Original Image\n Class: " + instance_label_raw+"\nPrediction: "+str(round(instance_prob,3)))
             nn_instances = np.squeeze(nn_instances, axis=3) if nn_instances.shape[-1] == 1 else nn_instances
 
             print(nn_instances.shape)
             for i in range(nn_instances.shape[0]):
                 axes[i+1].imshow(Image.fromarray(nn_instances[i]))
-                axes[i+1].set_title("Nearest Neighbour "+str(i+1))
+                axes[i+1].set_title("Neighbour "+str(i+1)+"\nSimilarity: "+str(round(sims[i],3))+"\nPrediction: " + str(round(preds[i],3)))
         
             for ax in fig.axes:
                 ax.axis('off')
@@ -215,31 +212,10 @@ class NearestNeighboursImage(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "Image to be explained in BASE64 format",
         "params": { 
-                "no_neighbours":{
-                    "description": "number of neighbours returned as an integer; default is 3.",
-                    "type":"int",
-                    "default": 3,
-                    "range":None,
-                    "required":False
-                    },
                 "samples":{
                     "description": "Number of samples to use from the background data. The whole dataset is used by default.",
                     "type":"int",
                     "default": None,
-                    "range":None,
-                    "required":False
-                    },
-                "png_width":{
-                    "description": "Width (in pixels) of the png image containing the explanation.",
-                    "type":"int",
-                    "default": 1200,
-                    "range":None,
-                    "required":False
-                    },
-                "png_height": {
-                    "description": "Height (in pixels) of the png image containing the explanation.",
-                    "type":"int",
-                    "default": 600,
                     "range":None,
                     "required":False
                     }

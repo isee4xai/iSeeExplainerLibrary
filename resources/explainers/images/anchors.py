@@ -103,9 +103,28 @@ class AnchorsImage(Resource):
             if "segmentation_fn" in params_json:
                 segmentation_fn = params_json["segmentation_fn"]
 
+            segmentation_kwargs={}
+            if segmentation_fn=='slic':
+                segmentation_kwargs["n_segments"]=10
+                if "n_segments" in params_json:
+                    segmentation_kwargs["n_segments"]=int(params_json["n_segments"])
+            elif segmentation_fn=='quickshift':
+                segmentation_kwargs["kernel_size"]=5
+                if "kernel_size" in params_json:
+                    segmentation_kwargs["kernel_size"]=float(params_json["kernel_size"])
+            elif segmentation_fn=='felzenszwalb':
+                segmentation_kwargs["scale"]=1
+                if "scale" in params_json:
+                    segmentation_kwargs["scale"]=float(params_json["scale"])
+
+
             threshold=0.95
             if "threshold" in params_json:
                 threshold= float(params_json["threshold"])
+
+            delta=0.1
+            if "delta" in params_json:
+                delta= float(params_json["delta"])
 
             size=(4, 4)
             if "png_height" in params_json and "png_width" in params_json:
@@ -114,15 +133,18 @@ class AnchorsImage(Resource):
                 except:
                     print("Could not convert dimensions for .PNG output file. Using default dimensions.")
 
-            explainer = AnchorImage(predic_func, instance.shape[1:], segmentation_fn=segmentation_fn)
-            explanation = explainer.explain(instance[0],threshold)
+            explainer = AnchorImage(predic_func, instance.shape[1:], segmentation_fn=segmentation_fn,segmentation_kwargs=segmentation_kwargs)
+            explanation = explainer.explain(instance[0],threshold,delta=delta)
+
+            print(dir(explanation))
         
             fig, axes = plt.subplots(1,1, figsize = size)
+            print(explanation.anchor)
             axes.imshow(explanation.anchor)
             if output_names!=None:
-                axes.set_title('Predicted Class: {}'.format(output_names[explanation.raw["prediction"][0]]))
+                axes.set_title('Predicted Class: '+ output_names[explanation.raw["prediction"][0]] + "\nPrecision: " + str(round(explanation.precision,3)) + "\nCoverage: " + str(round(explanation.coverage,3)))
             else:
-                axes.set_title('Predicted Class: {}'.format(explanation.raw["prediction"][0]))
+                axes.set_title('Predicted Class: '+ str(explanation.raw["prediction"][0]) + "\nPrecision: " + str(round(explanation.precision,3)) + "\nCoverage: " + str(round(explanation.coverage,3)))
         
             #saving
             img_buf = BytesIO()
@@ -148,10 +170,17 @@ class AnchorsImage(Resource):
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
                 "threshold": {
-                    "description": "The minimum level of precision required for the anchors. Default is 0.95",
+                    "description": "The minimum level of precision required for the anchor. Default is 0.95",
                     "type":"float",
                     "default": 0.95,
                     "range":[0,1],
+                    "required":False
+                    },
+                "delta": {
+                    "description": "Confidence threshold for the precision of the anchor. Default is 0.1",
+                    "type":"float",
+                    "default": 0.1,
+                    "range":[0.00001,1],
                     "required":False
                     },
                 "segmentation_fn": {
@@ -159,6 +188,27 @@ class AnchorsImage(Resource):
                     "type":"string",
                     "default": "slic",
                     "range":['slic','quickshift','felzenszwalb'],
+                    "required":False
+                    },
+                "n_segments":{
+                    "description": "Only used for slic segmentation algorithm. Specifies the (approximate) number of segments of the image.",
+                    "type":"int",
+                    "default": 10,
+                    "range":None,
+                    "required":False
+                    },
+                "kernel_size":{
+                    "description": "Only used for quickshift segmentation algorithm. Higher means fewer clusters",
+                    "type":"float",
+                    "default": 5,
+                    "range":None,
+                    "required":False
+                    },
+                "scale":{
+                    "description": "Only used for felzenszwalb segmentation algorithm. Higher scale means less and larger segments",
+                    "type":"float",
+                    "default": 1,
+                    "range":None,
                     "required":False
                     },
                 "png_width":{
