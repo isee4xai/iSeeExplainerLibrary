@@ -18,6 +18,7 @@ from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
 import traceback
+from timeit import default_timer as timer
 
 
 
@@ -141,6 +142,9 @@ class NativeGuides(Resource):
             distance='dtw' 
             if "distance" in params_json: 
                 distance = str(params_json["distance"])
+            timeout=10
+            if "timeout" in params_json: 
+                timeout = int(params_json["timeout"])
 
             #reshaping instance
             instance=np.array(instance)
@@ -167,10 +171,14 @@ class NativeGuides(Resource):
             prob_target = predic_func(generated_cf.reshape(1,-1))[0][target]
 
             # TODO: include timeout
+            start=timer()
             while prob_target < pred_treshold:
                 beta +=0.01 
                 generated_cf = generated_cf = dtw_barycenter_averaging([query, insample_cf], weights=np.array([(1-beta), beta]))
                 prob_target = predic_func(generated_cf.reshape(1,-1))[0][target]
+                current=timer()
+                if(current-start>timeout):
+                    return {"type":"text","explanation":"No counterfactual was found. Try increasing the timeout."}
         
             #plotting
             for param in ['text.color', 'axes.labelcolor', 'xtick.color', 'ytick.color']:
@@ -216,7 +224,7 @@ class NativeGuides(Resource):
 
     def get(self,id=None):
         base_dict={
-        "_method_description": "LIMESegment is a novel time series explanation framework which outperforms existing adaptations of LIME to time series on a variety of classification tasks. This method accepts 4 arguments: " 
+        "_method_description": "Model-agnostic method for counterfactual generation. The approach consists of finding the nearest unlike neighbour (NUN), referred to as a native guide, and then adapting it to ensure proximity,sparsity and plausibility .This method accepts 4 arguments: " 
                            "the 'id', the 'instance', the 'url', and the 'params' dictionary (optional) with the configuration parameters of the method. "
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
@@ -231,20 +239,14 @@ class NativeGuides(Resource):
                     "range":['dtw','euclidean'],
                     "required":False
                     },
-                "window_size":{
-                    "description":"Window size to be used by the segmentation algorithm. Default is T/5 (T = series length).",
+                "timeout" :{
+                    "description":"Timeout in seconds before stopping the counterfactual search. Defaults to 10 seconds.",
                     "type":"int",
-                    "default":None,
-                    "range":None,
+                    "default":10,
+                    "range": None,
                     "required":False
                     },
-                "change_points":{
-                    "description":"Number of change points to be determined by the segmentation algorithm. Default is 3.",
-                    "type":"int",
-                    "default":3,
-                    "range":None,
-                    "required":False
-                    }
+
                 },
         "output_description":{
                 "timeseries_attributions": "Show the attributions of the individual segments of the timeseries to the positive class."
@@ -257,33 +259,6 @@ class NativeGuides(Resource):
 
         }
 
-        if id is not None:
-            #Getting model info, data, and file from local repository
-            try:
-                _, model_info_file, data_file = get_model_files(id,self.model_folder)
-            except:
-                return base_dict
-
-            dataframe = pd.read_csv(data_file,header=0)
-            model_info=json.load(model_info_file)
-            target_names=model_info["attributes"]["target_names"]
-            features=list(model_info["attributes"]["features"].keys())
-            for target in target_names:
-                features.remove(target)
-            dataframe.drop(target_names,axis=1,inplace=True)
-            feature=features[0]
-            tslen=len(dataframe.columns)
-
-
-            base_dict["params"]["window_size"]["default"]=max(3,int(tslen/5))
-            base_dict["params"]["window_size"]["range"]=(3,int(tslen/2))
-
-            base_dict["params"]["change_points"]["range"]=[1,tslen]
-
-            return base_dict
-           
-
-        else:
-            return base_dict
+        return base_dict
 
         
