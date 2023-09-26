@@ -44,8 +44,13 @@ class ClassificationReport(Resource):
                 train_data=train_data[sample_idx,:]
                 actual=actual[sample_idx]
             train_data = normalise_image_batch(train_data, model_info)
-            print(train_data.shape)
-            preds = predic_func(train_data)
+            
+            #instead of batch to avoid potential OOM errors
+            preds=[]
+            for instance in train_data:
+                pred=predic_func(np.expand_dims(instance,axis=0))[0]
+                preds.append(pred)
+            preds=np.array(preds)
 
             return preds, actual
            
@@ -69,7 +74,13 @@ class ClassificationReport(Resource):
                         train_data=train_data[sample_idx,:]
                         actual=actual[sample_idx]
                     train_data = train_data.reshape((train_data.shape[0],)+tuple(model_info["attributes"]["features"]["image"]["shape"]))
-                    preds = predic_func(train_data)
+                   #instead of batch to avoid potential OOM errors
+                    preds=[]
+                    for instance in train_data:
+                        pred=predic_func(np.expand_dims(instance,axis=0))[0]
+                        preds.append(pred)
+                    preds=np.array(preds)
+
                     return preds, actual                 
                    
  
