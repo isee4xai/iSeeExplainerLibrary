@@ -237,7 +237,7 @@ class SSIMCounterfactual(Resource):
                     }
                 },
         "output_description":{
-                "0":"This explanation presents nearest neighbours to the query; nearest neighbours are examples that are similar to the query with similar AI system outcomes."
+                "0":"This explanation presents counterfactuals for the query using the Structural Similarity Index Measure (SSIM). Counterfactual instances are examples that are similar to the query but that are given different outcomes."
             },
 
         "meta":{

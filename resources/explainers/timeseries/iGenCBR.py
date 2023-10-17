@@ -293,6 +293,9 @@ class IGenCBR(Resource):
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "Array fo dictionaries containing data for each time point in a single window.",
+        "output_description":{
+                "timeseries_forecast": "Displays the forecast of the next time point of the given instance based on the behavior of the nearest neighbours."
+        },
         "params": { 
                 "num_neigbours" :{
                     "description":"Integer representing the number of neighbours to be included in the explanation. Defaults to 3.",

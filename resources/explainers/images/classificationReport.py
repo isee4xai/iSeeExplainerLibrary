@@ -164,7 +164,7 @@ class ClassificationReport(Resource):
                     }
                 },
         "output_description":{
-                "0":"This explanation presents nearest neighbours to the query; nearest neighbours are examples that are similar to the query with similar AI system outcomes."
+                "0":"This explanation covers the performance of the models using classification metrcis such as precision, recall, F1-Score, etc."
             },
 
         "meta":{

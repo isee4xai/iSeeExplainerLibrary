@@ -139,7 +139,7 @@ class SklearnICE(Resource):
                         "required":False
                         },
         "output_description":{
-                "partial_dependence_plot": "Shows the dependence between the target function and an input feature of interest. However, unlike a PDP, which shows the average effect of the input feature, an ICE plot visualizes the dependence of the prediction on a feature for each sample separately with one line per sample."
+                "ICE_plot": "Shows the dependence between the target function and an input feature of interest. However, unlike a PDP, which shows the average effect of the input feature, an ICE plot visualizes the dependence of the prediction on a feature for each sample separately with one line per sample."
          },
 
         "meta":{

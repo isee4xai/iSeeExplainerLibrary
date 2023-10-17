@@ -248,6 +248,9 @@ class CBRFox(Resource):
                            "These arguments are described below.",
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "2-D Array representing a single segment with data for multiple rows containing the feature values of particular time-points.",
+        "output_description":{
+                "timeseries_forecast": "Displays the forecast of the next time point of the given instance."
+        },
         "params": { 
                 "smoothness_factor" :{
                     "description":"Float ranging from 0 to 1 for the smoothness factor that will be applied for metric computation. Defaults to 0.03.",

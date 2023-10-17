@@ -221,7 +221,7 @@ class SSIMNearestNeighbours(Resource):
                     }
                 },
         "output_description":{
-                "0":"This explanation presents nearest neighbours to the query; nearest neighbours are examples that are similar to the query with similar AI system outcomes."
+                "0":"This explanation presents the nearest neighbours of the query using Structural Similarity Index Measure (SSIM). Nearest neighbours are examples that are similar to the query with similar AI system outcomes."
             },
 
         "meta":{

@@ -249,7 +249,7 @@ class NativeGuides(Resource):
 
                 },
         "output_description":{
-                "timeseries_attributions": "Show the attributions of the individual segments of the timeseries to the positive class."
+                "timeseries_counterfactual": "Shows a counterfactual for the given time series. Counterfactual instances are examples that are similar to the query but that are given different outcomes."
         },
         "meta":{
                 "modelAccess":"Any",
