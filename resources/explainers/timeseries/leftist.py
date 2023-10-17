@@ -163,7 +163,7 @@ class Leftist(Resource):
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                    "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "instance": "Array containing the values for each time point.",
-                "output_description":{
+        "output_description":{
                 "timeseries_attributions": "Show the attributions of the individual segments of the timeseries to the positive class."
         },
         "meta":{
