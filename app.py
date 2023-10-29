@@ -53,6 +53,8 @@ from resources.explainers.images.cfSSIM import SSIMCounterfactual
 from resources.explainers.images.saliency import SaliencyExp
 from resources.explainers.images.guidedBackprop import GuidedBackpropExp
 from resources.explainers.images.gradientInputs import GradientInputExp
+from resources.explainers.images.deconvnet import DeconvNetExp
+from resources.explainers.images.gradcampp import GradCAMPPExp
 from resources.explainers.text.lime import LimeText
 from resources.explainers.text.nlp_clf_explainer import NLPClassifierExpl
 from resources.explainers.timeseries.cbrFox import CBRFox
@@ -168,6 +170,8 @@ api.add_resource(SSIMCounterfactual, '/Images/SSIMCounterfactuals','/Images/SSIM
 api.add_resource(SaliencyExp, '/Images/Saliency','/Images/Saliency/<id>',resource_class_kwargs=path_dict)
 api.add_resource(GradientInputExp, '/Images/GradientInput','/Images/GradientInput/<id>',resource_class_kwargs=path_dict)
 api.add_resource(GuidedBackpropExp, '/Images/GuidedBackprop','/Images/GuidedBackprop/<id>',resource_class_kwargs=path_dict)
+api.add_resource(DeconvNetExp, '/Images/DeconvNet','/Images/DeconvNet/<id>',resource_class_kwargs=path_dict)
+api.add_resource(GradCAMPPExp, '/Images/GradCam++','/Images/GradCam++',resource_class_kwargs=path_dict)
 api.add_resource(LimeText, '/Text/LIME','/Text/LIME/<id>',resource_class_kwargs=path_dict)
 api.add_resource(NLPClassifierExpl, "/Text/NLPClassifier",'/Text/NLPClassifier/<id>', resource_class_kwargs=path_dict)
 api.add_resource(CBRFox, "/Timeseries/CBRFox",'/Timeseries/CBRFox/<id>', resource_class_kwargs=path_dict)
