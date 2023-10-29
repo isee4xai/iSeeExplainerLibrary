@@ -6,6 +6,8 @@ class Explainers(Resource):
                  #'/Images/Counterfactuals',
                  '/Images/ClassificationReport',
                  '/Images/ConfusionMatrix',
+                 '/Images/DeconvNet',
+                 '/Images/GradCam++',
                  '/Images/GradCam',
                  '/Images/GradientInput',
                  '/Images/GuidedBackprop',
