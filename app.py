@@ -55,6 +55,15 @@ from resources.explainers.images.guidedBackprop import GuidedBackpropExp
 from resources.explainers.images.gradientInputs import GradientInputExp
 from resources.explainers.images.deconvnet import DeconvNetExp
 from resources.explainers.images.gradcampp import GradCAMPPExp
+from resources.explainers.images.squareGrad import SquareGradExp
+from resources.explainers.images.varGrad import VarGradExp
+from resources.explainers.images.smoothGrad import SmoothGradExp
+from resources.explainers.images.forgrad import FORGradExp
+from resources.explainers.images.rise import RiseExp
+from resources.explainers.images.sobol import SobolAttributionMethodExp
+from resources.explainers.images.occlusion import OcclusionExp
+from resources.explainers.images.kernelShap import KernelSHAP
+from resources.explainers.images.hsic import HsicAttributionMethodExp
 from resources.explainers.text.lime import LimeText
 from resources.explainers.text.nlp_clf_explainer import NLPClassifierExpl
 from resources.explainers.timeseries.cbrFox import CBRFox
@@ -171,7 +180,16 @@ api.add_resource(SaliencyExp, '/Images/Saliency','/Images/Saliency/<id>',resourc
 api.add_resource(GradientInputExp, '/Images/GradientInput','/Images/GradientInput/<id>',resource_class_kwargs=path_dict)
 api.add_resource(GuidedBackpropExp, '/Images/GuidedBackprop','/Images/GuidedBackprop/<id>',resource_class_kwargs=path_dict)
 api.add_resource(DeconvNetExp, '/Images/DeconvNet','/Images/DeconvNet/<id>',resource_class_kwargs=path_dict)
-api.add_resource(GradCAMPPExp, '/Images/GradCam++','/Images/GradCam++',resource_class_kwargs=path_dict)
+api.add_resource(GradCAMPPExp, '/Images/GradCam++','/Images/GradCam++/<id>',resource_class_kwargs=path_dict)
+api.add_resource(SquareGradExp, '/Images/SquareGrad','/Images/SquareGrad/<id>',resource_class_kwargs=path_dict)
+api.add_resource(VarGradExp, '/Images/VarGrad','/Images/VarGrad/<id>',resource_class_kwargs=path_dict)
+api.add_resource(SmoothGradExp, '/Images/SmoothGrad','/Images/SmoothGrad/<id>',resource_class_kwargs=path_dict)
+api.add_resource(FORGradExp, '/Images/FORGrad','/Images/FORGrad/<id>',resource_class_kwargs=path_dict)
+api.add_resource(RiseExp, '/Images/RISE','/Images/RISE/<id>',resource_class_kwargs=path_dict)
+api.add_resource(SobolAttributionMethodExp, '/Images/Sobol','/Images/Sobol/<id>',resource_class_kwargs=path_dict)
+api.add_resource(OcclusionExp, '/Images/Occlusion','/Images/Occlusion/<id>',resource_class_kwargs=path_dict)
+api.add_resource(KernelSHAP, '/Images/KernelSHAP','/Images/KernelSHAP/<id>',resource_class_kwargs=path_dict)
+api.add_resource(HsicAttributionMethodExp, '/Images/HSIC','/Images/HSIC/<id>',resource_class_kwargs=path_dict)
 api.add_resource(LimeText, '/Text/LIME','/Text/LIME/<id>',resource_class_kwargs=path_dict)
 api.add_resource(NLPClassifierExpl, "/Text/NLPClassifier",'/Text/NLPClassifier/<id>', resource_class_kwargs=path_dict)
 api.add_resource(CBRFox, "/Timeseries/CBRFox",'/Timeseries/CBRFox/<id>', resource_class_kwargs=path_dict)
