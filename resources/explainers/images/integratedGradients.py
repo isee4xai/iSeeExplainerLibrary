@@ -285,7 +285,14 @@ class IntegratedGradientsImage(Resource):
                     "default": 600,
                     "range":None,
                     "required":False
-                    }
+                    },
+                "plot_type":{
+                    "description": "Plot style to be used. It can be either 'heatmap' or 'attributions'. Defaults to 'heatmap'.",
+                    "type":"str",
+                    "default": "heatmap",
+                    "range":["heatmap","attributions"],
+                    "required":False
+                    },
                 },
         "output_description":{
                 "attribution_plot":"Subplot with two columns. The first column shows the original image and its prediction. The second column shows the values of the attributions for the target class."
