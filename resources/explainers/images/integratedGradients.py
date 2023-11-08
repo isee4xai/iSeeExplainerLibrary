@@ -288,7 +288,7 @@ class IntegratedGradientsImage(Resource):
                     },
                 "plot_type":{
                     "description": "Plot style to be used. It can be either 'heatmap' or 'attributions'. Defaults to 'heatmap'.",
-                    "type":"str",
+                    "type":"string",
                     "default": "heatmap",
                     "range":["heatmap","attributions"],
                     "required":False
