@@ -184,6 +184,27 @@ class LimeImage(Resource):
                     "range":['quickshift','slic','felzenszwalb'],
                     "required":False
                     },
+                            "n_segments":{
+                    "description": "Only used for slic segmentation algorithm. Specifies the (approximate) number of segments of the image.",
+                    "type":"int",
+                    "default": 10,
+                    "range":None,
+                    "required":False
+                    },
+                "kernel_size":{
+                    "description": "Only used for quickshift segmentation algorithm. Higher means fewer clusters",
+                    "type":"float",
+                    "default": 5,
+                    "range":None,
+                    "required":False
+                    },
+                "scale":{
+                    "description": "Only used for felzenszwalb segmentation algorithm. Higher scale means less and larger segments",
+                    "type":"float",
+                    "default": 1,
+                    "range":None,
+                    "required":False
+                    },
                 "png_width":{
                     "description": "Width (in pixels) of the png image containing the explanation.",
                     "type":"int",
