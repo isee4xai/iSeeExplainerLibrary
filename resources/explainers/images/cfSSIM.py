@@ -228,6 +228,13 @@ class SSIMCounterfactual(Resource):
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "Image to be explained in BASE64 format",
         "params": { 
+                "num_cf":{
+                        "description": "Number of counterfactuals to be found. Defaults to 2.",
+                        "type":"int",
+                        "default": 2,
+                        "range":None,
+                        "required":False
+                        },
                 "samples":{
                     "description": "Number of samples to use from the background data. The whole dataset is used by default.",
                     "type":"int",
