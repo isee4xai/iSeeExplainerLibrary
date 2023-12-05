@@ -217,7 +217,14 @@ class SSIMNearestNeighbours(Resource):
         "_method_description": "Finds the nearest neighbours to a data instances based on minimum euclidean distance",
         "id": "Identifier of the ML model that was stored locally.",
         "instance": "Image to be explained in BASE64 format",
-        "params": { 
+        "params": {
+                "no_neighbours":{
+                        "description": "Number of neighbours to be found. Defaults to 3.",
+                        "type":"int",
+                        "default": 3,
+                        "range":None,
+                        "required":False
+                        },
                 "samples":{
                     "description": "Number of samples to use from the background data. The whole dataset is used by default.",
                     "type":"int",
