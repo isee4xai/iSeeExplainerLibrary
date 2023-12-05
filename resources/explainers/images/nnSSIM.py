@@ -92,13 +92,11 @@ class SSIMNearestNeighbours(Resource):
     
 
     def knn(self,no_neighbours,query,data,channel_axis):
-        print(query.shape)
-        print(data[0].shape)
         similarities=np.array([structural_similarity(query,image,channel_axis=channel_axis) for image in data])
         ind = np.argpartition(similarities, -(no_neighbours+1))[-(no_neighbours+1):]
-        print(ind)
+
         top=ind[np.argsort(similarities[ind])[::-1]]
-        print(ind)
+
 
         return top,similarities[top]
 
@@ -142,13 +140,18 @@ class SSIMNearestNeighbours(Resource):
                     return  "Could not normalize instance: " + str(e),BAD_REQUEST
 
             pred=np.array(predic_func(instance)[0])
+            print(pred.shape)
             if(len(pred.shape)==1):
                 instance_label = int(np.argmax(pred))
                 instance_prob=pred[instance_label]
             else:
                 instance_label=pred
                 instance_prob=instance_label
+
+            print(instance_label)
+            print(instance_prob)
             instance_label_raw = output_names[instance_label]
+            print(instance_label_raw)
 
             instance=instance[0]
             
@@ -165,11 +168,14 @@ class SSIMNearestNeighbours(Resource):
             train_data = self.nn_data(instance_label_raw, instance_label, model_info, data_file,sample=sample)
             nn_indices,sims = self.knn(no_neighbours,instance,train_data,channel_axis)
             nn_instances = np.array([train_data[n] for n in nn_indices[1:]])
-            sims=sims[1:]
+            sims=(1+sims[1:])/2
+            
             preds=predic_func(nn_instances)
-            if(len(preds.shape)==2):
-                preds = np.delete(preds,np.s_[0:instance_label],1)
-                preds = np.delete(preds,np.s_[1:-1],1)
+
+            #if(len(preds.shape)==2):
+            #    preds = np.delete(preds,np.s_[0:instance_label],1)
+            #    print(preds[0])
+            #    preds = np.delete(preds,np.s_[0:-1],1)
 
             preds=np.squeeze(preds)
 
@@ -187,10 +193,10 @@ class SSIMNearestNeighbours(Resource):
             axes[0].set_title("Original Image\n Class: " + instance_label_raw+"\nPrediction: "+str(round(instance_prob,3)))
             nn_instances = np.squeeze(nn_instances, axis=3) if nn_instances.shape[-1] == 1 else nn_instances
 
-            print(nn_instances.shape)
+ 
             for i in range(nn_instances.shape[0]):
                 axes[i+1].imshow(Image.fromarray(nn_instances[i]))
-                axes[i+1].set_title("Neighbour "+str(i+1)+"\nSimilarity: "+str(round(sims[i],3))+"\nPrediction: " + str(round(preds[i],3)))
+                axes[i+1].set_title("Neighbour "+str(i+1)+"\nSimilarity: "+str(round(sims[i],3))+"\nPrediction: " + str(round(preds[i][instance_label],3)))
         
             for ax in fig.axes:
                 ax.axis('off')

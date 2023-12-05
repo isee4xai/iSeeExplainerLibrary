@@ -7,6 +7,7 @@ class Explainers(Resource):
                  '/Images/ClassificationReport',
                  '/Images/ConfusionMatrix',
                  '/Images/DeconvNet',
+                 '/Images/FORGrad',
                  '/Images/GradCam++',
                  '/Images/GradCam',
                  '/Images/GradientInput',
