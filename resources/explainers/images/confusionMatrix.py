@@ -15,6 +15,7 @@ from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
 from utils.img_processing import normalise_image_batch
+from utils.validation import validate_params
 import traceback
 
 class ConfusionMatrixImages(Resource):
@@ -104,6 +105,8 @@ class ConfusionMatrixImages(Resource):
         if "params" in params:
             params_json=params["params"]
 
+        params_json=validate_params(params_json,self.get(_id)["params"])
+
         return self.explain(_id, instance, params_json)
     
     def explain(self, model_id, instance, params_json):
@@ -132,9 +135,9 @@ class ConfusionMatrixImages(Resource):
             else:
                 return "A ML model must be provided.",BAD_REQUEST
         
-            sample=None
-            if "samples" in params_json:
-                sample=int(params_json["samples"])
+            sample=params_json["samples"]
+ 
+                
 
             preds, actual = self.get_preds(model_info, predic_func, data_file,output_names,sample=sample)
 

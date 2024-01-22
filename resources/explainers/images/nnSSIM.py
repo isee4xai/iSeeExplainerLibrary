@@ -16,6 +16,7 @@ from utils import ontologyConstants
 from utils.base64 import base64_to_vector, PIL_to_base64
 from utils.img_processing import normalize_img, normalise_image_batch, denormalise_image_batch
 from utils.img_processing import normalise_image_batch
+from utils.validation import validate_params
 import traceback
 
 class SSIMNearestNeighbours(Resource):
@@ -87,6 +88,7 @@ class SSIMNearestNeighbours(Resource):
         params_json={}
         if "params" in params:
             params_json=params["params"]
+        params_json=validate_params(params_json,self.get(_id)["params"])
 
         return self.explain(_id, instance, params_json)
     
@@ -155,12 +157,9 @@ class SSIMNearestNeighbours(Resource):
 
             instance=instance[0]
             
-            no_neighbours = int(params_json["no_neighbours"]) if "no_neighbours" in params_json else 3
-
-            sample=None
-            if "samples" in params_json:
-                sample=int(params_json["samples"])
-
+            no_neighbours = params_json["no_neighbours"]
+            sample=params_json["samples"]
+  
             channel_axis=None
             if(instance.shape[-1]==3):
                 channel_axis=-1
@@ -181,12 +180,7 @@ class SSIMNearestNeighbours(Resource):
 
             nn_instances = denormalise_image_batch(nn_instances, model_info)
 
-            size=(12, 6)
-            if "png_height" in params_json and "png_width" in params_json:
-                try:
-                    size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
-                except:
-                    print("Could not convert dimensions for .PNG output file. Using default dimensions.")
+            size=(params_json["png_width"]/100.0,params_json["png_height"]/100.0)
 
             fig, axes = plt.subplots(nrows=1, ncols=nn_instances.shape[0]+1, figsize=size)
             axes[0].imshow(Image.fromarray(instance_raw))
@@ -229,6 +223,20 @@ class SSIMNearestNeighbours(Resource):
                     "description": "Number of samples to use from the background data. The whole dataset is used by default.",
                     "type":"int",
                     "default": None,
+                    "range":None,
+                    "required":False
+                    },                
+                "png_width":{
+                    "description": "Width (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 1200,
+                    "range":None,
+                    "required":False
+                    },
+                "png_height": {
+                    "description": "Height (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 600,
                     "range":None,
                     "required":False
                     }

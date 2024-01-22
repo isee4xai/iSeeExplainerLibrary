@@ -16,6 +16,7 @@ from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import base64_to_vector,PIL_to_base64
 from utils.img_processing import normalize_img
+from utils.validation import validate_params
 import traceback
 
 
@@ -46,6 +47,7 @@ class FORGradExp(Resource):
             params_json={}
             if "params" in params:
                 params_json=params["params"]
+            params_json=validate_params(params_json,self.get(_id)["params"])
 
             #Getting model info, data, and file from local repository
             model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
@@ -81,17 +83,11 @@ class FORGradExp(Resource):
             prediction=mlp(instance)[0].numpy()
             target_class=int(prediction.argmax())
 
-           
             if "target_class" in params_json:
                 if(params_json["target_class"]!="Highest Pred."):
                     target_class = output_names.index(params_json["target_class"])
 
-            sigma=int(math.sqrt(min(model_info["attributes"]["features"]["image"]["shape"][0],model_info["attributes"]["features"]["image"]["shape"][1])))
-            if "sigma" in params_json:
-                try:
-                    sigma=int(params_json["sigma"])
-                except:
-                    pass
+            sigma=params_json["sigma"]
 
             ## Generating explanation
             try:

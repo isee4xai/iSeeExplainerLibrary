@@ -15,6 +15,7 @@ from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import base64_to_vector,PIL_to_base64
 from utils.img_processing import normalize_img
+from utils.validation import validate_params
 import traceback
 
 
@@ -45,6 +46,7 @@ class IntegratedGradientsImage(Resource):
             params_json={}
             if "params" in params:
                 params_json=params["params"]
+            params_json=validate_params(params_json,self.get(_id)["params"])
 
             #Getting model info, data, and file from local repository
             model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
@@ -80,18 +82,11 @@ class IntegratedGradientsImage(Resource):
                 instance=normalize_img(instance,model_info)
             except Exception as e:
                     return  "Could not normalize instance: " + str(e),BAD_REQUEST
+            
             ## params from request
-            n_steps = 10
-            if "n_steps" in params_json:
-                n_steps = params_json["n_steps"]
-
-            method = "gausslegendre"
-            if "method" in params_json:
-                method = params_json["method"]
-
-            internal_batch_size=100
-            if "internal_batch_size" in params_json:
-                internal_batch_size = params_json["internal_batch_size"]
+            n_steps = params_json["n_steps"]
+            method = params_json["method"]
+            internal_batch_size=params_json["internal_batch_size"]
 
             prediction=mlp(instance)[0].numpy()
             target_class=int(prediction.argmax())
@@ -105,17 +100,8 @@ class IntegratedGradientsImage(Resource):
                     if(params_json["target_class"]!="Highest Pred."):
                         target_class = output_names.index(params_json["target_class"])
 
-            size=(12, 6)
-            if "png_height" in params_json and "png_width" in params_json:
-                try:
-                    size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
-                except:
-                    print("Could not convert dimensions for .PNG output file. Using default dimensions.")
-
-            plot_type="heatmap"
-            if "plot_type" in params_json:
-                if str(params_json["plot_type"])=="attributions":
-                    plot_type="attributions"
+            size=(params_json["png_width"]/100.0,params_json["png_height"]/100.0)
+            plot_type=params_json["plot_type"]
 
             ## Generating explanation
             ig  = IntegratedGradients(mlp,
@@ -245,7 +231,7 @@ class IntegratedGradientsImage(Resource):
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
                 "target_class":{
-                    "description": "String denoting the desired class for the computation of the attributions. Ignore for regression models. Defaults to the predicted class of the instance.",
+                    "description": "String denoting the desired class for the computation of the attributions. Defaults to the predicted class of the instance.",
                     "type":"string",
                     "default": None,
                     "range":None,
@@ -272,6 +258,13 @@ class IntegratedGradientsImage(Resource):
                     "range":None,
                     "required":False
                     },
+                "plot_type":{
+                    "description": "Plot style to be used. It can be either 'heatmap' or 'attributions'. Defaults to 'heatmap'.",
+                    "type":"string",
+                    "default": "heatmap",
+                    "range":["heatmap","attributions"],
+                    "required":False
+                    },
                 "png_width":{
                     "description": "Width (in pixels) of the png image containing the explanation.",
                     "type":"int",
@@ -285,14 +278,7 @@ class IntegratedGradientsImage(Resource):
                     "default": 600,
                     "range":None,
                     "required":False
-                    },
-                "plot_type":{
-                    "description": "Plot style to be used. It can be either 'heatmap' or 'attributions'. Defaults to 'heatmap'.",
-                    "type":"string",
-                    "default": "heatmap",
-                    "range":["heatmap","attributions"],
-                    "required":False
-                    },
+                    }
                 },
         "output_description":{
                 "attribution_plot":"Subplot with two columns. The first column shows the original image and its prediction. The second column shows the values of the attributions for the target class."

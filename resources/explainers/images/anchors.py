@@ -15,6 +15,7 @@ from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import base64_to_vector,PIL_to_base64
 from utils.img_processing import normalize_img
+from utils.validation import validate_params
 from io import BytesIO
 import requests
 import traceback
@@ -49,6 +50,7 @@ class AnchorsImage(Resource):
             params_json={}
             if "params" in params:
                 params_json=params["params"]
+            params_json=validate_params(params_json,self.get(_id)["params"])
         
             output_names=None
             predic_func=None
@@ -98,47 +100,25 @@ class AnchorsImage(Resource):
             if len(model_info["attributes"]["features"]["image"]["shape_raw"])==2 or model_info["attributes"]["features"]["image"]["shape_raw"][-1]==1:
                 plt.gray()
 
-
-            segmentation_fn='slic'
-            if "segmentation_fn" in params_json:
-                segmentation_fn = params_json["segmentation_fn"]
-
+            #params from request
+            segmentation_fn=params_json["segmentation_fn"]
             segmentation_kwargs={}
             if segmentation_fn=='slic':
-                segmentation_kwargs["n_segments"]=10
-                if "n_segments" in params_json:
-                    segmentation_kwargs["n_segments"]=int(params_json["n_segments"])
+                segmentation_kwargs["n_segments"]=params_json["n_segments"]
             elif segmentation_fn=='quickshift':
-                segmentation_kwargs["kernel_size"]=5
-                if "kernel_size" in params_json:
-                    segmentation_kwargs["kernel_size"]=float(params_json["kernel_size"])
+                segmentation_kwargs["kernel_size"]=params_json["kernel_size"]
             elif segmentation_fn=='felzenszwalb':
-                segmentation_kwargs["scale"]=1
-                if "scale" in params_json:
-                    segmentation_kwargs["scale"]=float(params_json["scale"])
+                segmentation_kwargs["scale"]=params_json["scale"]
 
+            threshold=params_json["threshold"]
+            delta=params_json["delta"]
 
-            threshold=0.95
-            if "threshold" in params_json:
-                threshold= float(params_json["threshold"])
-
-            delta=0.1
-            if "delta" in params_json:
-                delta= float(params_json["delta"])
-
-            size=(4, 4)
-            if "png_height" in params_json and "png_width" in params_json:
-                try:
-                    size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
-                except:
-                    print("Could not convert dimensions for .PNG output file. Using default dimensions.")
+            size=(params_json["png_width"]/100.0,params_json["png_height"]/100.0)
 
             explainer = AnchorImage(predic_func, instance.shape[1:], segmentation_fn=segmentation_fn,segmentation_kwargs=segmentation_kwargs)
             explanation = explainer.explain(instance[0],threshold,delta=delta)
-
-            print(dir(explanation))
         
-            fig, axes = plt.subplots(1,1, figsize = size)
+            _, axes = plt.subplots(1,1, figsize = size)
             print(explanation.anchor)
             axes.imshow(explanation.anchor)
             if output_names!=None:
