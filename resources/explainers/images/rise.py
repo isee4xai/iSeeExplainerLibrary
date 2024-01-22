@@ -14,6 +14,7 @@ from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import base64_to_vector,PIL_to_base64
 from utils.img_processing import normalize_img
+from utils.validation import validate_params
 import traceback
 
 
@@ -44,6 +45,7 @@ class RiseExp(Resource):
             params_json={}
             if "params" in params:
                 params_json=params["params"]
+            params_json=validate_params(params_json,self.get(_id)["params"])
 
             #Getting model info, data, and file from local repository
             model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
@@ -84,19 +86,9 @@ class RiseExp(Resource):
                 if(params_json["target_class"]!="Highest Pred."):
                     target_class = output_names.index(params_json["target_class"])
 
-            nb_samples=4000
-            if "nb_samples" in params_json:
-                try:
-                    nb_samples=int(params_json["nb_samples"])
-                except:
-                    pass
+            nb_samples=params_json["nb_samples"]
+            grid_size=params_json["grid_size"]
 
-            grid_size=7
-            if "grid_size" in params_json:
-                try:
-                    grid_size=int(params_json["grid_size"])
-                except:
-                    pass
 
             ## Generating explanation
             try:

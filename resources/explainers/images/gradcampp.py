@@ -14,6 +14,7 @@ from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import base64_to_vector,PIL_to_base64
 from utils.img_processing import normalize_img
+from utils.validation import validate_params
 import traceback
 
 
@@ -44,6 +45,7 @@ class GradCAMPPExp(Resource):
             params_json={}
             if "params" in params:
                 params_json=params["params"]
+            params_json=validate_params(params_json,self.get(_id)["params"])
 
             #Getting model info, data, and file from local repository
             model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
@@ -84,14 +86,12 @@ class GradCAMPPExp(Resource):
                 if(params_json["target_class"]!="Highest Pred."):
                     target_class = output_names.index(params_json["target_class"])
 
-            target_layer=None
-            if "target_conv_layer" in params_json:
-                target_layer=str(params_json["target_conv_layer"])
-                try: 
-                    mlp.get_layer(params_json["target_conv_layer"]).name
-                except Exception as e:
-                    #layer not found
-                    target_layer=None
+            target_layer=params_json["target_conv_layer"]
+            try: 
+                mlp.get_layer(params_json["target_conv_layer"]).name
+            except Exception as e:
+                #layer not found
+                target_layer=None
 
             ## Generating explanation
             try:
@@ -133,8 +133,7 @@ class GradCAMPPExp(Resource):
                     "default": None,
                     "range":None,
                     "required":False
-                    }         
-                },
+                    },
                 "target_conv_layer":{
                     "description":  "Name of the target convolutional layer to be provided as a string. This is the layer used to compute the explanation."\
                                     "Usually this will be the last convolutional layer in the model.",
@@ -142,7 +141,8 @@ class GradCAMPPExp(Resource):
                     "default": None,
                     "range":None,
                     "required":False
-                    },
+                    }
+                },
         "output_description":{
                 "saliency_map":"Displays an image that highlights the most relevant pixels to the target class. Red pixels indicate greater importance."
             },
@@ -159,12 +159,21 @@ class GradCAMPPExp(Resource):
         if id is not None:
             #Getting model info, data, and file from local repository
             try:
-                _, model_info_file, _ = get_model_files(id,self.model_folder)
+                model_file, model_info_file, _ = get_model_files(id,self.model_folder)
             except:
                 return base_dict
 
             model_info=json.load(model_info_file)
             target_name=model_info["attributes"]["target_names"][0]
+
+            if model_file!=None:
+                if model_info["backend"] in ontologyConstants.TENSORFLOW_URIS:
+                    model=h5py.File(model_file, 'w')
+                    mlp = tf.keras.models.load_model(model)
+                else:
+                    return "This method only supports Tensorflow/Keras models.",BAD_REQUEST
+            else:
+                return "This method requires a model file.",BAD_REQUEST
 
 
             if model_info["attributes"]["features"][target_name]["data_type"]=="categorical":
@@ -173,6 +182,15 @@ class GradCAMPPExp(Resource):
 
                 base_dict["params"]["target_class"]["default"]="Highest Pred."
                 base_dict["params"]["target_class"]["range"]=["Highest Pred."] + output_names
+
+                conv_layers=[]
+                for i in range(1,len(mlp.layers)+1):
+                    if "convolutional" in str(type(mlp.layers[-i])):
+                        conv_layers.append(mlp.layers[-i].name)
+                    
+                if conv_layers:
+                    base_dict["params"]["target_conv_layer"]["default"]=conv_layers[0]
+                    base_dict["params"]["target_conv_layer"]["range"]=conv_layers
 
                 return base_dict
 

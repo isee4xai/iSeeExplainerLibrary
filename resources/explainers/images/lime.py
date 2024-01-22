@@ -18,6 +18,7 @@ from io import BytesIO
 from utils import ontologyConstants
 from utils.base64 import base64_to_vector,PIL_to_base64
 from utils.img_processing import normalize_img
+from utils.validation import validate_params
 import traceback
 
 class LimeImage(Resource):
@@ -49,7 +50,8 @@ class LimeImage(Resource):
             params_json={}
             if "params" in params:
                 params_json=params["params"]
-       
+            params_json=validate_params(params_json,self.get(_id)["params"])
+
             #Getting model info, data, and file from local repository
             model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
 
@@ -97,36 +99,20 @@ class LimeImage(Resource):
                return "LIME only supports RGB images.",BAD_REQUEST
 
 
-            segmentation_fn='slic'
-            if "segmentation_fn" in params_json:
-                segmentation_fn = params_json["segmentation_fn"]
-
+            segmentation_fn=params_json["segmentation_fn"]
             segmentation_kwargs={}
             if segmentation_fn=='slic':
-                segmentation_kwargs["n_segments"]=10
-                if "n_segments" in params_json:
-                    segmentation_kwargs["n_segments"]=int(params_json["n_segments"])
+                segmentation_kwargs["n_segments"]=params_json["n_segments"]
             elif segmentation_fn=='quickshift':
-                segmentation_kwargs["kernel_size"]=5
-                if "kernel_size" in params_json:
-                    segmentation_kwargs["kernel_size"]=float(params_json["kernel_size"])
+                segmentation_kwargs["kernel_size"]=params_json["kernel_size"]
             elif segmentation_fn=='felzenszwalb':
-                segmentation_kwargs["scale"]=1
-                if "scale" in params_json:
-                    segmentation_kwargs["scale"]=float(params_json["scale"])
+                segmentation_kwargs["scale"]=params_json["scale"]
 
-            kwargsData = dict(top_labels=1,segmentation_fn=None)
-            if "top_classes" in params_json:
-                kwargsData["top_labels"] = int(params_json["top_classes"])   #top labels
+            kwargsData = dict(
+                top_labels=params_json["top_classes"],
+                segmentation_fn=SegmentationAlgorithm(segmentation_fn,**{k: v for k, v in segmentation_kwargs.items() if v is not None}))
 
-            kwargsData["segmentation_fn"] = SegmentationAlgorithm(segmentation_fn,**{k: v for k, v in segmentation_kwargs.items() if v is not None})
-
-            size=(12, 12)
-            if "png_height" in params_json and "png_width" in params_json:
-                try:
-                    size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
-                except:
-                    print("Could not convert dimensions for .PNG output file. Using default dimensions.")
+            size=(params_json["png_width"]/100.0,params_json["png_height"]/100.0)
         
             explainer = lime_image.LimeImageExplainer()
             explanation = explainer.explain_instance(instance[0], classifier_fn=predic_func,**{k: v for k, v in kwargsData.items() if v is not None})
@@ -171,7 +157,7 @@ class LimeImage(Resource):
         "image": "Image file to be explained. Ignored if 'instance' was specified in the request. Passing a file is only recommended when the model works with black and white images, or color images that are RGB-encoded using integers ranging from 0 to 255.",
         "params": { 
                 "top_classes":{
-                        "description": "Integer representing the number of classes with the highest prediction probability to be explained.",
+                        "description": "Integer representing the number of classes with the highest prediction probability to explain.",
                         "type":"int",
                         "default": 1,
                         "range":None,

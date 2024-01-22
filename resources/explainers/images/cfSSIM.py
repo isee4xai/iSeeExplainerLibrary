@@ -16,6 +16,7 @@ from utils import ontologyConstants
 from utils.base64 import base64_to_vector, PIL_to_base64
 from utils.img_processing import normalize_img, normalise_image_batch, denormalise_image_batch
 from utils.img_processing import normalise_image_batch
+from utils.validation import validate_params
 import traceback
 
 class SSIMCounterfactual(Resource):
@@ -96,6 +97,8 @@ class SSIMCounterfactual(Resource):
         if "params" in params:
             params_json=params["params"]
 
+        params_json=validate_params(params_json,self.get(_id)["params"])
+
         return self.explain(_id, instance, params_json)
     
 
@@ -159,11 +162,8 @@ class SSIMCounterfactual(Resource):
 
             instance=instance[0]
             
-            num_cf = int(params_json["num_cf"]) if "num_cf" in params_json else 2
-
-            sample=None
-            if "samples" in params_json:
-                sample=int(params_json["samples"])
+            num_cf = params_json["num_cf"]
+            sample=params_json["samples"]
 
             channel_axis=None
             if(instance.shape[-1]==3):
@@ -191,12 +191,7 @@ class SSIMCounterfactual(Resource):
 
             cf_indices = denormalise_image_batch(cf_indices, model_info)
 
-            size=(12, 6)
-            if "png_height" in params_json and "png_width" in params_json:
-                try:
-                    size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
-                except:
-                    print("Could not convert dimensions for .PNG output file. Using default dimensions.")
+            size=(params_json["png_width"]/100.0,params_json["png_height"]/100.0)
 
             fig, axes = plt.subplots(nrows=1, ncols=cf_indices.shape[0]+1, figsize=size)
             axes[0].imshow(Image.fromarray(instance_raw))
@@ -239,6 +234,20 @@ class SSIMCounterfactual(Resource):
                     "description": "Number of samples to use from the background data. The whole dataset is used by default.",
                     "type":"int",
                     "default": None,
+                    "range":None,
+                    "required":False
+                    },                
+                "png_width":{
+                    "description": "Width (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 1200,
+                    "range":None,
+                    "required":False
+                    },
+                "png_height": {
+                    "description": "Height (in pixels) of the png image containing the explanation.",
+                    "type":"int",
+                    "default": 600,
                     "range":None,
                     "required":False
                     }

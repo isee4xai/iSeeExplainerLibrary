@@ -16,6 +16,7 @@ from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import base64_to_vector, PIL_to_base64
 from utils.img_processing import normalize_img, normalise_image_batch, denormalise_image_batch
+from utils.validation import validate_params
 from sklearn.metrics.pairwise import euclidean_distances
 import traceback
 
@@ -110,12 +111,13 @@ class NearestNeighboursImage(Resource):
         params_json={}
         if "params" in params:
             params_json=params["params"]
+        params_json=validate_params(params_json,self.get(_id)["params"])
 
         return self.explain(_id, instance, params_json)
     
     def explain(self, model_id, instance, params_json):
         try:
-            no_neighbours = params_json["no_neighbours"] if "no_neighbours" in params_json else 3
+            
 
             #Getting model info, data, and file from local repository
             model_file, model_info_file, data_file = get_model_files(model_id,self.model_folder)
@@ -168,22 +170,16 @@ class NearestNeighboursImage(Resource):
             else:
                 instance_label=pred
             instance_label_raw = output_names[instance_label]
-            
-            sample=None
-            if "sample" in params_json:
-                sample=int(params_json["sample"])
+
+            no_neighbours = params_json["no_neighbours"]
+            sample=params_json["samples"]
 
             train_data, train_encodings = self.nn_data(instance_label_raw, instance_label, model_info, last_layer_func, data_file,sample=sample)
             nn_indices = self.knn(no_neighbours, train_encodings, last_layer_func(instance))
             nn_instances = np.array([train_data[n] for n in nn_indices[1:]])
             nn_instances = denormalise_image_batch(nn_instances, model_info)
 
-            size=(12, 6)
-            if "png_height" in params_json and "png_width" in params_json:
-                try:
-                    size=(int(params_json["png_width"])/100.0,int(params_json["png_height"])/100.0)
-                except:
-                    print("Could not convert dimensions for .PNG output file. Using default dimensions.")
+            size=(params_json["png_width"]/100.0,params_json["png_height"]/100.0)
 
             fig, axes = plt.subplots(nrows=1, ncols=nn_instances.shape[0]+1, figsize=size)
             axes[0].imshow(Image.fromarray(instance_raw))

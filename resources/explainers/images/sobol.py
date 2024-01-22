@@ -14,6 +14,7 @@ from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import base64_to_vector,PIL_to_base64
 from utils.img_processing import normalize_img
+from utils.validation import validate_params
 import traceback
 
 
@@ -44,6 +45,7 @@ class SobolAttributionMethodExp(Resource):
             params_json={}
             if "params" in params:
                 params_json=params["params"]
+            params_json=validate_params(params_json,self.get(_id)["params"])
 
             #Getting model info, data, and file from local repository
             model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
@@ -84,26 +86,10 @@ class SobolAttributionMethodExp(Resource):
                 if(params_json["target_class"]!="Highest Pred."):
                     target_class = output_names.index(params_json["target_class"])
 
-            nb_design=32
-            if "nb_design" in params_json:
-                try:
-                    nb_design=int(params_json["nb_design"])
-                except:
-                    pass
+            nb_design=params_json["nb_design"]
+            grid_size=params_json["grid_size"]
+            perturbation_function=params_json["perturbation_function"]
 
-            grid_size=8
-            if "grid_size" in params_json:
-                try:
-                    grid_size=int(params_json["grid_size"])
-                except:
-                    pass
-
-            perturbation_function="inpainting"
-            if "perturbation_function" in params_json:
-                try:
-                    perturbation_function=str(params_json["perturbation_function"])
-                except:
-                    pass
 
             ## Generating explanation
             try:
@@ -144,7 +130,7 @@ class SobolAttributionMethodExp(Resource):
                     "description": "Used to estimate the number of forward passes. The number of forwards is given by nb_design * (grid_size**2 + 2). Defaults to 32.",
                     "type":"int",
                     "default": 32,
-                    "range":[16,32,64],
+                    "range":[0,64],
                     "required":False
                     },
                 "grid_size":{

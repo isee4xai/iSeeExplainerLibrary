@@ -15,6 +15,7 @@ from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import base64_to_vector,PIL_to_base64
 from utils.img_processing import normalize_img
+from utils.validation import validate_params
 import traceback
 
 
@@ -45,6 +46,7 @@ class OcclusionExp(Resource):
             params_json={}
             if "params" in params:
                 params_json=params["params"]
+            params_json=validate_params(params_json,self.get(_id)["params"])
 
             #Getting model info, data, and file from local repository
             model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
@@ -85,30 +87,14 @@ class OcclusionExp(Resource):
                 if(params_json["target_class"]!="Highest Pred."):
                     target_class = output_names.index(params_json["target_class"])
 
-            patch_size=int(math.sqrt(min(model_info["attributes"]["features"]["image"]["shape"][0],model_info["attributes"]["features"]["image"]["shape"][1])))
-            print(patch_size)
-            if "patch_size" in params_json:
-                try:
-                    patch_size=int(params_json["patch_size"])
-                except:
-                    pass
+            patch_size=params_json["patch_size"]
 
             if patch_size%2==1:
                 patch_size=patch_size+1
 
-            patch_stride=patch_size//2
-            if "patch_stride" in params_json:
-                try:
-                    patch_stride=int(params_json["patch_stride"])
-                except:
-                    pass
+            patch_stride=params_json["patch_stride"]
+            occlusion_value=np.float32(params_json["occlusion_value"])
 
-            occlusion_value=np.mean(instance).astype("float32")
-            if "occlusion_value" in params_json:
-                try:
-                    occlusion_value=np.float32(params_json["occlusion_value"])
-                except:
-                    pass
 
 
             ## Generating explanation
@@ -149,7 +135,7 @@ class OcclusionExp(Resource):
                     "required":False
                     },         
                 "patch_size":{
-                    "description": "size of the occlusion patch (in pixels), it should be big enough to cover informative elements. Defaults to square root of the smallest dimension of the image.",
+                    "description": "Size of the occlusion patch (in pixels), it should be big enough to cover informative elements. Defaults to square root of the smallest dimension of the image.",
                     "type":"int",
                     "default": None,
                     "range":None,

@@ -19,6 +19,7 @@ from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import base64_to_vector,PIL_to_base64
 from utils.img_processing import normalize_img
+from utils.validation import validate_params
 import traceback
 
 class GradCam(Resource):
@@ -47,6 +48,7 @@ class GradCam(Resource):
             params_json={}
             if "params" in params:
                 params_json=params["params"]
+            params_json=validate_params(params_json,self.get(_id)["params"])
 
 
             #Getting model info, data, and file from local repository
@@ -91,21 +93,11 @@ class GradCam(Resource):
             except:
                 pass
             #params from request
-            target_layer=None
-            if "target_layer" in params_json:
-                try: 
-                    target_layer=mlp.get_layer(params_json["target_layer"]).name
-                except Exception as e:
-                    return "The specified target layer " + str(params_json["target_layer"]) + " does not exist: " + str(e),BAD_REQUEST
-            else:
-                for i in range(1,len(mlp.layers)+1):
-                        if "convolutional" in str(type(mlp.layers[-i])):
-                            target_layer=mlp.layers[-i].name
-                            break
-            
-            if target_layer is None:
-                return "No target layer found.",BAD_REQUEST
-
+            target_layer=params_json["target_layer"]
+            try: 
+                target_layer=mlp.get_layer(params_json["target_layer"]).name
+            except Exception as e:
+                return "The specified target layer " + str(params_json["target_layer"]) + " does not exist: " + str(e),BAD_REQUEST
 
             if "target_layer_index" in params_json:
                 try:
@@ -116,7 +108,7 @@ class GradCam(Resource):
             target_class=None
             if "target_class" in params_json:
                 if(params_json["target_class"]!="Highest Pred."):
-                    target_class = str(params_json["target_class"])
+                    target_class = params_json["target_class"]
 
             pred_index=None
             if target_class is not None:
@@ -313,15 +305,39 @@ class GradCam(Resource):
         if id is not None:
             #Getting model info, data, and file from local repository
             try:
-                _, model_info_file, _ = get_model_files(id,self.model_folder)
+                model_file, model_info_file, _ = get_model_files(id,self.model_folder)
             except:
                 return base_dict
 
             model_info=json.load(model_info_file)
             target_name=model_info["attributes"]["target_names"][0]
+            backend = model_info["backend"]
+
+            is_tf=False
+            if model_file!=None:
+                if backend in ontologyConstants.TENSORFLOW_URIS:
+                    model=h5py.File(model_file, 'w')
+                    mlp = tf.keras.models.load_model(model)
+                    is_tf=True
+                elif backend in ontologyConstants.PYTORCH_URIS:
+                    mlp = torch.load(model_file)
+                    mlp.eval()
 
 
             if model_info["attributes"]["features"][target_name]["data_type"]=="categorical":
+
+                if(is_tf):
+
+                    conv_layers=[]
+                    for i in range(1,len(mlp.layers)+1):
+                        if "convolutional" in str(type(mlp.layers[-i])):
+                            conv_layers.append(mlp.layers[-i].name)
+                    
+                    if conv_layers:
+                        base_dict["params"]["target_layer"]["default"]=conv_layers[0]
+                        base_dict["params"]["target_layer"]["range"]=conv_layers
+                        base_dict["params"]["target_layer"]["required"]=False
+                    base_dict["params"].pop("target_layer_index")
 
                 output_names=model_info["attributes"]["features"][target_name]["values_raw"]
 

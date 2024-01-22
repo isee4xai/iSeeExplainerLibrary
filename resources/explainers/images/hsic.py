@@ -16,6 +16,7 @@ from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import base64_to_vector,PIL_to_base64
 from utils.img_processing import normalize_img
+from utils.validation import validate_params
 import traceback
 
 
@@ -46,6 +47,7 @@ class HsicAttributionMethodExp(Resource):
             params_json={}
             if "params" in params:
                 params_json=params["params"]
+            params_json=validate_params(params_json,self.get(_id)["params"])
 
             #Getting model info, data, and file from local repository
             model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
@@ -86,21 +88,8 @@ class HsicAttributionMethodExp(Resource):
                 if(params_json["target_class"]!="Highest Pred."):
                     target_class = output_names.index(params_json["target_class"])
 
-            grid_size=8 #int(math.sqrt(min(model_info["attributes"]["features"]["image"]["shape"][0],model_info["attributes"]["features"]["image"]["shape"][1])))
-            if "grid_size" in params_json:
-                try:
-                    grid_size=int(params_json["grid_size"])
-                except:
-                    pass
-
-            nb_design=500
-            if "nb_design" in params_json:
-                try:
-                    nb_design=int(params_json["nb_design"])
-                except:
-                    pass
-
-
+            grid_size=params_json["grid_size"] 
+            nb_design=params_json["nb_design"]
 
             ## Generating explanation
             try:
@@ -148,7 +137,7 @@ class HsicAttributionMethodExp(Resource):
                     },         
                 "nb_design":{
                     "description": "Number of design for the sampler. Defaults to 500.",
-                    "type":"float",
+                    "type":"int",
                     "default": 500,
                     "range":None,
                     "required":False
@@ -184,15 +173,6 @@ class HsicAttributionMethodExp(Resource):
 
                 base_dict["params"]["target_class"]["default"]="Highest Pred."
                 base_dict["params"]["target_class"]["range"]=["Highest Pred."] + output_names
-
-                base_dict["params"]["patch_size"]["default"]=int(math.sqrt(min(model_info["attributes"]["features"]["image"]["shape"][0],model_info["attributes"]["features"]["image"]["shape"][1])))
-                base_dict["params"]["patch_size"]["range"]=[1,min(model_info["attributes"]["features"]["image"]["shape"][0],model_info["attributes"]["features"]["image"]["shape"][1])]
-
-                base_dict["params"]["patch_stride"]["default"]=base_dict["params"]["patch_size"]["default"]//3
-                base_dict["params"]["patch_stride"]["range"]=[1,base_dict["params"]["patch_size"]["default"]]
-
-                base_dict["params"]["occlusion_value"]["default"]=model_info["attributes"]["features"]["image"]["max"]-model_info["attributes"]["features"]["image"]["min"]/2
-                base_dict["params"]["occlusion_value"]["range"]=[model_info["attributes"]["features"]["image"]["min"],model_info["attributes"]["features"]["image"]["max"]]
 
                 return base_dict
 
