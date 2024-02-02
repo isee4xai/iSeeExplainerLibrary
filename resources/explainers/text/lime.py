@@ -13,6 +13,7 @@ from html2image import Html2Image
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
+from utils.validation import validate_params
 from PIL import Image
 import requests
 import traceback
@@ -47,6 +48,7 @@ class LimeText(Resource):
             params_json={}
             if "params" in params:
                 params_json=params["params"]
+            params_json=validate_params(params_json,self.get(_id)["params"])
         
             #getting model info, data, and file from local repository
             model_file, model_info_file, _ = get_model_files(_id,self.model_folder)
@@ -142,8 +144,9 @@ class LimeText(Resource):
         "url": "External URL of the prediction function. Ignored if a model file was uploaded to the server. "
                "This url must be able to handle a POST request receiving a (multi-dimensional) array of N data points as inputs (instances represented as arrays). It must return a array of N outputs (predictions for each instance).",
         "params": { 
+
                 "output_classes" : {
-                    "description":  "Array of integers representing the classes to be explained.",
+                    "description":  "Array of strings representing the names of the classes to be explained.",
                     "type":"array",
                     "default": None,
                     "range":None,
@@ -204,7 +207,7 @@ class LimeText(Resource):
 
                 output_names=model_info["attributes"]["features"][target_name]["values_raw"]
 
-                base_dict["params"]["output_classes"]["default"]=[output_names[1]]
+                base_dict["params"]["output_classes"]["default"]=None
                 base_dict["params"]["output_classes"]["range"]=output_names
 
                 base_dict["params"]["top_classes"]["range"]=[0,len(output_names)]
