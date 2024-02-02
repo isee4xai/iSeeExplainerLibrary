@@ -156,7 +156,7 @@ class NLPClassifierExpl(Resource):
         self.upload_folder = upload_folder
 
     def post(self):
-        try:
+
             params = request.json
             if params is None:
                 return "The json body is missing.",BAD_REQUEST
@@ -226,8 +226,7 @@ class NLPClassifierExpl(Resource):
                 response={"type":"dict","explanation":explanation}
 
             return response
-        except:
-            return traceback.format_exc(), 500
+
 
 
     def get(self,id=None):
