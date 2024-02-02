@@ -10,6 +10,7 @@ from NLPClassifierExplainer.NLPClassificationExplainer import NLPClassificationE
 from string import Template
 from utils import ontologyConstants
 from utils.base64 import PIL_to_base64
+from utils.validation import validate_params
 import traceback
 
 def _generate_html(explanation):
@@ -176,6 +177,7 @@ class NLPClassifierExpl(Resource):
             params_json={}
             if "params" in params:
                 params_json=params["params"]
+            params_json=validate_params(params_json,self.get(_id)["params"])
         
             #getting model info, data, and file from local repository
             model_file, model_info_file, data_file = get_model_files(_id,self.model_folder)

@@ -95,12 +95,13 @@ class LimeText(Resource):
             # Create explainer
             explainer = lime.lime_text.LimeTextExplainer(class_names=output_names)
             kwargsData2 = dict(labels=None, top_labels=1, num_features=None)
-            if "output_classes" in params_json and params_json["output_classes"] and output_names: #labels (if classification)
+
+            if params_json["top_classes"] and output_names: #if classification
+                kwargsData2["top_labels"] = params_json["top_classes"]   #top labels
+            if params_json["output_classes"] and output_names: #labels (if classification)
                 kwargsData2["labels"] = [output_names.index(c) for c in params_json["output_classes"]]
-            if "top_classes" in params_json and output_names: #if classification
-                kwargsData2["top_labels"] = int(params_json["top_classes"])   #top labels
-                if(not kwargsData2["top_labels"]):
-                    kwargsData2["top_labels"]=None
+                kwargsData2["top_labels"]=None #override top_classes
+
             if "num_features" in params_json:
                 kwargsData2["num_features"] = int(params_json["num_features"])
 
@@ -116,10 +117,10 @@ class LimeText(Resource):
             #saving
             hti = Html2Image()
             hti.output_path= os.getcwd()
-            size=(10, 4)
+
             css="body {background: white;}"
-            if "png_height" in params_json and "png_width" in params_json:
-                size=(int(params_json["png_width"])/100,int(params_json["png_height"])/100)
+            if params_json["png_height"] and params_json["png_height"] in params_json:
+                size=(params_json["png_width"],params_json["png_height"])
                 hti.screenshot(html_str=explanation.as_html(), css_str=css, save_as="temp.png", size=size)   
             else:
                 hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png")
@@ -146,14 +147,14 @@ class LimeText(Resource):
         "params": { 
 
                 "output_classes" : {
-                    "description":  "Array of strings representing the names of the classes to be explained.",
+                    "description":  "Array of strings representing the names of the classes to be explained. Overrides 'top_classes' if provided.",
                     "type":"array",
                     "default": None,
                     "range":None,
                     "required":False
                     },
                 "top_classes":{
-                        "description": "Integer representing the number of classes with the highest prediction probability to be explained. Overrides 'output_classes' if provided.",
+                        "description": "Integer representing the number of classes with the highest prediction probability to be explained. ",
                         "type":"int",
                         "default": 1,
                         "range":None,
@@ -163,21 +164,21 @@ class LimeText(Resource):
                         "description": "Integer representing the maximum number of features to be included in the explanation.",
                         "type":"int",
                         "default": 10,
-                        "range":None,
+                        "range":[100,4096],
                         "required":False
                     },
                 "png_width":{
                     "description": "Width (in pixels) of the png image containing the explanation.",
                     "type":"int",
-                    "default": 1000,
+                    "default": None,
                     "range":None,
                     "required":False
                     },
                 "png_height": {
                     "description": "Height (in pixels) of the png image containing the explanation.",
                     "type":"int",
-                    "default": 400,
-                    "range":None,
+                    "default": None,
+                    "range":[100,4096],
                     "required":False
                     }
                 },
@@ -210,7 +211,7 @@ class LimeText(Resource):
                 base_dict["params"]["output_classes"]["default"]=None
                 base_dict["params"]["output_classes"]["range"]=output_names
 
-                base_dict["params"]["top_classes"]["range"]=[0,len(output_names)]
+                base_dict["params"]["top_classes"]["range"]=[1,len(output_names)]
 
                 return base_dict
 
