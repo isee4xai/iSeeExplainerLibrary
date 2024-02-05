@@ -22,7 +22,6 @@ kaleido==0.1.0
 grad-cam==1.3.9
 protobuf==3.19.6
 flask-cors==3.0.10
-git+https://github.com/isee4xai/NLPClassifierExplainer
 xgboost==1.6.1
 discern-xai==0.0.27
 statsmodels==0.13.5
@@ -36,5 +35,6 @@ git+https://github.com/isee4xai/LIMESegment
 pertCF==0.1.18
 scikit-learn==1.2.2
 xplique==1.2.0
+git+https://github.com/isee4xai/NLPClassifierExplainer
 wordcloud
 
