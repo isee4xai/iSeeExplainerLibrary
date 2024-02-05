@@ -154,9 +154,9 @@ class ClassificationReport(Resource):
         "instance": "Image to be explained in BASE64 format",
         "params": { 
                 "samples":{
-                    "description": "Number of samples to use from the background data. The whole dataset is used by default.",
+                    "description": "Number of samples to use from the background data. A hundred samples are used by default.",
                     "type":"int",
-                    "default": None,
+                    "default": 100,
                     "range":None,
                     "required":False
                     }
