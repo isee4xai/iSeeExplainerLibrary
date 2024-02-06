@@ -81,6 +81,7 @@ class NearestNeighboursImage(Resource):
                         train_data.append(s_array)
                 except Exception as e: #end of rows
                     
+                    train_data=np.array(train_data)
                     if sample!=None:
                         train_data=train_data[np.random.randint(train_data.shape[0], size=min(sample,len(train_data))), :]
                     train_data = np.asarray(train_data, dtype=float)

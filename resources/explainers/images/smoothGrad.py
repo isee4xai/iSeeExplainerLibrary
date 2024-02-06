@@ -102,7 +102,7 @@ class SmoothGradExp(Resource):
             except Exception as e:
                 return  "Could not generate explanation: " + str(e),BAD_REQUEST
 
-            plot_attributions(explanations, instance, img_size=2., cmap='jet', alpha=0.4,absolute_value=True, clip_percentile=0.5)
+            plot_attributions(explanations, np.expand_dims(im,axis=0), img_size=2., cmap='jet', alpha=0.4,absolute_value=True, clip_percentile=0.5)
 
             #saving
             img_buf = BytesIO()
