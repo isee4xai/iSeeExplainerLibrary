@@ -99,7 +99,7 @@ class FORGradExp(Resource):
             filtered_explanations = forgrad(explanations, sigma=sigma)
 
 
-            plot_attributions(filtered_explanations, instance, img_size=2., cmap='jet', alpha=0.4,absolute_value=True, clip_percentile=0.5)
+            plot_attributions(filtered_explanations, np.expand_dims(im,axis=0), img_size=2., cmap='jet', alpha=0.4,absolute_value=True, clip_percentile=0.5)
 
             #saving
             img_buf = BytesIO()

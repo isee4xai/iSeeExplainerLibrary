@@ -112,7 +112,6 @@ class AnchorsImage(Resource):
 
             threshold=params_json["threshold"]
             delta=params_json["delta"]
-
             size=(params_json["png_width"]/100.0,params_json["png_height"]/100.0)
 
             explainer = AnchorImage(predic_func, instance.shape[1:], segmentation_fn=segmentation_fn,segmentation_kwargs=segmentation_kwargs)
@@ -121,10 +120,21 @@ class AnchorsImage(Resource):
             _, axes = plt.subplots(1,1, figsize = size)
             print(explanation.anchor)
             axes.imshow(explanation.anchor)
+
+            try:
+                prec=explanation.precision[0]
+            except:
+                prec=explanation.precision
+            try:
+                cov=explanation.coverage[0]
+            except:
+                cov=explanation.coverage
+
             if output_names!=None:
-                axes.set_title('Predicted Class: '+ output_names[explanation.raw["prediction"][0]] + "\nPrecision: " + str(round(explanation.precision,3)) + "\nCoverage: " + str(round(explanation.coverage,3)))
+
+                axes.set_title('Predicted Class: '+ output_names[explanation.raw["prediction"][0]] + "\nPrecision: " + str(round(prec,3)) + "\nCoverage: " + str(round(cov,3)))
             else:
-                axes.set_title('Predicted Class: '+ str(explanation.raw["prediction"][0]) + "\nPrecision: " + str(round(explanation.precision,3)) + "\nCoverage: " + str(round(explanation.coverage,3)))
+                axes.set_title('Predicted Class: '+ str(explanation.raw["prediction"][0]) + "\nPrecision: " + str(round(prec,3)) + "\nCoverage: " + str(round(cov,3)))
         
             #saving
             img_buf = BytesIO()
