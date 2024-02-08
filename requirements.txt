@@ -35,6 +35,5 @@ git+https://github.com/isee4xai/LIMESegment
 pertCF==0.1.18
 scikit-learn==1.2.2
 xplique==1.2.0
-git+https://github.com/isee4xai/NLPClassifierExplainer
 wordcloud
-
+git+https://github.com/isee4xai/NLPClassifierExplainer
