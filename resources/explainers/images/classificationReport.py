@@ -13,6 +13,7 @@ from sklearn.metrics import classification_report
 from getmodelfiles import get_model_files
 from utils import ontologyConstants
 from utils.img_processing import normalise_image_batch
+from utils.validation import validate_params
 import traceback
 
 class ClassificationReport(Resource):
@@ -102,6 +103,7 @@ class ClassificationReport(Resource):
         params_json={}
         if "params" in params:
             params_json=params["params"]
+        params_json=validate_params(params_json,self.get(_id)["params"])
 
         return self.explain(_id, instance, params_json)
     
