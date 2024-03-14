@@ -252,7 +252,8 @@ class NLPClassifierExpl(Resource):
                 "supportsBWImage":False,
                 "needsTrainingData": True
             },
-        "output_description": 
+        "output_description" :{
+            "nlp_explainer_table": 
 """
             A table containing  the following items
                 
