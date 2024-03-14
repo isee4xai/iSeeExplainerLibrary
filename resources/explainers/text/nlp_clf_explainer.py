@@ -251,5 +251,17 @@ class NLPClassifierExpl(Resource):
                 "modelAccess":"File",
                 "supportsBWImage":False,
                 "needsTrainingData": True
-            }
+            },
+        "output_description": 
+"""
+            A table containing  the following items
+                
+                * similarity_per_class: list of the most similar neighbours (with relative score) of the query for each class.
+                
+                * keywords: List of keywords similar to the query, with the relative score.
+                
+                * keywords_per_class: list of matching keywords for each target class.
+                    
+                * overlap:   List key keywords of each class with an indication if it is present in the query or not (Boolean).   
+"""
         }
