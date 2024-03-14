@@ -266,3 +266,5 @@ class NLPClassifierExpl(Resource):
                 * overlap:   List key keywords of each class with an indication if it is present in the query or not (Boolean).   
 """
         }
+        }
+    
