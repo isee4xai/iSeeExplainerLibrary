@@ -253,7 +253,6 @@ class NLPClassifierExpl(Resource):
                 "needsTrainingData": True
             },
         "output_description" :{
-
             "nlp_explainer_table": 
 """
             A table containing  the following items
