@@ -17,24 +17,20 @@ def _generate_html(explanation):
     # ------------------ header section ---------------------
 
     html = '''
-    <html>
-    <head>
-    </head>
-    <body>
 
     <style>
-    .class-name {font-family: monospace}
-    .xp-table { border: 2px solid black; border-collapse: collapse}
-    .xp-table tr {  border: 1px solid black}
-    .xp-table ul {padding: 0px}
-    .xp-table td {text-align: left; padding: 20px}
-    .xp-table td:first-child {background-color: #f7f7f7; font-weight:bolder; width:25%} 
-    .xp-list { display: flex; padding: 10px 10px 10px 0px; gap:15px}
-    .progressbar-text { line-height: 30px;}
-    .progressbar-bg { background-color: rgb(241, 241, 255); width: 500px; height: 30px}
-    .progressbar { background-color: rgb(14, 43, 1); height: 100%; color: white; text-indent: 10px}
-    .xp-green {background-color: #e1f5c6;}
-    .xp-red {background-color: #f5d9d6;}
+        .class-name {font-family: monospace}
+        .xp-table { border: 2px solid black; border-collapse: collapse}
+        .xp-table tr {  border: 1px solid black}
+        .xp-table ul {padding: 0px}
+        .xp-table td {text-align: left; padding: 20px}
+        .xp-table td:first-child {background-color: #f7f7f7; font-weight:bolder; width:25%} 
+        .xp-list { display: flex; padding: 10px 10px 10px 0px; gap:15px}
+        .progressbar-text { line-height: 30px;}
+        .progressbar-bg { background-color: rgb(241, 241, 255); width: 500px; height: 30px}
+        .progressbar { background-color: rgb(14, 43, 1); height: 100%; color: white; text-indent: 10px}
+        .xp-green {background-color: #e1f5c6;}
+        .xp-red {background-color: #f5d9d6;}
     </style>
 
     <h1>Explanation details</h1>
@@ -72,7 +68,7 @@ def _generate_html(explanation):
                 <div class="xp-list">
     '''
 
-    template = '<span>${KW} (${SCORE})</span>'
+    template = '<span>${KW} (${SCORE})</span> '
     for kw in explanation['keywords'].keys() :
         s = Template (template)
         html += s.substitute (KW=kw, SCORE="{:.3f}".format (explanation['keywords'][kw]))
@@ -97,7 +93,7 @@ def _generate_html(explanation):
         html += s1.substitute (CL=cl)
 
         for kw in explanation['keywords_per_class'][cl].keys():
-            s2 = Template ('<span>${KW} (${SCORE}) </span>')
+            s2 = Template ('<span>${KW} (${SCORE}) </span> ')
             html += s2.substitute (KW=kw, SCORE="{:.3f}".format (explanation['keywords_per_class'][cl][kw]))
 
         html +='</li>'
@@ -108,7 +104,6 @@ def _generate_html(explanation):
                 </div>
             </td>
         </tr>
-
     '''
 
 
@@ -124,7 +119,7 @@ def _generate_html(explanation):
         html += s1.substitute (CL=cl)
 
         for kw,overlap in explanation['overlap'][cl]:
-            s2 = Template ('<span class="${CLASS}">${KW}</span>')
+            s2 = Template ('<span class="${CLASS}">${KW}</span> ')
             css_style = "xp-green" if overlap else "xp-red"
             html += s2.substitute (KW=kw, CLASS= css_style)
 
@@ -140,8 +135,7 @@ def _generate_html(explanation):
     # ----------- end  ----------------
     html += '''
     </table>
-    </body>
-    </html>
+
     '''
 
     return html
@@ -165,14 +159,14 @@ class NLPClassifierExpl(Resource):
             #Check params
             if("id" not in params):
                 return "The model id was not specified in the params.",BAD_REQUEST
-            if("type" not in params):
-                return "The instance type was not specified in the params.",BAD_REQUEST
+            # if("type" not in params):
+            #     return "The instance type was not specified in the params.",BAD_REQUEST
             if("instance" not in params):
                 return "The instance was not specified in the params.",BAD_REQUEST
 
             _id =params["id"]
-            if("type"  in params):
-                inst_type=params["type"]
+            # if("type"  in params):
+            #     inst_type=params["type"]
             instance=str(params["instance"])
             params_json={}
             if "params" in params:
@@ -215,7 +209,7 @@ class NLPClassifierExpl(Resource):
             if output_format=="html":
                 # HTML explanation
                 html = _generate_html(explanation)
-                html=html.replace("\n","<br>")
+                # html=html.replace("\n","<br>")
                 response={"type":"html","explanation":html}
             elif output_format=="png":
                 # Image explanation
@@ -266,5 +260,5 @@ class NLPClassifierExpl(Resource):
                 * overlap:   List key keywords of each class with an indication if it is present in the query or not (Boolean).   
 """
         }
-        }
+    }
     
