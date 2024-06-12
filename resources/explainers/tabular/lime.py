@@ -160,27 +160,18 @@ class Lime(Resource):
             ##saving
 
             hti = Html2Image()
-            # hti.output_path= os.getcwd()
-            hti.output_path= "/tmp"
+            hti.output_path= os.getcwd()
             size=(10, 4)
             css="body {background: white;}"
             if "png_height" in params_json and "png_width" in params_json:
                 size=(int(params_json["png_width"])/100,int(params_json["png_height"])/100)
-                print("1")
-                print(explanation.as_html())
                 hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png", size=size)  
-                print("2")
-                print(explanation.as_html())
             else:
-                print("3")
-                print(explanation.as_html())
                 hti.screenshot(html_str=explanation.as_html(),css_str=css, save_as="temp.png",size=(1300,350))
-                print("4")
-                print(explanation.as_html())
 
-            im=Image.open("/tmp/temp.png")
+            im=Image.open("temp.png")
             b64Image=PIL_to_base64(im)
-            # os.remove("temp.png")
+            os.remove("temp.png")
 
             response={"type":"image","explanation":b64Image,"explanation_llm":json.loads(json.dumps(dict(explanation.as_list(explanation.available_labels()[0]))))}
             return response
